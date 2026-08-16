@@ -12,14 +12,14 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  // If login page, show minimal layout without sidebar
-  const isAuthPage = pathname === "/login" || pathname === "/signup";
+  // If auth page, show minimal layout without sidebar
+  const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/signup";
 
   if (isAuthPage) {
     return (
-      <main className="min-h-screen flex flex-col justify-center bg-surface">
+      <div className="min-h-screen">
         {children}
-      </main>
+      </div>
     );
   }
 
