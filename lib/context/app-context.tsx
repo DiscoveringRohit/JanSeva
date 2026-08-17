@@ -1,6 +1,14 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+
+declare const process: {
+  env: {
+    NEXT_PUBLIC_API_URL?: string;
+    [key: string]: string | undefined;
+  };
+};
+
 import {
   CivicIssue,
   INITIAL_ISSUES,
@@ -72,23 +80,115 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
   ]);
 
+  const fetchIssues = async () => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
+    const headers: HeadersInit = { "Content-Type": "application/json" };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    try {
+      const res = await fetch(`${API_URL}/api/issues/`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setIssues(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch issues from backend, using fallback.", e);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/api/notifications/`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch notifications from backend.", e);
+    }
+  };
+
+  const fetchUserProfile = async () => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/api/auth/profile/`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+      if (res.ok) {
+        const userProfile = await res.json();
+        const formattedUser: UserProfile = {
+          id: userProfile.id.toString(),
+          name: userProfile.username,
+          email: userProfile.email,
+          phone: userProfile.phone_number || "",
+          avatar: userProfile.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
+          ward: userProfile.ward || "Shanti Nagar",
+          wardNumber: userProfile.ward_number || 42,
+          role: userProfile.role,
+          karmaXP: userProfile.karma_xp,
+          level: userProfile.level,
+          levelTitle: userProfile.level_title,
+          verifiedCitizen: userProfile.verified_citizen,
+          aadhaarLinked: userProfile.aadhaar_linked,
+          stats: userProfile.stats || {
+            issuesReported: 0,
+            issuesResolved: 0,
+            upvotesGiven: 0,
+            verificationVotes: 0,
+            civicImpactScore: 10,
+          },
+          badges: userProfile.badges || [],
+        };
+        setUser(formattedUser);
+        localStorage.setItem("janseva_user", JSON.stringify(formattedUser));
+      }
+    } catch (e) {
+      console.error("Failed to fetch user profile.", e);
+    }
+  };
+
   // Load from localStorage on mount
   useEffect(() => {
-    try {
-      const savedIssues = localStorage.getItem("janseva_issues");
-      if (savedIssues) setIssues(JSON.parse(savedIssues));
+    const initData = async () => {
+      try {
+        const savedIssues = localStorage.getItem("janseva_issues");
+        if (savedIssues) setIssues(JSON.parse(savedIssues));
 
-      const savedUser = localStorage.getItem("janseva_user");
-      if (savedUser) setUser(JSON.parse(savedUser));
+        const savedUser = localStorage.getItem("janseva_user");
+        if (savedUser) setUser(JSON.parse(savedUser));
 
-      const savedNotifs = localStorage.getItem("janseva_notifs");
-      if (savedNotifs) setNotifications(JSON.parse(savedNotifs));
+        const savedNotifs = localStorage.getItem("janseva_notifs");
+        if (savedNotifs) setNotifications(JSON.parse(savedNotifs));
 
-      const savedPoll = localStorage.getItem("janseva_poll_vote");
-      if (savedPoll) setUserPollVote(savedPoll);
-    } catch (e) {
-      console.error("Failed to load local storage state", e);
-    }
+        const savedPoll = localStorage.getItem("janseva_poll_vote");
+        if (savedPoll) setUserPollVote(savedPoll);
+      } catch (e) {
+        console.error("Failed to load local storage state", e);
+      }
+
+      await fetchIssues();
+      const token = localStorage.getItem("janseva_token");
+      if (token) {
+        await fetchUserProfile();
+        await fetchNotifications();
+      }
+    };
+    initData();
   }, []);
 
   // Save changes to localStorage
@@ -175,9 +275,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const toggleUpvote = (issueId: string) => {
-    setIssues((prev) =>
-      prev.map((issue) => {
+  const toggleUpvote = async (issueId: string) => {
+    setIssues((prev: CivicIssue[]) =>
+      prev.map((issue: CivicIssue) => {
         if (issue.id === issueId) {
           const isUpvoted = !issue.isUpvoted;
           const newUpvotes = isUpvoted ? issue.upvotes + 1 : issue.upvotes - 1;
@@ -191,8 +291,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
     );
 
-    // Give user Karma XP
-    setUser((prev) => ({
+    // Give user Karma XP optimistically
+    setUser((prev: UserProfile) => ({
       ...prev,
       karmaXP: prev.karmaXP + 5,
       stats: {
@@ -200,6 +300,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         upvotesGiven: prev.stats.upvotesGiven + 1,
       },
     }));
+
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
+    if (token) {
+      try {
+        await fetch(`${API_URL}/api/issues/${issueId}/upvote/`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+        fetchUserProfile();
+        fetchIssues();
+      } catch (e) {
+        console.error("Failed to upvote on backend", e);
+      }
+    }
   };
 
   const addIssue = (newIssueData: Partial<CivicIssue>): CivicIssue => {
@@ -263,10 +381,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updatedAt: now,
     };
 
-    setIssues((prev) => [createdIssue, ...prev]);
+    setIssues((prev: CivicIssue[]) => [createdIssue, ...prev]);
 
-    // Give user Karma XP & update stats
-    setUser((prev) => ({
+    // Give user Karma XP & update stats optimistically
+    setUser((prev: UserProfile) => ({
       ...prev,
       karmaXP: prev.karmaXP + 50,
       stats: {
@@ -275,7 +393,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       },
     }));
 
-    // Add notification
+    // Add notification optimistically
     const newNotif: NotificationItem = {
       id: `notif-${Date.now()}`,
       title: `Report #${id} Submitted Successfully 🎉`,
@@ -286,15 +404,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       issueId: id,
       actionUrl: `/issues/${id}`,
     };
-    setNotifications((prev) => [newNotif, ...prev]);
+    setNotifications((prev: NotificationItem[]) => [newNotif, ...prev]);
+
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
+    if (token) {
+      fetch(`${API_URL}/api/issues/`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          title: createdIssue.title,
+          description: createdIssue.description,
+          category: createdIssue.category,
+          urgency: createdIssue.urgency,
+          location: createdIssue.location,
+          images: createdIssue.images,
+          ai_analysis: createdIssue.aiAnalysis,
+          assigned_department: createdIssue.assignedDepartment
+        })
+      }).then(async (res) => {
+        if (res.ok) {
+          const dbIssue = await res.json();
+          // replace optimistic model with real DB object
+          setIssues((prev: CivicIssue[]) => prev.map((item: CivicIssue) => item.id === id ? dbIssue : item));
+          fetchUserProfile();
+          fetchNotifications();
+          fetchIssues();
+        }
+      }).catch((e) => console.error("Failed to save issue to backend", e));
+    }
 
     return createdIssue;
   };
 
-  const updateIssueStatus = (issueId: string, status: CivicIssue["status"], note?: string) => {
+  const updateIssueStatus = async (issueId: string, status: CivicIssue["status"], note?: string) => {
     const now = new Date().toISOString();
-    setIssues((prev) =>
-      prev.map((issue) => {
+    setIssues((prev: CivicIssue[]) =>
+      prev.map((issue: CivicIssue) => {
         if (issue.id === issueId) {
           const updatedTimeline = [
             ...issue.timeline,
@@ -323,7 +472,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
     );
 
-    // Notification to citizens
+    // Notification to citizens optimistically
     const notif: NotificationItem = {
       id: `notif-${Date.now()}`,
       title: `Ticket #${issueId} Status: ${status}`,
@@ -334,12 +483,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       issueId,
       actionUrl: `/issues/${issueId}`,
     };
-    setNotifications((prev) => [notif, ...prev]);
+    setNotifications((prev: NotificationItem[]) => [notif, ...prev]);
+
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
+    if (token) {
+      try {
+        await fetch(`${API_URL}/api/issues/${issueId}/status/`, {
+          method: "PATCH",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ status, note })
+        });
+        fetchIssues();
+      } catch (e) {
+        console.error("Failed to update status on backend", e);
+      }
+    }
   };
 
-  const voteVerification = (issueId: string, vote: "yes" | "no") => {
-    setIssues((prev) =>
-      prev.map((issue) => {
+  const voteVerification = async (issueId: string, vote: "yes" | "no") => {
+    setIssues((prev: CivicIssue[]) =>
+      prev.map((issue: CivicIssue) => {
         if (issue.id === issueId) {
           const currentVotes = { ...issue.verificationVotes };
           if (currentVotes.userVoted === vote) return issue;
@@ -361,7 +528,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
     );
 
-    setUser((prev) => ({
+    setUser((prev: UserProfile) => ({
       ...prev,
       karmaXP: prev.karmaXP + 15,
       stats: {
@@ -369,11 +536,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         verificationVotes: prev.stats.verificationVotes + 1,
       },
     }));
+
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
+    if (token) {
+      try {
+        await fetch(`${API_URL}/api/issues/${issueId}/verify/`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ vote })
+        });
+        fetchUserProfile();
+        fetchIssues();
+      } catch (e) {
+        console.error("Failed to submit verification vote", e);
+      }
+    }
   };
 
-  const addComment = (issueId: string, text: string) => {
-    setIssues((prev) =>
-      prev.map((issue) => {
+  const addComment = async (issueId: string, text: string) => {
+    setIssues((prev: CivicIssue[]) =>
+      prev.map((issue: CivicIssue) => {
         if (issue.id === issueId) {
           return {
             ...issue,
@@ -383,23 +569,74 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return issue;
       })
     );
+
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
+    if (token) {
+      try {
+        await fetch(`${API_URL}/api/issues/${issueId}/comments/`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ text })
+        });
+        fetchIssues();
+      } catch (e) {
+        console.error("Failed to add comment on backend", e);
+      }
+    }
   };
 
-  const markNotificationRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+  const markNotificationRead = async (id: string) => {
+    setNotifications((prev: NotificationItem[]) =>
+      prev.map((n: NotificationItem) => (n.id === id ? { ...n, read: true } : n))
     );
+
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
+    const dbId = id.includes("-") ? id.split("-")[1] : id;
+    if (token && dbId && !isNaN(Number(dbId))) {
+      try {
+        await fetch(`${API_URL}/api/notifications/${dbId}/read/`, {
+          method: "PATCH",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+      } catch (e) {
+        console.error("Failed to mark notification as read", e);
+      }
+    }
   };
 
-  const markAllNotificationsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  const markAllNotificationsRead = async () => {
+    setNotifications((prev: NotificationItem[]) => prev.map((n: NotificationItem) => ({ ...n, read: true })));
+
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
+    if (token) {
+      try {
+        await fetch(`${API_URL}/api/notifications/read-all/`, {
+          method: "PATCH",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+      } catch (e) {
+        console.error("Failed to mark all notifications as read", e);
+      }
+    }
   };
 
   const votePoll = (optionId: string) => {
     if (userPollVote === optionId) return;
 
-    setWardData((prev) => {
-      const updatedOptions = prev.activePoll.options.map((opt) => {
+    setWardData((prev: WardInfo) => {
+      const updatedOptions = prev.activePoll.options.map((opt: any) => {
         if (opt.id === optionId) return { ...opt, votes: opt.votes + 1 };
         if (opt.id === userPollVote) return { ...opt, votes: Math.max(0, opt.votes - 1) };
         return opt;
@@ -420,7 +657,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("janseva_poll_vote", optionId);
     } catch (e) {}
 
-    setUser((prev) => ({
+    setUser((prev: UserProfile) => ({
       ...prev,
       karmaXP: prev.karmaXP + 20,
     }));
@@ -434,7 +671,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString(),
     };
 
-    setChatMessages((prev) => [...prev, userMsg]);
+    setChatMessages((prev: ChatMessage[]) => [...prev, userMsg]);
 
     // Simulated Smart AI Civic Response
     setTimeout(() => {
@@ -473,11 +710,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         suggestedIssueId,
       };
 
-      setChatMessages((prev) => [...prev, botMsg]);
+      setChatMessages((prev: ChatMessage[]) => [...prev, botMsg]);
     }, 600);
   };
 
-  const unreadNotifsCount = notifications.filter((n) => !n.read).length;
+  const unreadNotifsCount = notifications.filter((n: NotificationItem) => !n.read).length;
 
   return (
     <AppContext.Provider
