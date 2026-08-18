@@ -1,243 +1,234 @@
+import { CURRENT_USER, UserProfile } from "@/lib/data/mock-data";
 import {
   AuthResponse,
   LoginCredentials,
   PasswordResetResponse,
   RegisterCredentials,
-  GoogleAuthCredentials,
-  CompleteProfileCredentials,
+  UserRole,
 } from "./auth-types";
 
-import { WardOption } from "@/lib/data/cities-wards";
+declare const process: {
+  env: {
+    NEXT_PUBLIC_API_URL?: string;
+    [key: string]: string | undefined;
+  };
+};
+
+
+/**
+ * JanSeva Authentication Service
+ * 
+ * NOTE FOR BACKEND TEAM:
+ * This service currently provides a frontend-only mock implementation for prototypes and UI demos.
+ * To integrate with the real backend API:
+ * 1. Replace the mock promises with actual API calls (e.g., fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`))
+ * 2. Store session tokens (JWT/HTTP-only cookies) as per security guidelines.
+ * 3. Return the authenticated UserProfile and auth token.
+ */
 
 export const authService = {
   /**
-   * Fetch available municipal cities
-   */
-  async getCities(): Promise<string[]> {
-    try {
-      const res = await fetch("/api/cities");
-      const data = await res.json();
-
-      if (data.success && Array.isArray(data.cities)) {
-        return data.cities;
-      }
-
-      return [];
-    } catch {
-      return [];
-    }
-  },
-
-  /**
-   * Fetch wards dynamically by city
-   */
-  async getWards(city: string): Promise<WardOption[]> {
-    try {
-      const res = await fetch(
-        `/api/wards?city=${encodeURIComponent(city)}`
-      );
-
-      const data = await res.json();
-
-      if (data.success && Array.isArray(data.wards)) {
-        return data.wards;
-      }
-
-      return [];
-    } catch {
-      return [];
-    }
-  },
-
-  /**
-   * Login
+   * Login endpoint
+   * Connects to: POST /api/auth/login/
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
     try {
-      const res = await fetch("/api/auth/login", {
+      const response = await fetch(`${API_URL}/api/auth/login/`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(credentials),
-      });
-
-      const data = await res.json();
-
-      return data;
-    } catch {
-      return {
-        success: false,
-        message:
-          "Unable to connect to JanSeva authentication server. Please try again.",
-      };
-    }
-  },
-
-  /**
-   * Register Citizen / Officer
-   */
-  async register(
-    credentials: RegisterCredentials
-  ): Promise<AuthResponse> {
-    try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(credentials),
-      });
-
-      const data = await res.json();
-
-      return data;
-    } catch {
-      return {
-        success: false,
-        message:
-          "Unable to complete registration. Please check your connection and try again.",
-      };
-    }
-  },
-
-  /**
-   * Google OAuth login and account linking
-   */
-  async loginWithGoogle(
-    googleData: GoogleAuthCredentials
-  ): Promise<AuthResponse> {
-    try {
-      const res = await fetch("/api/auth/google", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(googleData),
-      });
-
-      const data = await res.json();
-
-      return data;
-    } catch {
-      return {
-        success: false,
-        message:
-          "Google sign-in was unsuccessful. Please try again.",
-      };
-    }
-  },
-
-  /**
-   * Verify email using the token from the email link
-   */
-  async verifyEmailToken(
-    token: string
-  ): Promise<AuthResponse> {
-    try {
-      const res = await fetch(
-        `/api/auth/verify-email?token=${encodeURIComponent(token)}`,
-        {
-          method: "GET",
-        }
-      );
-
-      const data = await res.json();
-
-      return data;
-    } catch {
-      return {
-        success: false,
-        message:
-          "Unable to verify email address. Please check your internet connection.",
-      };
-    }
-  },
-
-  /**
-   * Resend verification email
-   */
-  async resendVerificationEmail(
-    email: string
-  ): Promise<AuthResponse> {
-    try {
-      const res = await fetch("/api/auth/verify-email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email,
-          action: "resend",
+          username: credentials.identifier,
+          password: credentials.password,
         }),
       });
 
-      const data = await res.json();
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return {
+          success: false,
+          message: errorData.detail || "Invalid credentials. Please try again.",
+          errors: errorData,
+        };
+      }
 
-      return data;
-    } catch {
+      const tokenData = await response.json();
+      const token = tokenData.access;
+
+      // Fetch user profile details
+      const profileResponse = await fetch(`${API_URL}/api/auth/profile/`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!profileResponse.ok) {
+        return {
+          success: false,
+          message: "Failed to retrieve user profile details.",
+        };
+      }
+
+      const userProfile = await profileResponse.json();
+      
+      const formattedUser: UserProfile = {
+        id: userProfile.id.toString(),
+        name: userProfile.username,
+        email: userProfile.email,
+        phone: userProfile.phone_number || "",
+        avatar: userProfile.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
+        ward: userProfile.ward || "Shanti Nagar",
+        wardNumber: userProfile.ward_number || 42,
+        role: userProfile.role,
+        karmaXP: userProfile.karma_xp,
+        level: userProfile.level,
+        levelTitle: userProfile.level_title,
+        verifiedCitizen: userProfile.verified_citizen,
+        aadhaarLinked: userProfile.aadhaar_linked,
+        stats: userProfile.stats || {
+          issuesReported: 0,
+          issuesResolved: 0,
+          upvotesGiven: 0,
+          verificationVotes: 0,
+          civicImpactScore: 10,
+        },
+        badges: userProfile.badges || [],
+      };
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem("janseva_token", token);
+        localStorage.setItem("janseva_refresh_token", tokenData.refresh);
+        localStorage.setItem("janseva_user", JSON.stringify(formattedUser));
+      }
+
+      return {
+        success: true,
+        user: formattedUser,
+        token: token,
+        message: "Login successful",
+      };
+    } catch (e: any) {
       return {
         success: false,
-        message:
-          "Unable to resend verification email. Please try again.",
+        message: "Server is unreachable. Please make sure the backend is running.",
       };
     }
   },
 
   /**
-   * Request password reset
+   * Registration endpoint
+   * Connects to: POST /api/auth/register/
    */
-  async requestPasswordReset(
-    identifier: string
-  ): Promise<PasswordResetResponse> {
+  async register(data: RegisterCredentials): Promise<AuthResponse> {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
     try {
-      const res = await fetch("/api/auth/forgot-password", {
+      const response = await fetch(`${API_URL}/api/auth/register/`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          identifier,
-          action: "request",
+          username: data.identifier,
+          email: data.identifier.includes("@") ? data.identifier.trim() : "",
+          phone_number: !data.identifier.includes("@") ? data.identifier.trim() : "",
+          password: data.password,
+          fullName: data.fullName,
+          role: data.role || "citizen",
+          ward: data.ward,
+          wardNumber: data.wardNumber,
         }),
       });
 
-      const data = await res.json();
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return {
+          success: false,
+          message: errorData.error || "Registration failed. Please try again.",
+          errors: errorData,
+        };
+      }
 
-      return data;
-    } catch {
+      const resData = await response.json();
+      const token = resData.token;
+      const userProfile = resData.user;
+
+      const formattedUser: UserProfile = {
+        id: userProfile.id.toString(),
+        name: userProfile.username,
+        email: userProfile.email,
+        phone: userProfile.phone_number || "",
+        avatar: userProfile.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
+        ward: userProfile.ward || "Shanti Nagar",
+        wardNumber: userProfile.ward_number || 42,
+        role: userProfile.role,
+        karmaXP: userProfile.karma_xp,
+        level: userProfile.level,
+        levelTitle: userProfile.level_title,
+        verifiedCitizen: userProfile.verified_citizen,
+        aadhaarLinked: userProfile.aadhaar_linked,
+        stats: userProfile.stats || {
+          issuesReported: 0,
+          issuesResolved: 0,
+          upvotesGiven: 0,
+          verificationVotes: 0,
+          civicImpactScore: 10,
+        },
+        badges: userProfile.badges || [],
+      };
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem("janseva_token", token);
+        localStorage.setItem("janseva_refresh_token", resData.refresh);
+        localStorage.setItem("janseva_user", JSON.stringify(formattedUser));
+      }
+
+      return {
+        success: true,
+        user: formattedUser,
+        token: token,
+        message: "Registration successful",
+      };
+    } catch (e: any) {
       return {
         success: false,
-        message:
-          "Failed to send reset link. Please check your connection.",
+        message: "Server is unreachable. Please make sure the backend is running.",
       };
     }
   },
 
   /**
-   * Complete City/Ward profile after Google OAuth
+   * Password reset endpoint
+   * Connects to: POST /api/auth/forgot-password/
    */
-  async completeProfile(
-    data: CompleteProfileCredentials & { email: string }
-  ): Promise<AuthResponse> {
+  async requestPasswordReset(identifier: string): Promise<PasswordResetResponse> {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
     try {
-      const res = await fetch("/api/auth/complete-profile", {
+      const response = await fetch(`${API_URL}/api/auth/login/request-otp/`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: identifier.includes("@") ? identifier : "test@test.com",
+          phone_number: !identifier.includes("@") ? identifier : "1234567890",
+        }),
       });
 
-      const result = await res.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          message: "Failed to request OTP. Check email/phone number.",
+        };
+      }
 
-      return result;
-    } catch {
+      return {
+        success: true,
+        message: `OTP code has been sent successfully to ${identifier}.`,
+      };
+    } catch (e: any) {
       return {
         success: false,
-        message:
-          "Failed to update profile. Please try again.",
+        message: "Server is unreachable.",
       };
     }
   },
 };
+

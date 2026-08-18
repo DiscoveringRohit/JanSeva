@@ -121,7 +121,6 @@ export interface UserProfile {
   email: string;
   phone: string;
   avatar: string;
-  city?: string;
   ward: string;
   wardNumber: number;
   role: "citizen" | "officer" | "corporator";
@@ -152,7 +151,6 @@ export const CURRENT_USER: UserProfile = {
   email: "asmit.gupta@civic.in",
   phone: "+91 98765 43210",
   avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
-  city: "Bengaluru",
   ward: "Shanti Nagar",
   wardNumber: 42,
   role: "citizen",

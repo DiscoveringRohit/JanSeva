@@ -13,13 +13,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // If auth page, show minimal layout without sidebar
-  const isAuthPage =
-    pathname === "/login" ||
-    pathname === "/register" ||
-    pathname === "/signup" ||
-    pathname === "/verify-email" ||
-    pathname === "/forgot-password" ||
-    pathname === "/complete-profile";
+  const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/signup";
 
   if (isAuthPage) {
     return (

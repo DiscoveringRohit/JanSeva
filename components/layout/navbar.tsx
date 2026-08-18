@@ -30,7 +30,6 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
   const {
     user,
     switchRole,
-    logout,
     notifications,
     unreadNotifsCount,
     markNotificationRead,
@@ -312,17 +311,13 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
                   >
                     Edit Profile & Settings
                   </Link>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      logout();
-                      setShowRoleDropdown(false);
-                      router.push("/login");
-                    }}
-                    className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors"
+                  <Link
+                    href="/login"
+                    onClick={() => setShowRoleDropdown(false)}
+                    className="block px-2.5 py-1.5 rounded-lg text-xs font-medium text-rose-600 hover:bg-rose-50"
                   >
-                    Sign Out / Switch Account
-                  </button>
+                    Switch Account / Logout
+                  </Link>
                 </div>
               </div>
             )}
