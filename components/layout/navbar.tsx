@@ -19,6 +19,8 @@ import {
   ExternalLink,
   Flame
 } from "lucide-react";
+import { authService } from "@/lib/auth/auth-service-cookie3";
+import { CURRENT_USER } from "@/lib/data/mock-data";
 import { cn } from "@/lib/utils";
 
 interface NavbarProps {
@@ -29,6 +31,7 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
   const router = useRouter();
   const {
     user,
+    setUser,
     switchRole,
     notifications,
     unreadNotifsCount,
@@ -234,67 +237,69 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
                   </div>
                 </div>
 
-                {/* Role Switcher Demo Control */}
-                <div className="py-2">
-                  <p className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider mb-1.5">
-                    Demo Role Switcher
-                  </p>
-                  <div className="space-y-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        switchRole("citizen");
-                        setShowRoleDropdown(false);
-                      }}
-                      className={cn(
-                        "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors text-left",
-                        user.role === "citizen" ? "bg-primary-50 text-primary-700 font-bold" : "hover:bg-surface-container-low text-on-surface"
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <UserCheck className="w-3.5 h-3.5" />
-                        <span>Citizen (Asmit Gupta)</span>
-                      </div>
-                      {user.role === "citizen" && <Check className="w-3.5 h-3.5" />}
-                    </button>
+                {/* Role Switcher Demo Control (hidden unless demo enabled) */}
+                {typeof process !== "undefined" && process.env.NEXT_PUBLIC_ENABLE_DEMO === "true" && (
+                  <div className="py-2">
+                    <p className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider mb-1.5">
+                      Demo Role Switcher
+                    </p>
+                    <div className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          switchRole("citizen");
+                          setShowRoleDropdown(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors text-left",
+                          user.role === "citizen" ? "bg-primary-50 text-primary-700 font-bold" : "hover:bg-surface-container-low text-on-surface"
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <UserCheck className="w-3.5 h-3.5" />
+                          <span>Citizen ({user.name})</span>
+                        </div>
+                        {user.role === "citizen" && <Check className="w-3.5 h-3.5" />}
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        switchRole("officer");
-                        setShowRoleDropdown(false);
-                      }}
-                      className={cn(
-                        "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors text-left",
-                        user.role === "officer" ? "bg-primary-50 text-primary-700 font-bold" : "hover:bg-surface-container-low text-on-surface"
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Shield className="w-3.5 h-3.5" />
-                        <span>Officer (Er. Ramesh)</span>
-                      </div>
-                      {user.role === "officer" && <Check className="w-3.5 h-3.5" />}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          switchRole("officer");
+                          setShowRoleDropdown(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors text-left",
+                          user.role === "officer" ? "bg-primary-50 text-primary-700 font-bold" : "hover:bg-surface-container-low text-on-surface"
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Shield className="w-3.5 h-3.5" />
+                          <span>Officer (Er. Ramesh)</span>
+                        </div>
+                        {user.role === "officer" && <Check className="w-3.5 h-3.5" />}
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        switchRole("corporator");
-                        setShowRoleDropdown(false);
-                      }}
-                      className={cn(
-                        "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors text-left",
-                        user.role === "corporator" ? "bg-primary-50 text-primary-700 font-bold" : "hover:bg-surface-container-low text-on-surface"
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Corporator (Rajeshwari)</span>
-                      </div>
-                      {user.role === "corporator" && <Check className="w-3.5 h-3.5" />}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          switchRole("corporator");
+                          setShowRoleDropdown(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors text-left",
+                          user.role === "corporator" ? "bg-primary-50 text-primary-700 font-bold" : "hover:bg-surface-container-low text-on-surface"
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Corporator (Rajeshwari)</span>
+                        </div>
+                        {user.role === "corporator" && <Check className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="pt-2 border-t border-surface-dim space-y-1">
                   <Link
@@ -311,13 +316,18 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
                   >
                     Edit Profile & Settings
                   </Link>
-                  <Link
-                    href="/login"
-                    onClick={() => setShowRoleDropdown(false)}
-                    className="block px-2.5 py-1.5 rounded-lg text-xs font-medium text-rose-600 hover:bg-rose-50"
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setShowRoleDropdown(false);
+                      await authService.logout();
+                      setUser(CURRENT_USER);
+                      router.push('/login');
+                    }}
+                    className="w-full text-left block px-2.5 py-1.5 rounded-lg text-xs font-medium text-rose-600 hover:bg-rose-50"
                   >
                     Switch Account / Logout
-                  </Link>
+                  </button>
                 </div>
               </div>
             )}

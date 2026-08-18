@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
-import { authService } from "@/lib/auth/auth-service";
+import { authService } from "@/lib/auth/auth-service-cookie3";
 import { UserRole } from "@/lib/auth/auth-types";
 import {
   Sparkles,
@@ -28,10 +28,13 @@ export default function LoginPage() {
   const router = useRouter();
   const { switchRole, setUser } = useApp();
 
+  // Allow gating demo/demo quick-fill features via environment flag
+  const ENABLE_DEMO = typeof process !== "undefined" && process.env.NEXT_PUBLIC_ENABLE_DEMO === "true";
+
   // Form states
   const [role, setRole] = useState<UserRole>("citizen");
-  const [identifier, setIdentifier] = useState("asmit.gupta@civic.in");
-  const [password, setPassword] = useState("••••••••");
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
@@ -107,6 +110,7 @@ export default function LoginPage() {
   };
 
   const handleQuickDemoFill = (selectedRole: UserRole) => {
+    if (!(typeof process !== "undefined" && process.env.NEXT_PUBLIC_ENABLE_DEMO === "true")) return;
     setRole(selectedRole);
     setError(null);
     setFieldErrors({});

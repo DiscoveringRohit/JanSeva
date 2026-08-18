@@ -19,6 +19,7 @@ import {
   WardInfo,
   WARD_42_DATA,
 } from "@/lib/data/mock-data";
+import { authService, fetchWithAuth } from "@/lib/auth/auth-service-cookie3";
 
 interface ChatMessage {
   id: string;
@@ -69,7 +70,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     {
       id: "msg-1",
       sender: "assistant",
-      text: "Namaste Asmit! I am your JanSeva AI Civic Assistant. How can I assist you in Ward 42 (Shanti Nagar) today?",
+        text: "Namaste! I am your JanSeva AI Civic Assistant. How can I assist you in Ward 42 (Shanti Nagar) today?",
       timestamp: new Date().toISOString(),
       quickActions: [
         { label: "📸 Report a New Problem", action: "report" },
@@ -78,7 +79,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         { label: "💧 Water Supply Schedule", action: "water_timing" },
       ],
     },
-  ]);
+  ])  
+
+  // Install global fetch interceptor for API calls to attach Authorization and perform cookie-based refresh
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const originalFetch = window.fetch.bind(window);
+    const API_ROOT = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+    window.fetch = async (input: RequestInfo, init: RequestInit = {}) => {
+      const url = typeof input === 'string' ? input : (input as any).url || '';
+      if (url.startsWith(API_ROOT)) {
+        return fetchWithAuth(input, init);
+      }
+      return originalFetch(input, init);
+    };
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, []);
 
   const fetchIssues = async () => {
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
@@ -88,7 +106,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       headers["Authorization"] = `Bearer ${token}`;
     }
     try {
-      const res = await fetch(`${API_URL}/api/issues/`, { headers });
+      const res = await fetchWithAuth(`${API_URL}/api/issues/`);
       if (res.ok) {
         const data = await res.json();
         setIssues(data);
@@ -169,21 +187,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const savedIssues = localStorage.getItem("janseva_issues");
         if (savedIssues) setIssues(JSON.parse(savedIssues));
 
-        const savedUser = localStorage.getItem("janseva_user");
-        if (savedUser) setUser(JSON.parse(savedUser));
+        // Attempt to restore session using HttpOnly refresh cookie (if present)
+        const restored = await authService.tryRestoreSession();
 
-        const savedNotifs = localStorage.getItem("janseva_notifs");
-        if (savedNotifs) setNotifications(JSON.parse(savedNotifs));
+        if (!restored) {
+          // If no cookie/session, do not restore sensitive user state automatically.
+          // Keep any non-auth data cached locally.
+          const savedUser = localStorage.getItem("janseva_user");
+          if (savedUser) setUser(JSON.parse(savedUser));
 
-        const savedPoll = localStorage.getItem("janseva_poll_vote");
-        if (savedPoll) setUserPollVote(savedPoll);
+          const savedNotifs = localStorage.getItem("janseva_notifs");
+          if (savedNotifs) setNotifications(JSON.parse(savedNotifs));
+
+          const savedPoll = localStorage.getItem("janseva_poll_vote");
+          if (savedPoll) setUserPollVote(savedPoll);
+        }
       } catch (e) {
         console.error("Failed to load local storage state", e);
       }
 
+      // Load latest issues; fetchWithAuth will attach access token and refresh via cookie when needed
       await fetchIssues();
-      const token = localStorage.getItem("janseva_token");
-      if (token) {
+
+      // If the cookie-based session was restored, fetch the authoritative profile & notifs
+      const restoredAfter = await authService.tryRestoreSession();
+      if (restoredAfter) {
         await fetchUserProfile();
         await fetchNotifications();
       }
@@ -202,7 +230,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem("janseva_user", JSON.stringify(user));
+      // Only persist user in localStorage when an auth token exists.
+      // This prevents the app from overwriting a legitimately-signed-in user
+      // with the default guest/CURRENT_USER on page reloads where no token is present.
+      const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
+      if (token) {
+        localStorage.setItem("janseva_user", JSON.stringify(user));
+      }
     } catch (e) {
       console.error(e);
     }
@@ -221,8 +255,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setUser({
         ...CURRENT_USER,
         role: "citizen",
-        name: "Asmit Gupta",
-        levelTitle: "Civic Champion",
       });
     } else if (role === "officer") {
       setUser({
