@@ -48,6 +48,7 @@ interface AppContextType {
   userPollVote: string | null;
   chatMessages: ChatMessage[];
   sendChatMessage: (text: string) => void;
+  logout: () => void;
   isAiDrawerOpen: boolean;
   setIsAiDrawerOpen: (open: boolean) => void;
   activeFilter: string;
@@ -716,12 +717,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const unreadNotifsCount = notifications.filter((n: NotificationItem) => !n.read).length;
 
+  const logout = () => {
+    localStorage.removeItem("janseva_user");
+    setUser({
+      ...CURRENT_USER,
+      id: "JS-GUEST",
+      name: "Guest User",
+      email: "",
+      phone: "",
+      role: "citizen",
+    });
+  };
+
   return (
     <AppContext.Provider
       value={{
         user,
         setUser,
         switchRole,
+        logout,
         issues,
         toggleUpvote,
         addIssue,
