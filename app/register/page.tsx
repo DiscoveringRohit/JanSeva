@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
-import { authService } from "@/lib/auth/auth-service";
+import { authService } from "@/lib/auth/auth-service-cookie3";
 import { UserRole } from "@/lib/auth/auth-types";
 import {
   Sparkles,
@@ -50,6 +50,8 @@ const BENGALURU_WARDS = [
 export default function RegisterPage() {
   const router = useRouter();
   const { setUser, switchRole } = useApp();
+
+  const ENABLE_DEMO = typeof process !== "undefined" && process.env.NEXT_PUBLIC_ENABLE_DEMO === "true";
 
   // Form states
   const [role, setRole] = useState<UserRole>("citizen");
@@ -158,6 +160,7 @@ export default function RegisterPage() {
   };
 
   const handleQuickDemoFill = (type: UserRole) => {
+    if (!ENABLE_DEMO) return;
     setRole(type);
     setError(null);
     setFieldErrors({});

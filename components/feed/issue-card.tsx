@@ -146,18 +146,18 @@ export function IssueCard({ issue }: IssueCardProps) {
           <div className="flex items-center justify-between text-[11px] mb-1">
             <div className="flex items-center gap-1.5 font-bold text-primary-900">
               <Sparkles className="w-3.5 h-3.5 text-primary-600" />
-              <span>AI Triage: {issue.aiAnalysis.detectedObject}</span>
+                          <span>AI Triage: {issue.aiAnalysis?.detectedObject ?? "Unknown"}</span>
             </div>
             <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-primary-100 text-primary-800">
-              {issue.aiAnalysis.confidence}% Conf.
+                          {issue.aiAnalysis?.confidence ? `${issue.aiAnalysis.confidence}% Conf.` : "N/A"}
             </span>
           </div>
           <p className="text-[11px] text-on-surface-variant line-clamp-1">
-            {issue.aiAnalysis.summary}
+                        {issue.aiAnalysis?.summary ?? "No AI summary available."}
           </p>
           <div className="mt-1.5 flex items-center justify-between text-[10px] text-on-surface-variant font-semibold border-t border-primary-100/50 pt-1.5">
             <span>Routed to: <strong className="text-primary-800">{issue.assignedDepartment}</strong></span>
-            <span>SLA: ~{issue.aiAnalysis.suggestedSlaHours}h</span>
+                        <span>SLA: ~{issue.aiAnalysis?.suggestedSlaHours ?? "N/A"}h</span>
           </div>
         </div>
       </div>
