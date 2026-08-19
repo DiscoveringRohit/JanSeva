@@ -1094,71 +1094,134 @@ export function AppProvider({
       karmaXP: prev.karmaXP + 20,
     }));
   };
-  const sendChatMessage = async (text: string) => {
-  const userMsg: ChatMessage = {
-    id: `msg-${Date.now()}`,
-    sender: "user",
-    text,
-    timestamp: new Date().toISOString(),
-  };
 
-  setChatMessages((prev: ChatMessage[]) => [
-    ...prev,
-    userMsg,
-  ]);
+  const sendChatMessage = (text: string) => {
+    const userMsg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      sender: "user",
+      text,
+      timestamp: new Date().toISOString(),
+    };
 
-  try {
-    const response = await fetch(
-      "https://civic-issue-chatbot.onrender.com/chat",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          query: text,
-        }),
-      }
+    setChatMessages(
+      (prev: ChatMessage[]) => [
+        ...prev,
+        userMsg,
+      ]
     );
 
-    if (!response.ok) {
-      throw new Error(
-        `Chatbot request failed: ${response.status}`
+    // Simulated Smart AI Civic Response
+    setTimeout(() => {
+      let botResponse = "";
+      let quickActions:
+        | {
+            label: string;
+            action: string;
+          }[]
+        | undefined = undefined;
+
+      let suggestedIssueId:
+        | string
+        | undefined = undefined;
+
+      const lower = text.toLowerCase();
+
+      if (
+        lower.includes("report") ||
+        lower.includes("pothole") ||
+        lower.includes("garbage") ||
+        lower.includes("waste") ||
+        lower.includes("leak")
+      ) {
+        botResponse =
+          "I can help you file this immediately with AI Computer Vision. Click below to launch the smart reporting wizard with auto-GPS detection and department routing.";
+
+        quickActions = [
+          {
+            label:
+              "📸 Open AI Reporting Wizard",
+            action: "open_report",
+          },
+        ];
+      } else if (
+        lower.includes("js-101") ||
+        lower.includes("101") ||
+        lower.includes("drainage")
+      ) {
+        botResponse =
+          "Issue **#JS-101 (4th Main Sewage Overflow)** is currently **In Progress**. Senior Inspector Ramesh Kulkarni and a desilting suction crew are on-site. Current resolution ETA: ~2.5 hours. 94% of neighbors verified the progress.";
+
+        suggestedIssueId = "JS-101";
+
+        quickActions = [
+          {
+            label:
+              "🔍 View Live Progression Tracker",
+            action: "open_issue_js101",
+          },
+        ];
+      } else if (
+        lower.includes("corporator") ||
+        lower.includes("rajeshwari") ||
+        lower.includes("representative")
+      ) {
+        botResponse =
+          "Ward 42 (Shanti Nagar) Corporator is **Smt. Rajeshwari N.**\n• Office: Ward 42 Municipal Office, 80ft Road\n• Helpline: +91 80 2297 5500\n• Next Public Town Hall: Sunday, Aug 23 at 10:00 AM";
+
+        quickActions = [
+          {
+            label: "🏛️ Visit My Ward Portal",
+            action: "open_ward",
+          },
+        ];
+      } else if (
+        lower.includes("water") ||
+        lower.includes("supply") ||
+        lower.includes("tanker")
+      ) {
+        botResponse =
+          "Drinking water in Ward 42 is supplied via Cauvery Phase IV on **Monday, Wednesday, Friday from 6:00 AM to 9:30 AM**. Emergency municipal water tankers can be booked directly through JanSeva.";
+
+        quickActions = [
+          {
+            label:
+              "💧 Book Emergency Tanker",
+            action: "book_tanker",
+          },
+        ];
+      } else {
+        botResponse = `Understood! I've analyzed your query regarding "${text}". In Ward 42, JanSeva resolves 92% of civic inquiries automatically within 18 hours. Would you like me to connect you with the Ward helpdesk or open a complaint ticket?`;
+
+        quickActions = [
+          {
+            label: "📸 Report Civic Issue",
+            action: "open_report",
+          },
+          {
+            label: "🗺️ Explore Ward Map",
+            action: "open_map",
+          },
+        ];
+      }
+
+      const botMsg: ChatMessage = {
+        id: `msg-${Date.now() + 1}`,
+        sender: "assistant",
+        text: botResponse,
+        timestamp: new Date().toISOString(),
+        quickActions,
+        suggestedIssueId,
+      };
+
+      setChatMessages(
+        (prev: ChatMessage[]) => [
+          ...prev,
+          botMsg,
+        ]
       );
-    }
+    }, 600);
+  };
 
-    const data = await response.json();
-
-    console.log("Civic chatbot response:", data);
-
-    const botMsg: ChatMessage = {
-      id: `msg-${Date.now() + 1}`,
-      sender: "assistant",
-      text: data.answer || "I couldn't generate a response.",
-      timestamp: new Date().toISOString(),
-    };
-
-    setChatMessages((prev: ChatMessage[]) => [
-      ...prev,
-      botMsg,
-    ]);
-  } catch (error) {
-    console.error("Civic chatbot error:", error);
-
-    const botMsg: ChatMessage = {
-      id: `msg-${Date.now() + 1}`,
-      sender: "assistant",
-      text:
-        "Sorry, I'm having trouble connecting to the civic assistant right now. Please try again.",
-      timestamp: new Date().toISOString(),
-    };
-
-    setChatMessages((prev: ChatMessage[]) => [
-      ...prev,
-      botMsg,
-    ]);
-  }
-};
   const unreadNotifsCount =
     notifications.filter(
       (n: NotificationItem) => !n.read
