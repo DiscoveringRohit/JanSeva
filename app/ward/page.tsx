@@ -25,14 +25,14 @@ import {
 import { cn } from "@/lib/utils";
 
 export default function WardPage() {
-  const { wardData, issues } = useApp();
+  const { wardData } = useApp();
   const [activeTab, setActiveTab] = useState<"overview" | "budget" | "projects" | "announcements">("overview");
 
   const projects = [
     {
       id: "p1",
       title: "Stormwater Drainage Conduit Overhaul (4th to 9th Cross)",
-      dept: "BBMP Stormwater Drain (SWD)",
+      dept: "BMC Stormwater Drain",
       budgetCr: 2.4,
       progress: 68,
       status: "On Schedule",
@@ -42,7 +42,7 @@ export default function WardPage() {
     {
       id: "p2",
       title: "Shanti Nagar Community Park Play Zone & Solar LED Retrofit",
-      dept: "BBMP Parks & Renewable Cell",
+      dept: "BMC Parks & Gardens",
       budgetCr: 0.65,
       progress: 92,
       status: "Near Completion",
@@ -52,7 +52,7 @@ export default function WardPage() {
     {
       id: "p3",
       title: "Cauvery Phase IV Potable Water Line Replacement",
-      dept: "BWSSB Water Division",
+      dept: "BMC Water Supply",
       budgetCr: 3.8,
       progress: 45,
       status: "Active Work",
@@ -62,7 +62,7 @@ export default function WardPage() {
     {
       id: "p4",
       title: "80ft Corridor Asphalt Cold-Mix Resurfacing",
-      dept: "BBMP Major Roads",
+      dept: "BMC Road Infrastructure",
       budgetCr: 1.8,
       progress: 30,
       status: "Monsoon Paused",
@@ -82,7 +82,7 @@ export default function WardPage() {
           <div className="space-y-3 max-w-2xl">
             <div className="flex items-center gap-2">
               <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-bold">
-                BBMP East Zone
+                BMC South Zone
               </span>
               <span className="text-xs text-white/70 font-semibold">City Ward #42</span>
             </div>
@@ -270,15 +270,15 @@ export default function WardPage() {
                 <h4 className="font-headline font-bold text-sm text-on-surface">Emergency Ward Directory</h4>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between p-2 rounded-xl bg-surface-container-low">
-                    <span className="font-medium text-on-surface-variant">BBMP Control Room:</span>
+                    <span className="font-medium text-on-surface-variant">BMC Control Room:</span>
                     <strong className="text-primary-700">1533 / 080-22660000</strong>
                   </div>
                   <div className="flex justify-between p-2 rounded-xl bg-surface-container-low">
-                    <span className="font-medium text-on-surface-variant">BESCOM Electricity:</span>
+                    <span className="font-medium text-on-surface-variant">Electricity Helpline:</span>
                     <strong className="text-amber-700">1912</strong>
                   </div>
                   <div className="flex justify-between p-2 rounded-xl bg-surface-container-low">
-                    <span className="font-medium text-on-surface-variant">BWSSB Water Leakage:</span>
+                    <span className="font-medium text-on-surface-variant">BMC Water Leakage:</span>
                     <strong className="text-cyan-700">1916</strong>
                   </div>
                   <div className="flex justify-between p-2 rounded-xl bg-surface-container-low">

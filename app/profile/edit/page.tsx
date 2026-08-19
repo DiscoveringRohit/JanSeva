@@ -13,7 +13,8 @@ import {
   Globe,
   ArrowLeft,
   Check,
-  Save
+  Save,
+  Camera
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,11 +22,13 @@ export default function EditProfilePage() {
   const router = useRouter();
   const { user, setUser } = useApp();
 
-  const [name, setName] = useState(user.name);
-  const [email, setEmail] = useState(user.email);
-  const [phone, setPhone] = useState(user.phone);
-  const [ward, setWard] = useState(user.ward);
-  const [wardNumber, setWardNumber] = useState(user.wardNumber);
+  const [name, setName] = useState(user?.name || "");
+  const [email, setEmail] = useState(user?.email || "");
+  const [phone, setPhone] = useState(user?.phone || "");
+  const [gender, setGender] = useState(user?.gender || "Prefer not to say");
+  const [avatar, setAvatar] = useState(user?.avatar || "");
+  const [ward, setWard] = useState(user?.ward || "");
+  const [wardNumber, setWardNumber] = useState(user?.wardNumber || "");
   const [savedToast, setSavedToast] = useState(false);
 
   const [smsAlerts, setSmsAlerts] = useState(true);
@@ -35,20 +38,40 @@ export default function EditProfilePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
     setUser({
       ...user,
       name,
       email,
       phone,
+      gender,
+      avatar,
       ward,
       wardNumber,
     });
     setSavedToast(true);
-    setTimeout(() => {
-      setSavedToast(false);
-      router.push("/profile");
-    }, 1200);
+    setTimeout(() => setSavedToast(false), 3000);
   };
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-4">
+        <div className="p-4 rounded-full bg-slate-100">
+          <ShieldCheck className="w-10 h-10 text-slate-400" />
+        </div>
+        <div>
+          <h2 className="font-headline font-bold text-xl text-slate-800">Access Denied</h2>
+          <p className="text-sm text-slate-500 mt-1">Please login to edit your profile.</p>
+        </div>
+        <button 
+          onClick={() => router.push("/login")}
+          className="px-6 py-2.5 bg-primary-600 text-white font-bold text-sm rounded-xl mt-4"
+        >
+          Login
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn pb-12">
@@ -84,11 +107,38 @@ export default function EditProfilePage() {
 
         {/* Avatar Section */}
         <div className="flex items-center gap-4 p-4 rounded-2xl bg-surface-container-low border border-surface-dim">
-          <img
-            src={user.avatar}
-            alt={name}
-            className="w-16 h-16 rounded-full object-cover ring-2 ring-primary-200"
-          />
+          <div className="relative group cursor-pointer">
+            {avatar ? (
+              <img
+                src={avatar}
+                alt={name}
+                className="w-16 h-16 rounded-full object-cover ring-2 ring-primary-200"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-headline font-bold text-2xl ring-2 ring-primary-200">
+                {name ? name.charAt(0).toUpperCase() : "U"}
+              </div>
+            )}
+            <label className="absolute inset-0 flex items-center justify-center bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+              <Camera className="w-5 h-5" />
+              <input 
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                      if (ev.target?.result) {
+                        setAvatar(ev.target.result as string);
+                      }
+                    };
+                    reader.readAsDataURL(e.target.files[0]);
+                  }
+                }} 
+              />
+            </label>
+          </div>
           <div>
             <p className="text-xs font-bold text-on-surface">{name}</p>
             <p className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
@@ -145,25 +195,44 @@ export default function EditProfilePage() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-on-surface mb-1">Registered Municipal Ward</label>
-            <div className="relative">
-              <MapPin className="w-4 h-4 text-primary-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <select
-                value={wardNumber}
-                onChange={(e) => {
-                  const num = Number(e.target.value);
-                  setWardNumber(num);
-                  if (num === 42) setWard("Shanti Nagar");
-                  else if (num === 41) setWard("Austin Town");
-                  else setWard("Richmond Town");
-                }}
-                className="w-full pl-10 pr-4 py-2.5 text-xs font-bold rounded-2xl bg-surface-container-low border border-surface-dim text-on-surface focus:outline-none"
-              >
-                <option value={42}>Ward 42 • Shanti Nagar (BBMP East Zone)</option>
-                <option value={41}>Ward 41 • Austin Town (BBMP East Zone)</option>
-                <option value={76}>Ward 76 • Richmond Town (BBMP Central Zone)</option>
-              </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1">Registered Municipal Ward</label>
+              <div className="relative">
+                <MapPin className="w-4 h-4 text-primary-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <select
+                  value={wardNumber}
+                  onChange={(e) => {
+                    const num = Number(e.target.value);
+                    setWardNumber(num);
+                    if (num === 42) setWard("Shanti Nagar");
+                    else if (num === 41) setWard("Austin Town");
+                    else setWard("Richmond Town");
+                  }}
+                  className="w-full pl-10 pr-4 py-2.5 text-xs font-bold rounded-2xl bg-surface-container-low border border-surface-dim text-on-surface focus:outline-none"
+                >
+                  <option value={42}>Ward 63 • Unit 9 (BMC South Zone)</option>
+                  <option value={41}>Ward 62 • Unit 8 (BMC South Zone)</option>
+                  <option value={76}>Ward 64 • Unit 4 (BMC Central Zone)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1">Gender</label>
+              <div className="relative">
+                <User className="w-4 h-4 text-primary-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <select
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 text-xs font-bold rounded-2xl bg-surface-container-low border border-surface-dim text-on-surface focus:outline-none"
+                >
+                  <option value="Prefer not to say">Prefer not to say</option>
+                  <option value="Female">Female</option>
+                  <option value="Male">Male</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
             </div>
           </div>
 

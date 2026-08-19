@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
+import { DEFAULT_LOCATION } from "@/lib/data/default-location";
 import {
   Search,
   PlusCircle,
@@ -20,7 +21,8 @@ import {
   Flame
 } from "lucide-react";
 import { authService } from "@/lib/auth/auth-service-cookie3";
-import { CURRENT_USER } from "@/lib/data/mock-data";
+import { UserAvatarBadge } from "@/components/layout/user-avatar-badge";
+
 import { cn } from "@/lib/utils";
 
 interface NavbarProps {
@@ -42,6 +44,23 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  
+  const notifDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (notifDropdownRef.current && !notifDropdownRef.current.contains(event.target as Node)) {
+        setShowNotifDropdown(false);
+      }
+    }
+    
+    if (showNotifDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showNotifDropdown]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,7 +113,7 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
             className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container border border-surface-dim text-xs font-semibold text-on-surface-variant transition-colors"
           >
             <MapPin className="w-3.5 h-3.5 text-primary-600" />
-            <span>Ward 42 • Shanti Nagar</span>
+            <span>Ward {DEFAULT_LOCATION.wardNumber} • {DEFAULT_LOCATION.city}</span>
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
           </Link>
         </div>
@@ -108,7 +127,7 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search potholes, water leaks, ward issues, tickets..."
-              className="w-full pl-9.5 pr-4 py-2 text-xs rounded-full bg-surface-container-low border border-surface-dim focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-600 focus:bg-white text-on-surface placeholder:text-on-surface-variant/60 transition-all shadow-inner"
+              className="w-full pl-10 pr-4 py-2 text-xs rounded-full bg-surface-container-low border border-surface-dim focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-600 focus:bg-white text-on-surface placeholder:text-on-surface-variant/60 transition-all shadow-inner"
             />
           </form>
         </div>
@@ -138,7 +157,7 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
           </Link>
 
           {/* Notifications Dropdown */}
-          <div className="relative">
+          <div className="relative" ref={notifDropdownRef}>
             <button
               type="button"
               onClick={() => setShowNotifDropdown(!showNotifDropdown)}
@@ -200,138 +219,14 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
           </div>
 
           {/* Role Switcher & Profile Dropdown */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-              className="flex items-center gap-2 pl-2 pr-2.5 py-1 rounded-full bg-surface-container-low hover:bg-surface-container border border-surface-dim transition-all"
-            >
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-7 h-7 rounded-full object-cover ring-2 ring-primary-500/20"
-              />
-              <div className="hidden lg:flex flex-col items-start text-left">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs font-bold text-on-surface leading-none">{user.name.split(" ")[0]}</span>
-                  <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-primary-100 text-primary-800 capitalize">
-                    {user.role}
-                  </span>
-                </div>
-                <span className="text-[10px] font-semibold text-emerald-600 flex items-center gap-0.5">
-                  <Flame className="w-2.5 h-2.5" />
-                  {user.karmaXP} XP
-                </span>
-              </div>
-              <ChevronDown className="w-3.5 h-3.5 text-on-surface-variant" />
-            </button>
-
-            {showRoleDropdown && (
-              <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white p-3 shadow-xl border border-surface-container-high z-50 animate-fadeIn">
-                <div className="pb-2 border-b border-surface-dim">
-                  <p className="text-xs font-bold text-on-surface">{user.name}</p>
-                  <p className="text-[11px] text-on-surface-variant">{user.email}</p>
-                  <div className="mt-1 flex items-center justify-between text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                    <span>Level {user.level} {user.levelTitle}</span>
-                    <span>{user.karmaXP} XP</span>
-                  </div>
-                </div>
-
-                {/* Role Switcher Demo Control (hidden unless demo enabled) */}
-                {typeof process !== "undefined" && process.env.NEXT_PUBLIC_ENABLE_DEMO === "true" && (
-                  <div className="py-2">
-                    <p className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider mb-1.5">
-                      Demo Role Switcher
-                    </p>
-                    <div className="space-y-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          switchRole("citizen");
-                          setShowRoleDropdown(false);
-                        }}
-                        className={cn(
-                          "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors text-left",
-                          user.role === "citizen" ? "bg-primary-50 text-primary-700 font-bold" : "hover:bg-surface-container-low text-on-surface"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <UserCheck className="w-3.5 h-3.5" />
-                          <span>Citizen ({user.name})</span>
-                        </div>
-                        {user.role === "citizen" && <Check className="w-3.5 h-3.5" />}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          switchRole("officer");
-                          setShowRoleDropdown(false);
-                        }}
-                        className={cn(
-                          "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors text-left",
-                          user.role === "officer" ? "bg-primary-50 text-primary-700 font-bold" : "hover:bg-surface-container-low text-on-surface"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Shield className="w-3.5 h-3.5" />
-                          <span>Officer (Er. Ramesh)</span>
-                        </div>
-                        {user.role === "officer" && <Check className="w-3.5 h-3.5" />}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          switchRole("corporator");
-                          setShowRoleDropdown(false);
-                        }}
-                        className={cn(
-                          "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors text-left",
-                          user.role === "corporator" ? "bg-primary-50 text-primary-700 font-bold" : "hover:bg-surface-container-low text-on-surface"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="w-3.5 h-3.5" />
-                          <span>Corporator (Rajeshwari)</span>
-                        </div>
-                        {user.role === "corporator" && <Check className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="pt-2 border-t border-surface-dim space-y-1">
-                  <Link
-                    href="/profile"
-                    onClick={() => setShowRoleDropdown(false)}
-                    className="block px-2.5 py-1.5 rounded-lg text-xs font-medium text-on-surface hover:bg-surface-container-low"
-                  >
-                    View My Profile
-                  </Link>
-                  <Link
-                    href="/profile/edit"
-                    onClick={() => setShowRoleDropdown(false)}
-                    className="block px-2.5 py-1.5 rounded-lg text-xs font-medium text-on-surface hover:bg-surface-container-low"
-                  >
-                    Edit Profile & Settings
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setShowRoleDropdown(false);
-                      await authService.logout();
-                      setUser(CURRENT_USER);
-                      router.push('/login');
-                    }}
-                    className="w-full text-left block px-2.5 py-1.5 rounded-lg text-xs font-medium text-rose-600 hover:bg-rose-50"
-                  >
-                    Switch Account / Logout
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          <UserAvatarBadge 
+            user={user} 
+            onLogout={async () => {
+              await authService.logout();
+              setUser(null);
+              router.push('/login');
+            }} 
+          />
         </div>
 
       </div>

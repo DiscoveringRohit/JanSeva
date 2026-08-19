@@ -58,7 +58,7 @@ export default function AssistantPage() {
     "🔍 Status of sewage issue #JS-101",
     "💧 Ward 42 Drinking Water Schedule",
     "🏛️ Who is my Ward Corporator and office address?",
-    "⚡ BESCOM Streetlight power outage helpline",
+    "⚡ BMC Streetlight power outage helpline",
   ];
 
   return (
@@ -80,7 +80,7 @@ export default function AssistantPage() {
               </span>
             </div>
             <p className="text-xs text-on-surface-variant">
-              Multilingual civic assistant with live BBMP, BESCOM & BWSSB intelligence.
+              Multilingual civic assistant with live BMC and allied departments intelligence.
             </p>
           </div>
         </div>

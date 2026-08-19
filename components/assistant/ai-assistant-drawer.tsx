@@ -139,7 +139,7 @@ export function AiAssistantDrawer() {
               <span>Civic Copilot Capabilities</span>
             </div>
             <p className="text-[11px] text-on-surface-variant">
-              Trained on BBMP, BESCOM, BWSSB ward manuals, citizen charters, and live IoT telemetry.
+              Trained on BMC, Traffic, and Water ward manuals, citizen charters, and live IoT telemetry.
             </p>
           </div>
 

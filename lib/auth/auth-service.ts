@@ -1,4 +1,5 @@
-import { CURRENT_USER, UserProfile } from "@/lib/data/mock-data";
+import { UserProfile } from "@/lib/data/mock-data";
+import { DEFAULT_USER_FALLBACK } from "@/lib/data/default-location";
 import {
   AuthResponse,
   LoginCredentials,
@@ -78,9 +79,9 @@ export const authService = {
         name: userProfile.username,
         email: userProfile.email,
         phone: userProfile.phone_number || "",
-        avatar: userProfile.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
-        ward: userProfile.ward || "Shanti Nagar",
-        wardNumber: userProfile.ward_number || 42,
+        avatar: userProfile.avatar || DEFAULT_USER_FALLBACK.avatar,
+        ward: userProfile.ward || DEFAULT_USER_FALLBACK.ward,
+        wardNumber: userProfile.ward_number || DEFAULT_USER_FALLBACK.wardNumber,
         role: userProfile.role,
         karmaXP: userProfile.karma_xp,
         level: userProfile.level,
@@ -157,9 +158,9 @@ export const authService = {
         name: userProfile.username,
         email: userProfile.email,
         phone: userProfile.phone_number || "",
-        avatar: userProfile.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
-        ward: userProfile.ward || "Shanti Nagar",
-        wardNumber: userProfile.ward_number || 42,
+        avatar: userProfile.avatar || DEFAULT_USER_FALLBACK.avatar,
+        ward: userProfile.ward || DEFAULT_USER_FALLBACK.ward,
+        wardNumber: userProfile.ward_number || DEFAULT_USER_FALLBACK.wardNumber,
         role: userProfile.role,
         karmaXP: userProfile.karma_xp,
         level: userProfile.level,

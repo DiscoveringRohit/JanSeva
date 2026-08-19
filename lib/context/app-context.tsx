@@ -18,12 +18,13 @@ import {
   CivicIssue,
   INITIAL_ISSUES,
   UserProfile,
-  CURRENT_USER,
+
   NotificationItem,
   INITIAL_NOTIFICATIONS,
   WardInfo,
   WARD_42_DATA,
 } from "@/lib/data/mock-data";
+import { DEFAULT_LOCATION, DEFAULT_USER_FALLBACK } from "@/lib/data/default-location";
 
 import {
   authService,
@@ -43,8 +44,8 @@ interface ChatMessage {
 }
 
 interface AppContextType {
-  user: UserProfile;
-  setUser: React.Dispatch<React.SetStateAction<UserProfile>>;
+  user: UserProfile | null;
+  setUser: React.Dispatch<React.SetStateAction<UserProfile | null>>;
   switchRole: (
     role: "citizen" | "officer" | "corporator"
   ) => void;
@@ -89,13 +90,24 @@ const AppContext = createContext<AppContextType | undefined>(
   undefined
 );
 
+// Bridge for pure API functions in lib/api/issues.ts to mutate context fallbacks
+export const MockContextBridge: {
+  getIssues: () => CivicIssue[];
+  toggleUpvote: (issueId: string) => void;
+  addComment: (issueId: string, text: string) => void;
+} = {
+  getIssues: () => [],
+  toggleUpvote: () => {},
+  addComment: () => {},
+};
+
 export function AppProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const [user, setUser] =
-    useState<UserProfile>(CURRENT_USER);
+    useState<UserProfile | null>(null);
 
   const [issues, setIssues] =
     useState<CivicIssue[]>(INITIAL_ISSUES);
@@ -120,7 +132,7 @@ export function AppProvider({
       {
         id: "msg-1",
         sender: "assistant",
-        text: "Namaste! I am your JanSeva AI Civic Assistant. How can I assist you in Ward 42 (Shanti Nagar) today?",
+        text: `Namaste! I am your JanSeva AI Civic Assistant. How can I assist you in ${DEFAULT_LOCATION.ward} today?`,
         timestamp: new Date().toISOString(),
         quickActions: [
           {
@@ -142,6 +154,12 @@ export function AppProvider({
         ],
       },
     ]);
+
+  // Sync state to MockContextBridge so that non-React API files can access it during mock fallbacks
+  useEffect(() => {
+    MockContextBridge.getIssues = () => issues;
+    // We will assign the other methods below when they are defined in scope
+  }, [issues]);
 
   // Install global fetch interceptor for API calls
   // to attach Authorization and perform cookie-based refresh.
@@ -202,7 +220,15 @@ export function AppProvider({
 
       if (res.ok) {
         const data = await res.json();
-        setIssues(data);
+        
+        setIssues((prevIssues) => {
+          // If the backend returns data, we still want to keep any local mock issues 
+          // (like those submitted during the demo) that haven't been synced to the backend yet.
+          const backendIds = new Set(data.map((i: any) => i.id));
+          const localOnlyIssues = prevIssues.filter(i => !backendIds.has(i.id));
+          
+          return [...data, ...localOnlyIssues];
+        });
       }
     } catch (e) {
       console.error(
@@ -237,7 +263,12 @@ export function AppProvider({
 
       if (res.ok) {
         const data = await res.json();
-        setNotifications(data);
+        
+        setNotifications((prevNotifs) => {
+          const backendIds = new Set(data.map((n: any) => n.id));
+          const localOnlyNotifs = prevNotifs.filter(n => !backendIds.has(n.id));
+          return [...data, ...localOnlyNotifs];
+        });
       }
     } catch (e) {
       console.error(
@@ -278,11 +309,9 @@ export function AppProvider({
           name: userProfile.username,
           email: userProfile.email,
           phone: userProfile.phone_number || "",
-          avatar:
-            userProfile.avatar ||
-            "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
-          ward: userProfile.ward || "Shanti Nagar",
-          wardNumber: userProfile.ward_number || 42,
+          avatar: userProfile.avatar || DEFAULT_USER_FALLBACK.avatar,
+          ward: userProfile.ward || DEFAULT_USER_FALLBACK.ward,
+          wardNumber: userProfile.ward_number || DEFAULT_USER_FALLBACK.wardNumber,
           role: userProfile.role,
           karmaXP: userProfile.karma_xp,
           level: userProfile.level,
@@ -318,38 +347,31 @@ export function AppProvider({
   useEffect(() => {
     const initData = async () => {
       try {
-        const savedIssues =
-          localStorage.getItem("janseva_issues");
-
+        const savedIssues = localStorage.getItem("janseva_issues");
         if (savedIssues) {
           setIssues(JSON.parse(savedIssues));
         }
 
+        const savedUser = localStorage.getItem("janseva_user");
+        if (savedUser) {
+          setUser(JSON.parse(savedUser));
+        }
+
+        const savedNotifs = localStorage.getItem("janseva_notifs");
+        if (savedNotifs) {
+          setNotifications(JSON.parse(savedNotifs));
+        }
+
+        const savedPoll = localStorage.getItem("janseva_poll_vote");
+        if (savedPoll) {
+          setUserPollVote(savedPoll);
+        }
+
         // Attempt to restore session using HttpOnly refresh cookie
-        const restored =
+        try {
           await authService.tryRestoreSession();
-
-        if (!restored) {
-          const savedUser =
-            localStorage.getItem("janseva_user");
-
-          if (savedUser) {
-            setUser(JSON.parse(savedUser));
-          }
-
-          const savedNotifs =
-            localStorage.getItem("janseva_notifs");
-
-          if (savedNotifs) {
-            setNotifications(JSON.parse(savedNotifs));
-          }
-
-          const savedPoll =
-            localStorage.getItem("janseva_poll_vote");
-
-          if (savedPoll) {
-            setUserPollVote(savedPoll);
-          }
+        } catch (sessionError) {
+          console.warn("Could not restore backend session, continuing with local state", sessionError);
         }
       } catch (e) {
         console.error(
@@ -392,7 +414,7 @@ export function AppProvider({
           ? localStorage.getItem("janseva_token")
           : null;
 
-      if (token) {
+      if (token && user) {
         localStorage.setItem(
           "janseva_user",
           JSON.stringify(user)
@@ -418,60 +440,24 @@ export function AppProvider({
   const switchRole = (
     role: "citizen" | "officer" | "corporator"
   ) => {
+    if (!user) return;
+    
     if (role === "citizen") {
       setUser({
-        ...CURRENT_USER,
+        ...user,
         role: "citizen",
       });
     } else if (role === "officer") {
       setUser({
-        id: "JS-OFF-4412",
-        name: "Er. Ramesh Kulkarni",
-        email: "ramesh.kulkarni@bbmp.gov.in",
-        phone: "+91 94808 12345",
-        avatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
-        ward: "Shanti Nagar",
-        wardNumber: 42,
+        ...user,
         role: "officer",
-        karmaXP: 3820,
-        level: 8,
         levelTitle: "Senior Ward Officer",
-        verifiedCitizen: true,
-        aadhaarLinked: true,
-        stats: {
-          issuesReported: 0,
-          issuesResolved: 142,
-          upvotesGiven: 420,
-          verificationVotes: 198,
-          civicImpactScore: 98,
-        },
-        badges: CURRENT_USER.badges,
       });
     } else if (role === "corporator") {
       setUser({
-        id: "JS-CORP-042",
-        name: "Smt. Rajeshwari N.",
-        email: "corporator.ward42@bbmp.gov.in",
-        phone: "+91 80 2297 5500",
-        avatar:
-          "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
-        ward: "Shanti Nagar",
-        wardNumber: 42,
+        ...user,
         role: "corporator",
-        karmaXP: 5600,
-        level: 10,
         levelTitle: "Ward 42 Corporator",
-        verifiedCitizen: true,
-        aadhaarLinked: true,
-        stats: {
-          issuesReported: 5,
-          issuesResolved: 298,
-          upvotesGiven: 650,
-          verificationVotes: 320,
-          civicImpactScore: 99,
-        },
-        badges: CURRENT_USER.badges,
       });
     }
   };
@@ -497,14 +483,14 @@ export function AppProvider({
     );
 
     // Give user Karma XP optimistically
-    setUser((prev: UserProfile) => ({
+    setUser((prev: UserProfile | null) => prev ? ({
       ...prev,
       karmaXP: prev.karmaXP + 5,
       stats: {
         ...prev.stats,
         upvotesGiven: prev.stats.upvotesGiven + 1,
       },
-    }));
+    }) : prev);
 
     const API_URL =
       process.env.NEXT_PUBLIC_API_URL ||
@@ -542,7 +528,8 @@ export function AppProvider({
   const addIssue = (
     newIssueData: Partial<CivicIssue>
   ): CivicIssue => {
-    const id = `JS-${Math.floor(
+    if (!user) throw new Error("User not authenticated");
+    const id = newIssueData.id || `JS-${Math.floor(
       100 + Math.random() * 900
     )}`;
 
@@ -562,19 +549,15 @@ export function AppProvider({
       urgency:
         newIssueData.urgency || "High",
       location: newIssueData.location || {
-        address:
-          "Ward 42, Shanti Nagar, Bengaluru",
-        ward: "Shanti Nagar",
-        wardNumber: 42,
-        lat:
-          12.962 +
-          (Math.random() - 0.5) * 0.01,
-        lng:
-          77.596 +
-          (Math.random() - 0.5) * 0.01,
+        address: `${DEFAULT_LOCATION.ward}, ${DEFAULT_LOCATION.city}, ${DEFAULT_LOCATION.state}`,
+        ward: DEFAULT_LOCATION.ward,
+        wardNumber: DEFAULT_LOCATION.wardNumber,
+        lat: 20.270 + (Math.random() - 0.5) * 0.01,
+        lng: 85.760 + (Math.random() - 0.5) * 0.01,
       },
       reporter: {
         name: user.name,
+        username: user.username,
         avatar: user.avatar,
         isVerified: user.verifiedCitizen,
         karma: user.karmaXP,
@@ -586,20 +569,16 @@ export function AppProvider({
       },
       aiAnalysis:
         newIssueData.aiAnalysis || {
-          detectedObject:
-            "Verified Infrastructure Hazard",
+          detectedObject: "Verified Infrastructure Hazard",
           confidence: 97.5,
-          estimatedSeverity:
-            "High Priority Civic Issue",
-          predictedDepartment:
-            "BBMP Ward 42 Maintenance",
+          estimatedSeverity: "High Priority Civic Issue",
+          predictedDepartment: `${DEFAULT_LOCATION.municipalBody} ${DEFAULT_LOCATION.ward} Maintenance`,
           suggestedSlaHours: 24,
-          summary:
-            "AI verified valid physical hazard from geo-tagged image.",
+          summary: "AI verified valid physical hazard from geo-tagged image.",
         },
       assignedDepartment:
         newIssueData.assignedDepartment ||
-        "BBMP Ward 42 Rapid Response",
+        `${DEFAULT_LOCATION.municipalBody} ${DEFAULT_LOCATION.ward} Rapid Response`,
       timeline: [
         {
           stage: "Reported",
@@ -632,7 +611,7 @@ export function AppProvider({
     ]);
 
     // Give user Karma XP & update stats optimistically
-    setUser((prev: UserProfile) => ({
+    setUser((prev: UserProfile | null) => prev ? ({
       ...prev,
       karmaXP: prev.karmaXP + 50,
       stats: {
@@ -640,7 +619,7 @@ export function AppProvider({
         issuesReported:
           prev.stats.issuesReported + 1,
       },
-    }));
+    }) : prev);
 
     // Add notification optimistically
     const newNotif: NotificationItem = {
@@ -719,6 +698,7 @@ export function AppProvider({
     status: CivicIssue["status"],
     note?: string
   ) => {
+    if (!user) return;
     const now = new Date().toISOString();
 
     setIssues((prev: CivicIssue[]) =>
@@ -856,7 +836,7 @@ export function AppProvider({
       })
     );
 
-    setUser((prev: UserProfile) => ({
+    setUser((prev: UserProfile | null) => prev ? ({
       ...prev,
       karmaXP: prev.karmaXP + 15,
       stats: {
@@ -864,7 +844,7 @@ export function AppProvider({
         verificationVotes:
           prev.stats.verificationVotes + 1,
       },
-    }));
+    }) : prev);
 
     const API_URL =
       process.env.NEXT_PUBLIC_API_URL ||
@@ -1226,6 +1206,13 @@ export function AppProvider({
     notifications.filter(
       (n: NotificationItem) => !n.read
     ).length;
+
+  // Sync to MockContextBridge
+  useEffect(() => {
+    MockContextBridge.getIssues = () => issues;
+    MockContextBridge.toggleUpvote = toggleUpvote;
+    MockContextBridge.addComment = addComment;
+  }, [issues, toggleUpvote, addComment]);
 
   return (
     <AppContext.Provider

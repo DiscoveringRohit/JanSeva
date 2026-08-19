@@ -3,14 +3,20 @@
 import React from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/context/app-context";
+import { getWardStats } from "@/lib/api/issues";
 import { Building2, Shield, Phone, Mail, Award, CheckCircle2, TrendingUp } from "lucide-react";
 
 export function WardStatsWidget() {
-  const { wardData, issues } = useApp();
+  const { wardData } = useApp();
+  const [stats, setStats] = React.useState<{ resolutionRate?: number; avgResolutionTime?: string } | null>(null);
 
-  const total = issues.length;
-  const resolved = issues.filter((i) => i.status === "Resolved").length;
-  const resolutionRate = total > 0 ? Math.round((resolved / total) * 100) : 87;
+  React.useEffect(() => {
+    getWardStats(42).then(data => {
+      setStats(data);
+    });
+  }, []);
+
+  const resolutionRate = stats?.resolutionRate ?? 87;
 
   return (
     <div className="rounded-3xl bg-white border border-surface-container-high/80 p-5 shadow-soft space-y-4">
@@ -22,7 +28,7 @@ export function WardStatsWidget() {
           </div>
           <div>
             <h4 className="font-headline font-bold text-sm text-on-surface">Ward 42 • {wardData.name}</h4>
-            <p className="text-[11px] text-on-surface-variant font-medium">Bengaluru City Corporation</p>
+            <p className="text-[11px] text-on-surface-variant font-medium">Bhubaneswar Municipal Corporation</p>
           </div>
         </div>
         <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">

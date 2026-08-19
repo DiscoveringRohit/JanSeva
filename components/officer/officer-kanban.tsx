@@ -23,8 +23,12 @@ import {
 } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 
-export function OfficerKanban() {
-  const { issues, updateIssueStatus, user } = useApp();
+export function OfficerKanban({ departmentFilter }: { departmentFilter?: string }) {
+  const { issues: allIssues, updateIssueStatus, user } = useApp();
+  
+  const issues = departmentFilter
+    ? allIssues.filter(i => i.category.toLowerCase() === departmentFilter.toLowerCase())
+    : allIssues;
   const [selectedTicket, setSelectedTicket] = useState<CivicIssue | null>(null);
   const [statusUpdateNote, setStatusUpdateNote] = useState("");
   const [targetStatus, setTargetStatus] = useState<CivicIssue["status"]>("In Progress");

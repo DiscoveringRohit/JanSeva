@@ -300,6 +300,9 @@ export const authService = {
       localStorage.removeItem(
         "janseva_user"
       );
+      localStorage.removeItem(
+        "janseva_token"
+      );
     }
 
     return true;
