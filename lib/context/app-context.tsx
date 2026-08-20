@@ -78,6 +78,7 @@ interface AppContextType {
 
   chatMessages: ChatMessage[];
   sendChatMessage: (text: string) => void;
+  sendVoiceMessage: (audioBlob: Blob) => Promise<void>;
 
   isAiDrawerOpen: boolean;
   setIsAiDrawerOpen: (open: boolean) => void;
@@ -1136,6 +1137,53 @@ export function AppProvider({
     ]);
   }
 };
+const sendVoiceMessage = async (audioBlob: Blob) => {
+  try {
+    const formData = new FormData();
+
+    formData.append("audio", audioBlob, "recording.webm");
+
+    const response = await fetch(
+      "https://civic-issue-chatbot.onrender.com/chat/voice",
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Voice request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    const botMsg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      sender: "assistant",
+      text: data.answer,
+      timestamp: new Date().toISOString(),
+    };
+
+    setChatMessages((prev: ChatMessage[]) => [
+      ...prev,
+      botMsg,
+    ]);
+  } catch (error) {
+    console.error("Voice chatbot error:", error);
+
+    const errorMsg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      sender: "assistant",
+      text: "Sorry, I couldn't process your voice message. Please try again.",
+      timestamp: new Date().toISOString(),
+    };
+
+    setChatMessages((prev: ChatMessage[]) => [
+      ...prev,
+      errorMsg,
+    ]);
+  }
+};
 
   const unreadNotifsCount =
     notifications.filter(
@@ -1170,6 +1218,7 @@ export function AppProvider({
         userPollVote,
         chatMessages,
         sendChatMessage,
+        sendVoiceMessage,
         isAiDrawerOpen,
         setIsAiDrawerOpen,
         activeFilter,

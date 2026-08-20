@@ -23,12 +23,12 @@ import { cn } from "@/lib/utils";
 
 export default function AssistantPage() {
   const router = useRouter();
-  const { chatMessages, sendChatMessage } = useApp();
+  const { chatMessages, sendChatMessage ,sendVoiceMessage} = useApp();
   const [input, setInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [selectedLang, setSelectedLang] = useState("English");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
@@ -40,19 +40,52 @@ export default function AssistantPage() {
       setInput("");
     }
   };
+  const handleVoiceSim = async () => {
+  if (isRecording) {
+    mediaRecorderRef.current?.stop();
+    return;
+  }
 
-  const handleVoiceSim = () => {
-    if (!isRecording) {
-      setIsRecording(true);
-      setTimeout(() => {
-        setIsRecording(false);
-        sendChatMessage("Can you check the current water supply timings and pressure in Shanti Nagar Ward 42?");
-      }, 2400);
-    } else {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+    });
+
+    const mediaRecorder = new MediaRecorder(stream);
+    const audioChunks: Blob[] = [];
+
+    mediaRecorderRef.current = mediaRecorder;
+    setIsRecording(true);
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        audioChunks.push(event.data);
+      }
+    };
+
+    mediaRecorder.onstop = async () => {
       setIsRecording(false);
-    }
-  };
+      mediaRecorderRef.current = null;
 
+      stream.getTracks().forEach((track) => track.stop());
+
+      const audioBlob = new Blob(audioChunks, {
+        type: mediaRecorder.mimeType || "audio/webm",
+      });
+
+      await sendVoiceMessage(audioBlob);
+    };
+
+    mediaRecorder.start();
+  } catch (error) {
+    console.error("Microphone error:", error);
+    setIsRecording(false);
+
+   } catch (error) {
+  console.error("Microphone error:", error);
+  setIsRecording(false);
+}
+};
   const quickPrompts = [
     "📸 How do I report a broken road with AI?",
     "🔍 Status of sewage issue #JS-101",
