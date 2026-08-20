@@ -306,7 +306,8 @@ export function AppProvider({
 
         const formattedUser: UserProfile = {
           id: userProfile.id.toString(),
-          name: userProfile.username,
+          name: userProfile.name || userProfile.username,
+          username: userProfile.username,
           email: userProfile.email,
           phone: userProfile.phone_number || "",
           avatar: userProfile.avatar || DEFAULT_USER_FALLBACK.avatar,
@@ -1069,10 +1070,10 @@ export function AppProvider({
       );
     } catch (e) {}
 
-    setUser((prev: UserProfile) => ({
+    setUser((prev: UserProfile | null) => prev ? ({
       ...prev,
       karmaXP: prev.karmaXP + 20,
-    }));
+    }) : prev);
   };
 
   const sendChatMessage = (text: string) => {

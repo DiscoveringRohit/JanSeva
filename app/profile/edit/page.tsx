@@ -47,7 +47,7 @@ export default function EditProfilePage() {
       gender,
       avatar,
       ward,
-      wardNumber,
+      wardNumber: Number(wardNumber) || 0,
     });
     setSavedToast(true);
     setTimeout(() => setSavedToast(false), 3000);
