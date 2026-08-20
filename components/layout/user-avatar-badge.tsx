@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { UserProfile } from "@/lib/auth/auth-types";
+import { UserProfile } from "@/lib/data/mock-data";
 import { ChevronDown, Flame, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 

@@ -51,7 +51,7 @@ export default function ProfilePage() {
   );
 
   const dynamicIssuesReported = myReports.length;
-  const dynamicIssuesResolved = myReports.filter(i => i.status === "Resolved" || i.status === "Closed").length;
+  const dynamicIssuesResolved = myReports.filter(i => i.status === "Resolved").length;
   const dynamicUpvotes = upvotedIssues.length;
   const dynamicImpactScore = Math.min(100, Math.max(user.stats.civicImpactScore, Math.round((dynamicIssuesReported * 5) + (dynamicIssuesResolved * 10) + (dynamicUpvotes * 2))));
 

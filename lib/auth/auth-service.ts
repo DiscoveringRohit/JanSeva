@@ -76,7 +76,8 @@ export const authService = {
       
       const formattedUser: UserProfile = {
         id: userProfile.id.toString(),
-        name: userProfile.username,
+        name: userProfile.name || userProfile.username,
+        username: userProfile.username,
         email: userProfile.email,
         phone: userProfile.phone_number || "",
         avatar: userProfile.avatar || DEFAULT_USER_FALLBACK.avatar,
@@ -155,7 +156,8 @@ export const authService = {
 
       const formattedUser: UserProfile = {
         id: userProfile.id.toString(),
-        name: userProfile.username,
+        name: userProfile.name || userProfile.username,
+        username: userProfile.username,
         email: userProfile.email,
         phone: userProfile.phone_number || "",
         avatar: userProfile.avatar || DEFAULT_USER_FALLBACK.avatar,
