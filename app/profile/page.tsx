@@ -23,7 +23,24 @@ export default function ProfilePage() {
   const { user, issues } = useApp();
   const [activeTab, setActiveTab] = useState<"reports" | "upvotes" | "badges">("reports");
 
-  const myReports = issues.filter((i) => i.reporter.name === user.name);
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-4">
+        <div className="p-4 rounded-full bg-slate-100">
+          <ShieldCheck className="w-10 h-10 text-slate-400" />
+        </div>
+        <div>
+          <h2 className="font-headline font-bold text-xl text-slate-800">Profile Unavailable</h2>
+          <p className="text-sm text-slate-500 mt-1">Please login to view your profile.</p>
+        </div>
+        <Link href="/login" className="px-6 py-2.5 bg-primary-600 text-white font-bold text-sm rounded-xl mt-4">
+          Login
+        </Link>
+      </div>
+    );
+  }
+
+  const myReports = issues.filter((i) => (i.reporter.username && i.reporter.username === user.username) || i.reporter.name === user.name);
   const upvotedIssues = issues.filter((i) => i.isUpvoted);
 
   const nextLevelXP = (user.level + 1) * 500;
@@ -33,6 +50,11 @@ export default function ProfilePage() {
     Math.round(((user.karmaXP - 1000) / 500) * 100)
   );
 
+  const dynamicIssuesReported = myReports.length;
+  const dynamicIssuesResolved = myReports.filter(i => i.status === "Resolved" || i.status === "Closed").length;
+  const dynamicUpvotes = upvotedIssues.length;
+  const dynamicImpactScore = Math.min(100, Math.max(user.stats.civicImpactScore, Math.round((dynamicIssuesReported * 5) + (dynamicIssuesResolved * 10) + (dynamicUpvotes * 2))));
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-fadeIn pb-12">
       
@@ -41,11 +63,17 @@ export default function ProfilePage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="relative">
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-20 h-20 rounded-full object-cover ring-4 ring-primary-100 shadow-md"
-              />
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="w-20 h-20 rounded-full object-cover ring-4 ring-primary-100 shadow-md"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-headline font-bold text-3xl ring-4 ring-primary-100 shadow-md">
+                  {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+                </div>
+              )}
               <span className="absolute bottom-0 right-0 p-1 bg-primary-600 text-white rounded-full ring-2 ring-white">
                 <ShieldCheck className="w-4 h-4" />
               </span>
@@ -62,7 +90,7 @@ export default function ProfilePage() {
               </div>
               <p className="text-xs text-on-surface-variant flex items-center gap-1.5 mt-1">
                 <MapPin className="w-3.5 h-3.5 text-primary-600" />
-                <span>Ward {user.wardNumber} ({user.ward}), Bengaluru</span>
+                <span>Ward {user.wardNumber} ({user.ward}), Bhubaneswar</span>
                 <span>•</span>
                 <span className="text-emerald-700 font-bold">Verified Citizen ID #{user.id}</span>
               </p>
@@ -106,19 +134,19 @@ export default function ProfilePage() {
         {/* Impact Statistics Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
           <div className="p-4 rounded-2xl bg-surface-container-low border border-surface-dim">
-            <p className="text-2xl font-black text-primary-700 font-headline">{user.stats.issuesReported}</p>
+            <p className="text-2xl font-black text-primary-700 font-headline">{dynamicIssuesReported}</p>
             <p className="text-[11px] text-on-surface-variant font-medium">Reports Logged</p>
           </div>
           <div className="p-4 rounded-2xl bg-surface-container-low border border-surface-dim">
-            <p className="text-2xl font-black text-emerald-700 font-headline">{user.stats.issuesResolved}</p>
+            <p className="text-2xl font-black text-emerald-700 font-headline">{dynamicIssuesResolved}</p>
             <p className="text-[11px] text-on-surface-variant font-medium">Repairs Verified</p>
           </div>
           <div className="p-4 rounded-2xl bg-surface-container-low border border-surface-dim">
-            <p className="text-2xl font-black text-indigo-700 font-headline">{user.stats.upvotesGiven}</p>
+            <p className="text-2xl font-black text-indigo-700 font-headline">{dynamicUpvotes}</p>
             <p className="text-[11px] text-on-surface-variant font-medium">Community Upvotes</p>
           </div>
           <div className="p-4 rounded-2xl bg-surface-container-low border border-surface-dim">
-            <p className="text-2xl font-black text-purple-700 font-headline">{user.stats.civicImpactScore}%</p>
+            <p className="text-2xl font-black text-purple-700 font-headline">{dynamicImpactScore}%</p>
             <p className="text-[11px] text-on-surface-variant font-medium">Impact Rating</p>
           </div>
         </div>

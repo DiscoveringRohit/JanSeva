@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
-import { authService } from "@/lib/auth/auth-service-cookie3";
+import { authApi } from "@/lib/api/auth";
 import { UserRole } from "@/lib/auth/auth-types";
 import {
   Sparkles,
@@ -32,10 +32,10 @@ export default function LoginPage() {
   const ENABLE_DEMO = typeof process !== "undefined" && process.env.NEXT_PUBLIC_ENABLE_DEMO === "true";
 
   // Form states
-  const [role, setRole] = useState<UserRole>("citizen");
+  const [step, setStep] = useState<1 | 2>(1);
   const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [username, setUsername] = useState("");
+  const [otp, setOtp] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
 
   // Status & validation states
@@ -44,59 +44,74 @@ export default function LoginPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Forgot Password modal/drawer state
-  const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotIdentifier, setForgotIdentifier] = useState("");
-  const [forgotLoading, setForgotLoading] = useState(false);
-  const [forgotStatus, setForgotStatus] = useState<string | null>(null);
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setFieldErrors({});
 
-  // Validate form before submitting
-  const validateForm = () => {
     const errors: Record<string, string> = {};
-    if (!identifier.trim()) {
-      errors.identifier = "Please enter your email or mobile number";
+    if (!identifier.trim()) errors.identifier = "Please enter your email or mobile number";
+    if (!username.trim()) errors.username = "Please enter your username";
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
     }
-    if (!password || password.length < 4) {
-      errors.password = "Password must be at least 4 characters";
+
+    setIsLoading(true);
+    try {
+      const response = await authApi.sendOtp(identifier, 'email');
+      if (response.success || response.message) {
+        setSuccessMessage("OTP sent successfully!");
+        setTimeout(() => {
+          setSuccessMessage(null);
+          setStep(2);
+        }, 800);
+      } else {
+        setError(response.message || "Failed to send OTP.");
+      }
+    } catch (err) {
+      setError("An unexpected connection error occurred.");
+    } finally {
+      setIsLoading(false);
     }
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setSuccessMessage(null);
+    setFieldErrors({});
 
-    if (!validateForm()) return;
+    if (!otp.trim() || otp.length < 4) {
+      setFieldErrors({ otp: "Enter a valid OTP" });
+      return;
+    }
 
     setIsLoading(true);
 
     try {
-      const response = await authService.login({
+      const response = await authApi.login({
         identifier,
-        password,
+        username,
+        otp,
         rememberMe,
-        role,
       });
 
       if (response.success && response.user) {
         setSuccessMessage("Login successful! Redirecting...");
         
         // Update application state
-        if (role === "officer") {
-          switchRole("officer");
-        } else {
-          switchRole("citizen");
-          setUser(response.user);
+        if (response.token) {
+          // TODO: Move to httpOnly cookie before production
+          localStorage.setItem("janseva_token", response.token);
         }
+        localStorage.setItem("janseva_user", JSON.stringify(response.user));
+        setUser(response.user);
+
+        switchRole("citizen");
 
         setTimeout(() => {
-          if (role === "officer") {
-            router.push("/officer");
-          } else {
-            router.push("/feed");
-          }
+          router.push("/feed");
         }, 600);
       } else {
         setError(response.message || "Invalid credentials. Please try again.");
@@ -109,35 +124,12 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickDemoFill = (selectedRole: UserRole) => {
+  const handleQuickDemoFill = () => {
     if (!(typeof process !== "undefined" && process.env.NEXT_PUBLIC_ENABLE_DEMO === "true")) return;
-    setRole(selectedRole);
     setError(null);
     setFieldErrors({});
-    if (selectedRole === "officer") {
-      setIdentifier("ramesh.kulkarni@bbmp.gov.in");
-      setPassword("officer2026");
-    } else {
-      setIdentifier("asmit.gupta@civic.in");
-      setPassword("citizen2026");
-    }
-  };
-
-  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!forgotIdentifier.trim()) {
-      setForgotStatus("Please enter your registered email or mobile.");
-      return;
-    }
-    setForgotLoading(true);
-    try {
-      const res = await authService.requestPasswordReset(forgotIdentifier);
-      setForgotStatus(res.message);
-    } catch (err) {
-      setForgotStatus("Failed to send reset link. Please try again.");
-    } finally {
-      setForgotLoading(false);
-    }
+    setIdentifier("asmit.gupta@civic.in");
+    setUsername("citizen_user");
   };
 
   return (
@@ -194,51 +186,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Role Switcher Tabs */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 px-1">
-            <span>Select Account Role</span>
-            <span className="text-[10px] text-primary-600 font-semibold cursor-pointer hover:underline" onClick={() => handleQuickDemoFill(role === "citizen" ? "officer" : "citizen")}>
-              Quick fill {role === "citizen" ? "Officer" : "Citizen"}
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-bold">
-            <button
-              type="button"
-              onClick={() => {
-                setRole("citizen");
-                setFieldErrors({});
-              }}
-              className={cn(
-                "py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-2",
-                role === "citizen"
-                  ? "bg-white text-primary-700 shadow-sm border border-slate-200/80 font-bold"
-                  : "text-slate-500 hover:text-slate-800"
-              )}
-            >
-              <UserCheck className="w-4 h-4 text-primary-600" />
-              <span>Citizen</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setRole("officer");
-                setFieldErrors({});
-              }}
-              className={cn(
-                "py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-2",
-                role === "officer"
-                  ? "bg-white text-primary-700 shadow-sm border border-slate-200/80 font-bold"
-                  : "text-slate-500 hover:text-slate-800"
-              )}
-            >
-              <Shield className="w-4 h-4 text-primary-600" />
-              <span>Officer / Admin</span>
-            </button>
-          </div>
-        </div>
-
         {/* Feedback Alerts */}
         {error && (
           <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2 animate-fadeIn">
@@ -255,7 +202,8 @@ export default function LoginPage() {
         )}
 
         {/* Login Form */}
-        <form onSubmit={handleLogin} className="space-y-3.5">
+        {step === 1 ? (
+        <form onSubmit={handleSendOtp} className="space-y-3.5">
           {/* Email / Mobile Field */}
           <div>
             <label
@@ -275,84 +223,47 @@ export default function LoginPage() {
                 value={identifier}
                 onChange={(e) => {
                   setIdentifier(e.target.value);
-                  if (fieldErrors.identifier) {
-                    setFieldErrors((prev) => ({ ...prev, identifier: "" }));
-                  }
+                  if (fieldErrors.identifier) setFieldErrors((prev) => ({ ...prev, identifier: "" }));
                 }}
                 placeholder="name@civic.in or +91 98765 43210"
                 className={cn(
                   "w-full pl-10 pr-4 py-2.5 text-xs rounded-xl bg-slate-50 border text-slate-900 transition-all placeholder:text-slate-400 focus:outline-none focus:bg-white",
-                  fieldErrors.identifier
-                    ? "border-rose-400 focus:ring-2 focus:ring-rose-200"
-                    : "border-slate-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
+                  fieldErrors.identifier ? "border-rose-400 focus:ring-2 focus:ring-rose-200" : "border-slate-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                 )}
               />
             </div>
-            {fieldErrors.identifier && (
-              <p className="text-[11px] text-rose-600 mt-1 font-medium">
-                {fieldErrors.identifier}
-              </p>
-            )}
+            {fieldErrors.identifier && <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.identifier}</p>}
           </div>
 
-          {/* Password Field */}
+          {/* Username Field */}
           <div>
-            <div className="flex items-center justify-between text-xs mb-1">
-              <label htmlFor="password" className="font-bold text-slate-700">
-                Password
-              </label>
-              <button
-                type="button"
-                onClick={() => {
-                  setForgotIdentifier(identifier);
-                  setShowForgotModal(true);
-                }}
-                className="text-primary-600 hover:text-primary-700 font-semibold hover:underline text-[11px]"
-              >
-                Forgot Password?
-              </button>
-            </div>
+            <label
+              htmlFor="username"
+              className="block text-xs font-bold text-slate-700 mb-1"
+            >
+              Username
+            </label>
             <div className="relative">
               <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                <Lock className="w-4 h-4" />
+                <UserCheck className="w-4 h-4" />
               </div>
               <input
-                id="password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
+                id="username"
+                name="username"
+                type="text"
+                value={username}
                 onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (fieldErrors.password) {
-                    setFieldErrors((prev) => ({ ...prev, password: "" }));
-                  }
+                  setUsername(e.target.value);
+                  if (fieldErrors.username) setFieldErrors((prev) => ({ ...prev, username: "" }));
                 }}
-                placeholder="Enter your password"
+                placeholder="janseva_user"
                 className={cn(
-                  "w-full pl-10 pr-10 py-2.5 text-xs rounded-xl bg-slate-50 border text-slate-900 transition-all placeholder:text-slate-400 focus:outline-none focus:bg-white",
-                  fieldErrors.password
-                    ? "border-rose-400 focus:ring-2 focus:ring-rose-200"
-                    : "border-slate-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
+                  "w-full pl-10 pr-4 py-2.5 text-xs rounded-xl bg-slate-50 border text-slate-900 transition-all placeholder:text-slate-400 focus:outline-none focus:bg-white",
+                  fieldErrors.username ? "border-rose-400 focus:ring-2 focus:ring-rose-200" : "border-slate-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
                 )}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-              </button>
             </div>
-            {fieldErrors.password && (
-              <p className="text-[11px] text-rose-600 mt-1 font-medium">
-                {fieldErrors.password}
-              </p>
-            )}
+            {fieldErrors.username && <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.username}</p>}
           </div>
 
           {/* Remember Me & Security Notice */}
@@ -381,16 +292,66 @@ export default function LoginPage() {
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Verifying Credentials...</span>
+                <span>Sending OTP...</span>
               </>
             ) : (
               <>
-                <span>Sign In as {role === "officer" ? "Officer" : "Citizen"}</span>
+                <span>Send OTP via Email</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>
         </form>
+        ) : (
+        <form onSubmit={handleLogin} className="space-y-3.5">
+          <div className="text-center mb-4">
+            <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-2 text-emerald-600">
+              <Mail className="w-5 h-5" />
+            </div>
+            <p className="text-xs text-slate-500">We sent an OTP to {identifier}</p>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-slate-700 mb-1 text-center">Enter 6-digit OTP</label>
+            <input 
+              type="text" 
+              placeholder="• • • • • •" 
+              value={otp} 
+              onChange={(e) => {
+                setOtp(e.target.value);
+                if (fieldErrors.otp) setFieldErrors((prev) => ({ ...prev, otp: "" }));
+              }} 
+              className={cn(
+                "w-full text-center tracking-[0.5em] font-mono text-xl py-3 bg-slate-50 border rounded-xl focus:bg-white focus:outline-none transition-all",
+                fieldErrors.otp ? "border-rose-400 focus:ring-2 focus:ring-rose-200" : "border-slate-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
+              )}
+              maxLength={6} 
+            />
+            {fieldErrors.otp && <p className="text-[10px] text-rose-600 mt-1 text-center font-medium">{fieldErrors.otp}</p>}
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-headline font-bold text-xs sm:text-sm shadow-lg shadow-emerald-600/30 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Verifying...</span>
+              </>
+            ) : (
+              <>
+                <span>Verify OTP & Sign In</span>
+                <CheckCircle2 className="w-4 h-4" />
+              </>
+            )}
+          </button>
+          <div className="text-center pt-2">
+            <button type="button" onClick={() => setStep(1)} className="text-[11px] text-slate-500 hover:text-slate-800 underline">Back</button>
+          </div>
+        </form>
+        )}
 
         {/* Divider */}
         <div className="relative flex py-1 items-center">
@@ -402,16 +363,16 @@ export default function LoginPage() {
         </div>
 
         {/* Social / Civic Login Options */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex justify-center">
           {/* Google Sign-in */}
           <button
             type="button"
             onClick={() => {
-              handleQuickDemoFill("citizen");
+              handleQuickDemoFill();
               setSuccessMessage("Google authentication verified. Logging in...");
               setTimeout(() => router.push("/feed"), 800);
             }}
-            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-all hover:border-slate-300"
+            className="w-full sm:w-2/3 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-all hover:border-slate-300"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path
@@ -432,20 +393,6 @@ export default function LoginPage() {
               />
             </svg>
             <span>Google</span>
-          </button>
-
-          {/* DigiLocker / Aadhaar Sign-in */}
-          <button
-            type="button"
-            onClick={() => {
-              handleQuickDemoFill("citizen");
-              setSuccessMessage("DigiLocker KYC linked (Ward 42). Redirecting...");
-              setTimeout(() => router.push("/feed"), 800);
-            }}
-            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold transition-all"
-          >
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>DigiLocker</span>
           </button>
         </div>
 
@@ -473,102 +420,13 @@ export default function LoginPage() {
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            onClick={() => handleQuickDemoFill("citizen")}
+            onClick={() => handleQuickDemoFill()}
             className="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-semibold border border-slate-700"
           >
             Citizen Demo
           </button>
-          <button
-            type="button"
-            onClick={() => handleQuickDemoFill("officer")}
-            className="px-2 py-0.5 rounded-md bg-indigo-900/60 hover:bg-indigo-800/60 text-indigo-200 text-[10px] font-semibold border border-indigo-700/50"
-          >
-            Officer Demo
-          </button>
         </div>
       </div>
-
-      {/* Forgot Password Modal */}
-      {showForgotModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 space-y-4 text-slate-900 animate-slideUp">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center">
-                  <KeyRound className="w-4 h-4" />
-                </div>
-                <h3 className="font-headline font-bold text-base text-slate-900">
-                  Reset Password
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowForgotModal(false);
-                  setForgotStatus(null);
-                }}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-600">
-              Enter your registered email or mobile number. We will send a secure OTP / reset link.
-            </p>
-
-            {forgotStatus ? (
-              <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-100 text-primary-900 text-xs font-medium space-y-2">
-                <p>{forgotStatus}</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowForgotModal(false);
-                    setForgotStatus(null);
-                  }}
-                  className="w-full py-2 rounded-xl bg-primary-600 text-white font-bold text-xs"
-                >
-                  Close & Back to Login
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleForgotPasswordSubmit} className="space-y-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Registered Identifier
-                  </label>
-                  <input
-                    type="text"
-                    value={forgotIdentifier}
-                    onChange={(e) => setForgotIdentifier(e.target.value)}
-                    placeholder="email@civic.in or +91 98765 43210"
-                    required
-                    className="w-full px-3.5 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowForgotModal(false)}
-                    className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={forgotLoading}
-                    className="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs shadow-md shadow-primary-600/20 flex items-center gap-1.5"
-                  >
-                    {forgotLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                    <span>Send Reset Instructions</span>
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
 
     </div>
   );

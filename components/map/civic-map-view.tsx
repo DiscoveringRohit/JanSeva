@@ -23,8 +23,12 @@ import {
 } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 
-export function CivicMapView() {
-  const { issues, toggleUpvote } = useApp();
+export function CivicMapView({ departmentFilter }: { departmentFilter?: string }) {
+  const { issues: allIssues, toggleUpvote } = useApp();
+  
+  const issues = departmentFilter
+    ? allIssues.filter(i => i.category.toLowerCase() === departmentFilter.toLowerCase())
+    : allIssues;
   const [selectedIssue, setSelectedIssue] = useState<CivicIssue | null>(issues[0]);
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [activeStatus, setActiveStatus] = useState<string>("All");

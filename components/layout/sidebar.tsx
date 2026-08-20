@@ -39,13 +39,6 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
     { label: "Civic Live Map", href: "/map", icon: Map },
     { label: "My Ward 360°", href: "/ward", icon: Building2 },
     { label: "AI Smart Report", href: "/report", icon: PlusCircle, highlight: true },
-    {
-      label: "Officer Operations",
-      href: "/officer",
-      icon: ShieldCheck,
-      badge: activeOfficerTickets > 0 ? `${activeOfficerTickets} Open` : undefined,
-      isOfficerOnly: false,
-    },
     { label: "AI Civic Assistant", href: "/assistant", icon: Bot },
     {
       label: "Notifications",
@@ -188,16 +181,26 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
               <Award className="w-4 h-4 text-emerald-600" />
               <div>
                 <p className="text-[10px] text-on-surface-variant font-medium">Civic Karma</p>
-                <p className="font-bold text-on-surface">{user.karmaXP} XP</p>
+                <p className="font-bold text-on-surface">{user ? `${user.karmaXP} XP` : "0 XP"}</p>
               </div>
             </div>
-            <Link
-              href="/profile"
-              onClick={onCloseMobile}
-              className="text-[10px] font-bold text-primary-600 hover:underline"
-            >
-              Level {user.level}
-            </Link>
+            {user ? (
+              <Link
+                href="/profile"
+                onClick={onCloseMobile}
+                className="text-[10px] font-bold text-primary-600 hover:underline"
+              >
+                Level {user.level}
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                onClick={onCloseMobile}
+                className="text-[10px] font-bold text-primary-600 hover:underline"
+              >
+                Login to earn XP
+              </Link>
+            )}
           </div>
 
           <div className="flex items-center justify-between text-[10px] text-on-surface-variant px-1 font-medium">

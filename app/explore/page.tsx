@@ -110,7 +110,7 @@ function ExploreContent() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by keyword, street name, pothole, BWSSB, BESCOM, ticket #..."
+            placeholder="Search by keyword, street name, pothole, Water, Electricity, ticket #..."
             className="w-full pl-11 pr-10 py-3 text-xs sm:text-sm rounded-2xl bg-surface-container-low border border-surface-dim focus:outline-none focus:ring-2 focus:ring-primary-500 text-on-surface"
           />
           {searchQuery && (

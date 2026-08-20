@@ -14,6 +14,7 @@ export interface CivicIssue {
   };
   reporter: {
     name: string;
+    username: string;
     avatar: string;
     isVerified: boolean;
     karma: number;
@@ -118,11 +119,14 @@ export interface NotificationItem {
 export interface UserProfile {
   id: string;
   name: string;
+  username: string;
   email: string;
   phone: string;
+  gender?: string;
   avatar: string;
   ward: string;
   wardNumber: number;
+  department?: string;
   role: "citizen" | "officer" | "corporator";
   karmaXP: number;
   level: number;
@@ -145,40 +149,18 @@ export interface UserProfile {
   }[];
 }
 
-export const CURRENT_USER: UserProfile = {
-  id: "",
-  name: "Guest Citizen",
-  email: "",
-  phone: "",
-  avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80",
-  ward: "Shanti Nagar",
-  wardNumber: 42,
-  role: "citizen",
-  karmaXP: 0,
-  level: 1,
-  levelTitle: "Newcomer",
-  verifiedCitizen: false,
-  aadhaarLinked: false,
-  stats: {
-    issuesReported: 0,
-    issuesResolved: 0,
-    upvotesGiven: 0,
-    verificationVotes: 0,
-    civicImpactScore: 0,
-  },
-  badges: [],
-};
+
 
 export const WARD_42_DATA: WardInfo = {
-  name: "Shanti Nagar",
+  name: "Ward 63",
   number: 42,
-  city: "Bengaluru",
+  city: "Bhubaneswar",
   corporator: {
     name: "Smt. Rajeshwari N.",
     party: "Ward Citizen Council",
-    office: "Ward 42 Municipal Office, 80ft Road, Shanti Nagar",
+    office: "Ward 63 Municipal Office, 80ft Road, Ward 63",
     phone: "+91 80 2297 5500",
-    email: "corporator.ward42@bbmp.gov.in",
+    email: "corporator.ward63@bmc.gov.in",
     avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
   },
   healthScore: 84,
@@ -236,14 +218,15 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     status: "In Progress",
     urgency: "Critical",
     location: {
-      address: "4th Main Road, Behind City Market, Shanti Nagar",
-      ward: "Shanti Nagar",
+      address: "4th Main Road, Behind City Market, Ward 63",
+      ward: "Ward 63",
       wardNumber: 42,
       lat: 12.9611,
       lng: 77.5975,
     },
     reporter: {
       name: "Asmit Gupta",
+      username: "asmit_g",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
       isVerified: true,
       karma: 1450,
@@ -256,11 +239,11 @@ export const INITIAL_ISSUES: CivicIssue[] = [
       detectedObject: "Ruptured Underground Sewage Conduits",
       confidence: 96.8,
       estimatedSeverity: "Critical Bio-Hazard",
-      predictedDepartment: "Bengaluru Water Supply & Sewerage Board (BWSSB)",
+      predictedDepartment: "BMC Water Supply",
       suggestedSlaHours: 12,
       summary: "AI detected 15+ meters of high-risk sewage flooding. Automated alert dispatched to sanitary engineering rapid response unit.",
     },
-    assignedDepartment: "BWSSB Ward 42 Division",
+    assignedDepartment: "BMC Water Supply Ward 63 Division",
     assignedOfficer: {
       name: "Er. Ramesh Kulkarni",
       role: "Senior Sanitary Inspector",
@@ -283,7 +266,7 @@ export const INITIAL_ISSUES: CivicIssue[] = [
       {
         stage: "Assigned",
         timestamp: "2026-08-15T09:40:00Z",
-        note: "Ticket assigned to BWSSB Ward 42 Senior Inspector Ramesh Kulkarni.",
+        note: "Ticket assigned to BMC Ward 63 Senior Inspector Ramesh Kulkarni.",
         actor: "Municipal Dispatch",
       },
       {
@@ -312,14 +295,15 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     status: "Assigned",
     urgency: "Critical",
     location: {
-      address: "80 Feet Road, Near Metro Pillar 142, Shanti Nagar",
-      ward: "Shanti Nagar",
+      address: "80 Feet Road, Near Metro Pillar 142, Ward 63",
+      ward: "Ward 63",
       wardNumber: 42,
       lat: 12.9634,
       lng: 77.5998,
     },
     reporter: {
       name: "Pooja Hegde",
+      username: "pooja_h",
       avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80",
       isVerified: true,
       karma: 890,
@@ -331,11 +315,11 @@ export const INITIAL_ISSUES: CivicIssue[] = [
       detectedObject: "Deep Asphalt Cavity / Road Hazard",
       confidence: 98.2,
       estimatedSeverity: "High Traffic Accident Risk",
-      predictedDepartment: "BBMP Road Infrastructure & Maintenance",
+      predictedDepartment: "BMC Road Infrastructure",
       suggestedSlaHours: 24,
       summary: "AI detected 1.5m diameter, ~15cm deep pothole located in fast lane. Immediate barricading recommended.",
     },
-    assignedDepartment: "BBMP Infrastructure Division",
+    assignedDepartment: "BMC Road Infrastructure",
     assignedOfficer: {
       name: "V. Somanna",
       role: "Assistant Executive Engineer",
@@ -352,7 +336,7 @@ export const INITIAL_ISSUES: CivicIssue[] = [
       {
         stage: "AI Verified",
         timestamp: "2026-08-15T08:30:03Z",
-        note: "Geo-fenced against Ward 42 road asset register. Duplicate check passed.",
+        note: "Geo-fenced against Ward 63 road asset register. Duplicate check passed.",
         actor: "JanSeva AI Engine",
       },
       {
@@ -380,14 +364,15 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     status: "Resolved",
     urgency: "High",
     location: {
-      address: "8th Cross, Sector 3, Shanti Nagar",
-      ward: "Shanti Nagar",
+      address: "8th Cross, Sector 3, Ward 63",
+      ward: "Ward 63",
       wardNumber: 42,
       lat: 12.9589,
       lng: 77.5942,
     },
     reporter: {
       name: "Kiran Kumar",
+      username: "kiran_k",
       avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=400&auto=format&fit=crop&q=80",
       isVerified: true,
       karma: 620,
@@ -400,11 +385,11 @@ export const INITIAL_ISSUES: CivicIssue[] = [
       detectedObject: "Defective Streetlight Luminaires / Phase Fault",
       confidence: 94.5,
       estimatedSeverity: "Public Safety Risk",
-      predictedDepartment: "BESCOM / Municipal Lighting Cell",
+      predictedDepartment: "BMC Public Lighting",
       suggestedSlaHours: 24,
       summary: "Feeder pillar circuit fault detected affecting 12 consecutive streetlights.",
     },
-    assignedDepartment: "BESCOM Lighting Cell",
+    assignedDepartment: "BMC Public Lighting",
     assignedOfficer: {
       name: "Suresh Babu",
       role: "Junior Electrical Engineer",
@@ -421,7 +406,7 @@ export const INITIAL_ISSUES: CivicIssue[] = [
       {
         stage: "Assigned",
         timestamp: "2026-08-14T20:15:00Z",
-        note: "BESCOM night maintenance van dispatched.",
+        note: "BMC night maintenance van dispatched.",
         actor: "Operations Center",
       },
       {
@@ -456,14 +441,15 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     status: "AI Verified",
     urgency: "High",
     location: {
-      address: "Main Gate, Shanti Nagar Community Park, 2nd Stage",
-      ward: "Shanti Nagar",
+      address: "Main Gate, Ward 63 Community Park, 2nd Stage",
+      ward: "Ward 63",
       wardNumber: 42,
       lat: 12.9655,
       lng: 77.5921,
     },
     reporter: {
       name: "Dr. Ananya Roy",
+      username: "ananya_roy",
       avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80",
       isVerified: true,
       karma: 1120,
@@ -475,7 +461,7 @@ export const INITIAL_ISSUES: CivicIssue[] = [
       detectedObject: "Mixed Commercial Solid Waste / Black Spot",
       confidence: 97.4,
       estimatedSeverity: "Sanitary Violation & Nuisance",
-      predictedDepartment: "BBMP Solid Waste Management (SWM)",
+      predictedDepartment: "BMC Sanitation",
       suggestedSlaHours: 8,
       summary: "AI recognized commercial packaging. Recommended immediate cleanup compactor and CCTV marshaling installation.",
     },
@@ -512,14 +498,15 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     status: "In Progress",
     urgency: "Critical",
     location: {
-      address: "Opposite BESCOM Substation, 1st Cross, Shanti Nagar",
-      ward: "Shanti Nagar",
+      address: "Opposite BMC Substation, 1st Cross, Ward 63",
+      ward: "Ward 63",
       wardNumber: 42,
       lat: 12.9602,
       lng: 77.5961,
     },
     reporter: {
       name: "Mohit Deshmukh",
+      username: "mohit_d",
       avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80",
       isVerified: true,
       karma: 450,
@@ -531,11 +518,11 @@ export const INITIAL_ISSUES: CivicIssue[] = [
       detectedObject: "Pressurized Potable Water Main Rupture",
       confidence: 99.1,
       estimatedSeverity: "High Resource Loss & Scarcity Risk",
-      predictedDepartment: "BWSSB Water Supply Division",
+      predictedDepartment: "BMC Water Supply",
       suggestedSlaHours: 6,
       summary: "AI calculated loss rate ~400 liters/min. Valve shutoff protocol initiated.",
     },
-    assignedDepartment: "BWSSB Water Supply Division",
+    assignedDepartment: "BMC Water Supply",
     assignedOfficer: {
       name: "Er. Manjunath Swamy",
       role: "Water Supply Engineer",
@@ -552,7 +539,7 @@ export const INITIAL_ISSUES: CivicIssue[] = [
       {
         stage: "AI Verified",
         timestamp: "2026-08-15T10:00:03Z",
-        note: "Emergency alert sent to BWSSB Central Control.",
+        note: "Emergency alert sent to BMC Central Control.",
         actor: "JanSeva AI Engine",
       },
       {
@@ -586,14 +573,15 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     status: "Resolved",
     urgency: "Critical",
     location: {
-      address: "Double Road & Lalbagh Road Junction, Shanti Nagar",
-      ward: "Shanti Nagar",
+      address: "Double Road & Lalbagh Road Junction, Ward 63",
+      ward: "Ward 63",
       wardNumber: 42,
       lat: 12.9554,
       lng: 77.5933,
     },
     reporter: {
       name: "Deepak Sharma",
+      username: "deepak_sh",
       avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&auto=format&fit=crop&q=80",
       isVerified: true,
       karma: 780,
@@ -606,7 +594,7 @@ export const INITIAL_ISSUES: CivicIssue[] = [
       detectedObject: "Traffic Light Controller Desynchronization",
       confidence: 96.0,
       estimatedSeverity: "Severe Congestion Hazard",
-      predictedDepartment: "Bengaluru Traffic Police (BTP)",
+      predictedDepartment: "Bhubaneswar Traffic Police (BTP)",
       suggestedSlaHours: 2,
       summary: "Signal PLC controller rebooted remotely and traffic wardens deployed for manual override.",
     },
@@ -655,14 +643,15 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     status: "In Progress",
     urgency: "Moderate",
     location: {
-      address: "Near St. Joseph High School, 3rd Cross, Shanti Nagar",
-      ward: "Shanti Nagar",
+      address: "Near St. Joseph High School, 3rd Cross, Ward 63",
+      ward: "Ward 63",
       wardNumber: 42,
       lat: 12.9641,
       lng: 77.5982,
     },
     reporter: {
       name: "Sneha Reddy",
+      username: "sneha_r",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
       isVerified: true,
       karma: 530,
@@ -674,11 +663,11 @@ export const INITIAL_ISSUES: CivicIssue[] = [
       detectedObject: "Hazardous Tree Limb / Overhead Wire Entanglement",
       confidence: 95.7,
       estimatedSeverity: "Moderate Risk to Pedestrians",
-      predictedDepartment: "BBMP Forest & Horticulture Cell",
+      predictedDepartment: "BMC Parks & Gardens",
       suggestedSlaHours: 18,
       summary: "Tree pruning team with hydraulic lift scheduled.",
     },
-    assignedDepartment: "BBMP Horticulture & Forest Wing",
+    assignedDepartment: "BMC Parks & Gardens",
     assignedOfficer: {
       name: "Praveen Gowda",
       role: "Horticulture Supervisor",
@@ -701,7 +690,7 @@ export const INITIAL_ISSUES: CivicIssue[] = [
       {
         stage: "In Progress",
         timestamp: "2026-08-15T11:00:00Z",
-        note: "Pruning branch in coordination with BESCOM power shutdown.",
+        note: "Pruning branch in coordination with TPCODL power shutdown.",
         actor: "Praveen Gowda",
       },
     ],
@@ -723,14 +712,15 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     status: "Assigned",
     urgency: "Moderate",
     location: {
-      address: "Rose Garden Park, 6th Cross, Shanti Nagar",
-      ward: "Shanti Nagar",
+      address: "Rose Garden Park, 6th Cross, Ward 63",
+      ward: "Ward 63",
       wardNumber: 42,
       lat: 12.9572,
       lng: 77.5958,
     },
     reporter: {
       name: "Asmit Gupta",
+      username: "asmit_g",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
       isVerified: true,
       karma: 1450,
@@ -742,11 +732,11 @@ export const INITIAL_ISSUES: CivicIssue[] = [
       detectedObject: "Damaged Public Playground Equipment",
       confidence: 93.8,
       estimatedSeverity: "Child Injury Safety Hazard",
-      predictedDepartment: "BBMP Parks & Gardens Division",
+      predictedDepartment: "BMC Parks & Gardens",
       suggestedSlaHours: 48,
       summary: "Equipment replacement requisition auto-filed with parks maintenance budget.",
     },
-    assignedDepartment: "BBMP Parks Division",
+    assignedDepartment: "BMC Parks & Gardens",
     timeline: [
       {
         stage: "Reported",
@@ -787,7 +777,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: "notif-2",
     title: "Community Upvote Milestone! 🔥",
-    message: "Your report on 4th Main Drainage reached 140+ neighbor upvotes and has been boosted to Ward 42 Priority #1.",
+    message: "Your report on 4th Main Drainage reached 140+ neighbor upvotes and has been boosted to Ward 63 Priority #1.",
     type: "upvote",
     timestamp: "2026-08-15T10:45:00Z",
     read: false,
@@ -797,7 +787,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: "notif-3",
     title: "Issue Resolved: Streetlights on 8th Cross",
-    message: "BESCOM restored 12 streetlights. Please cast your citizen verification vote to confirm fix!",
+    message: "BMC restored 12 streetlights. Please cast your citizen verification vote to confirm fix!",
     type: "status",
     timestamp: "2026-08-15T01:15:00Z",
     read: true,
@@ -807,7 +797,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: "notif-4",
     title: "New Civic Badge Unlocked: Ward Hero 🏆",
-    message: "You've earned +250 Karma XP for active contributions to Ward 42 cleanliness metrics.",
+    message: "You've earned +250 Karma XP for active contributions to Ward 63 cleanliness metrics.",
     type: "badge",
     timestamp: "2026-08-14T18:00:00Z",
     read: true,
@@ -825,9 +815,9 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
 ];
 
 export const TOP_LEADERBOARD = [
-  { rank: 1, name: "Asmit Gupta", ward: "Ward 42", karma: 1450, badge: "Civic Champion", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" },
-  { rank: 2, name: "Dr. Ananya Roy", ward: "Ward 42", karma: 1120, badge: "Green Guardian", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80" },
-  { rank: 3, name: "Pooja Hegde", ward: "Ward 42", karma: 890, badge: "Urban Scout", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" },
+  { rank: 1, name: "Asmit Gupta", ward: "Ward 63", karma: 1450, badge: "Civic Champion", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" },
+  { rank: 2, name: "Dr. Ananya Roy", ward: "Ward 63", karma: 1120, badge: "Green Guardian", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80" },
+  { rank: 3, name: "Pooja Hegde", ward: "Ward 63", karma: 890, badge: "Urban Scout", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" },
   { rank: 4, name: "Deepak Sharma", ward: "Ward 41", karma: 780, badge: "Transit Ally", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80" },
-  { rank: 5, name: "Kiran Kumar", ward: "Ward 42", karma: 620, badge: "Safety Pioneer", avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&auto=format&fit=crop&q=80" },
+  { rank: 5, name: "Kiran Kumar", ward: "Ward 63", karma: 620, badge: "Safety Pioneer", avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&auto=format&fit=crop&q=80" },
 ];

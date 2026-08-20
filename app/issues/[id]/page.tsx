@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
+import { getIssueById, upvoteIssue, addComment as addCommentApi } from "@/lib/api/issues";
+import { CivicIssue } from "@/lib/data/mock-data";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/status-badge";
 import {
   ArrowLeft,
@@ -28,12 +30,32 @@ export default function IssueDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const { issues, toggleUpvote, voteVerification, user, addComment } = useApp();
+  const { voteVerification, user } = useApp();
 
-  const issue = issues.find((i) => i.id === id) || issues[0];
+  const [issue, setIssue] = useState<CivicIssue | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  React.useEffect(() => {
+    getIssueById(id).then((data) => {
+      if (data) setIssue(data);
+      setIsLoading(false);
+    });
+  }, [id]);
+
   const [commentText, setCommentText] = useState("");
   const [copied, setCopied] = useState(false);
   const [activePhotoTab, setActivePhotoTab] = useState<"reported" | "resolved">("reported");
+
+  // Local optimistic state for upvoting
+  const [localUpvotes, setLocalUpvotes] = useState(0);
+  const [localIsUpvoted, setLocalIsUpvoted] = useState(false);
+
+  React.useEffect(() => {
+    if (issue) {
+      setLocalUpvotes(issue.upvotes);
+      setLocalIsUpvoted(issue.isUpvoted || false);
+    }
+  }, [issue]);
 
   // Sample discussion comments
   const [comments, setComments] = useState([
@@ -42,7 +64,7 @@ export default function IssueDetailPage() {
       author: "Pooja Hegde",
       avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80",
       role: "Ward 42 Resident",
-      text: "Thanks for reporting this! The smell was terrible yesterday evening. Glad to see the BWSSB team on site now.",
+      text: "Thanks for reporting this! The smell was terrible yesterday evening. Glad to see the BMC Water team on site now.",
       timestamp: "2026-08-15T10:30:00Z",
       likes: 14,
     },
@@ -58,21 +80,32 @@ export default function IssueDetailPage() {
     },
   ]);
 
-  const handlePostComment = (e: React.FormEvent) => {
+  const handleToggleUpvote = async () => {
+    if (!issue) return;
+    const wasUpvoted = localIsUpvoted;
+    setLocalIsUpvoted(!wasUpvoted);
+    setLocalUpvotes(prev => wasUpvoted ? prev - 1 : prev + 1);
+
+    await upvoteIssue(issue.id);
+  };
+
+  const handlePostComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (commentText.trim()) {
+    if (commentText.trim() && issue) {
       const newC = {
         id: `c-${Date.now()}`,
-        author: user.name,
-        avatar: user.avatar,
-        role: user.role === "officer" ? "Senior Ward Officer" : "Ward 42 Citizen",
-        isOfficer: user.role === "officer",
+        author: user?.name || "Guest Citizen",
+        avatar: user?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100",
+        role: user?.role === "officer" ? "Senior Ward Officer" : "Ward 42 Citizen",
+        isOfficer: user?.role === "officer",
         text: commentText.trim(),
         timestamp: new Date().toISOString(),
         likes: 1,
       };
       setComments([...comments, newC]);
-      addComment(issue.id, commentText.trim());
+      
+      await addCommentApi(issue.id, commentText.trim());
+      
       setCommentText("");
     }
   };
@@ -84,6 +117,23 @@ export default function IssueDetailPage() {
       setTimeout(() => setCopied(false), 2000);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-20">
+        <div className="w-8 h-8 rounded-full border-4 border-primary-200 border-t-primary-600 animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!issue) {
+    return (
+      <div className="text-center py-20">
+        <h2 className="text-xl font-bold">Issue not found</h2>
+        <button onClick={() => router.back()} className="mt-4 text-primary-600 underline">Go Back</button>
+      </div>
+    );
+  }
 
   const stages = ["Reported", "AI Verified", "Assigned", "In Progress", "Resolved"];
   const currentStageIndex = stages.indexOf(issue.status);
@@ -253,16 +303,16 @@ export default function IssueDetailPage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => toggleUpvote(issue.id)}
+              onClick={handleToggleUpvote}
               className={cn(
                 "flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold text-xs sm:text-sm transition-all shadow-sm",
-                issue.isUpvoted
+                localIsUpvoted
                   ? "bg-primary-600 text-white shadow-md shadow-primary-600/30 scale-105"
                   : "bg-surface-container-low text-on-surface hover:bg-surface-container"
               )}
             >
-              <ThumbsUp className={cn("w-4 h-4", issue.isUpvoted ? "fill-white" : "")} />
-              <span>{issue.upvotes} Community Upvotes</span>
+              <ThumbsUp className={cn("w-4 h-4", localIsUpvoted ? "fill-white" : "")} />
+              <span>{localUpvotes} Community Upvotes</span>
             </button>
 
             <span className="text-xs text-on-surface-variant font-medium">
@@ -278,8 +328,10 @@ export default function IssueDetailPage() {
               className="w-8 h-8 rounded-full object-cover"
             />
             <div className="text-left">
-              <p className="text-xs font-bold text-on-surface">{issue.reporter.name}</p>
-              <p className="text-[10px] text-emerald-700 font-semibold">{issue.reporter.karma} Karma XP</p>
+              <p className="text-xs font-bold text-on-surface">@{issue.reporter.username || issue.reporter.name}</p>
+              <p className="text-[10px] text-emerald-700 font-semibold">
+                {(user && (issue.reporter.username === user.username || issue.reporter.name === user.name)) ? user.karmaXP : issue.reporter.karma} Karma XP
+              </p>
             </div>
           </div>
         </div>
@@ -461,8 +513,8 @@ export default function IssueDetailPage() {
         {/* New Comment Input */}
         <form onSubmit={handlePostComment} className="flex gap-2.5">
           <img
-            src={user.avatar}
-            alt={user.name}
+            src={user?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}
+            alt={user?.name || "Guest"}
             className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-primary-100"
           />
           <div className="flex-1 flex gap-2">
@@ -470,12 +522,13 @@ export default function IssueDetailPage() {
               type="text"
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Add your neighbor update or question..."
-              className="flex-1 px-4 py-2.5 text-xs rounded-2xl bg-surface-container-low border border-surface-dim focus:outline-none focus:ring-2 focus:ring-primary-500 text-on-surface"
+              placeholder={user ? "Add your neighbor update or question..." : "Please login to join the discussion"}
+              disabled={!user}
+              className="flex-1 px-4 py-2.5 text-xs rounded-2xl bg-surface-container-low border border-surface-dim focus:outline-none focus:ring-2 focus:ring-primary-500 text-on-surface disabled:opacity-60 disabled:cursor-not-allowed"
             />
             <button
               type="submit"
-              disabled={!commentText.trim()}
+              disabled={!commentText.trim() || !user}
               className="px-5 py-2.5 rounded-2xl bg-primary-600 hover:bg-primary-700 disabled:opacity-40 text-white font-bold text-xs shadow-md shadow-primary-600/30 transition-all flex items-center gap-1.5"
             >
               <Send className="w-3.5 h-3.5" />

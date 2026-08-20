@@ -3,31 +3,34 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/context/app-context";
+import { getFeed } from "@/lib/api/issues";
+import { CivicIssue } from "@/lib/data/mock-data";
 import { IssueCard } from "@/components/feed/issue-card";
 import { WardStatsWidget } from "@/components/feed/ward-stats-widget";
 import { LeaderboardWidget } from "@/components/feed/leaderboard-widget";
 import { ActivePollWidget } from "@/components/feed/active-poll-widget";
 import { CategoryPill } from "@/components/ui/category-pill";
-import {
-  Sparkles,
-  Search,
-  Filter,
-  PlusCircle,
-  TrendingUp,
-  MapPin,
-  Camera,
-  Layers,
-  ArrowUpDown
-} from "lucide-react";
+import { Award, Camera, MapPin, Search, Filter, TrendingUp, AlertCircle, CheckCircle2, ChevronRight, X, Clock, Settings, LogOut, Sparkles, Layers, ArrowUpDown } from "lucide-react";
+import { GUEST_USER } from "@/lib/data/default-location";
 import { cn } from "@/lib/utils";
 
 export default function FeedPage() {
-  const { issues, user } = useApp();
+  const { user } = useApp();
+
+  const [issues, setIssues] = useState<CivicIssue[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  React.useEffect(() => {
+    getFeed().then((data) => {
+      setIssues(data);
+      setIsLoading(false);
+    });
+  }, []);
 
   const [activeTab, setActiveTab] = useState<"all" | "ward" | "critical" | "resolved" | "in_progress">("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"upvotes" | "recent" | "urgency">("upvotes");
+  const [sortBy, setSortBy] = useState<"upvotes" | "recent" | "urgency">("recent");
 
   const categories = ["All", "Sanitation", "Roads", "Water", "Electricity", "Waste", "Traffic", "Parks"];
 
@@ -85,7 +88,7 @@ export default function FeedPage() {
         </div>
 
         <Link
-          href="/report"
+          href={user ? "/report" : "/login"}
           className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-primary-600 to-indigo-700 hover:brightness-110 text-white font-headline font-bold text-xs shadow-lg shadow-primary-600/30 hover:scale-102 active:scale-98 transition-all shrink-0"
         >
           <Camera className="w-4 h-4" />
@@ -96,12 +99,12 @@ export default function FeedPage() {
       {/* Quick Report Bar for Citizens */}
       <div className="rounded-3xl bg-white border border-surface-container-high p-4 shadow-soft flex items-center gap-3">
         <img
-          src={user.avatar}
-          alt={user.name}
+          src={user?.avatar || GUEST_USER.avatar}
+          alt={user?.name || GUEST_USER.name}
           className="w-10 h-10 rounded-full object-cover ring-2 ring-primary-100 shrink-0"
         />
         <Link
-          href="/report"
+          href={user ? "/report" : "/login"}
           className="flex-1 px-4 py-2.5 rounded-2xl bg-surface-container-low hover:bg-surface-container border border-surface-dim text-xs text-on-surface-variant font-medium transition-colors flex items-center justify-between"
         >
           <span>What civic problem did you spot in Ward 42 today?</span>
@@ -190,7 +193,12 @@ export default function FeedPage() {
         
         {/* Left 2 Columns: Feed Stream */}
         <div className="lg:col-span-2 space-y-6">
-          {filteredIssues.length === 0 ? (
+          {isLoading ? (
+            <div className="rounded-3xl bg-white border border-surface-container-high p-12 text-center">
+              <div className="w-8 h-8 rounded-full border-4 border-primary-200 border-t-primary-600 animate-spin mx-auto mb-3"></div>
+              <p className="text-sm font-semibold text-on-surface-variant">Loading community feed...</p>
+            </div>
+          ) : filteredIssues.length === 0 ? (
             <div className="rounded-3xl bg-white border border-surface-container-high p-12 text-center space-y-3">
               <div className="w-12 h-12 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center mx-auto font-bold">
                 🔍

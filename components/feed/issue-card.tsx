@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { CivicIssue } from "@/lib/data/mock-data";
-import { useApp } from "@/lib/context/app-context";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/status-badge";
+import { upvoteIssue, downvoteIssue } from "@/lib/api/issues";
 import {
   ThumbsUp,
   MessageSquare,
@@ -24,9 +24,11 @@ interface IssueCardProps {
 }
 
 export function IssueCard({ issue }: IssueCardProps) {
-  const { toggleUpvote } = useApp();
   const [copied, setCopied] = useState(false);
   const [showResolvedPhoto, setShowResolvedPhoto] = useState(false);
+
+  const [localUpvotes, setLocalUpvotes] = useState(issue.upvotes);
+  const [localIsUpvoted, setLocalIsUpvoted] = useState(issue.isUpvoted);
 
   const handleShare = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -38,10 +40,19 @@ export function IssueCard({ issue }: IssueCardProps) {
     }
   };
 
-  const handleUpvote = (e: React.MouseEvent) => {
+  const handleUpvote = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toggleUpvote(issue.id);
+    
+    const wasUpvoted = localIsUpvoted;
+    setLocalIsUpvoted(!wasUpvoted);
+    setLocalUpvotes(prev => wasUpvoted ? prev - 1 : prev + 1);
+
+    if (wasUpvoted) {
+      await downvoteIssue(issue.id);
+    } else {
+      await upvoteIssue(issue.id);
+    }
   };
 
   return (
@@ -50,15 +61,17 @@ export function IssueCard({ issue }: IssueCardProps) {
         {/* Card Header: Author, Location, Date, Status */}
         <div className="flex items-start justify-between gap-3 mb-3.5">
           <div className="flex items-center gap-3">
-            <img
-              src={issue.reporter.avatar}
-              alt={issue.reporter.name}
-              className="w-10 h-10 rounded-full object-cover ring-2 ring-primary-100"
-            />
+            <div className="relative w-8 h-8 rounded-full overflow-hidden shrink-0 border border-surface-container-high bg-surface-container-low shadow-sm">
+              <img
+                src={issue.reporter.avatar}
+                alt={issue.reporter.username || issue.reporter.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-xs sm:text-sm font-bold text-on-surface font-headline">
-                  {issue.reporter.name}
+                <span className="text-xs font-bold text-on-surface leading-none hover:underline cursor-pointer">
+                  @{issue.reporter.username || issue.reporter.name}
                 </span>
                 {issue.reporter.isVerified && (
                   <span title="Verified Resident of Ward 42">
@@ -171,13 +184,13 @@ export function IssueCard({ issue }: IssueCardProps) {
             onClick={handleUpvote}
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold transition-all select-none",
-              issue.isUpvoted
+              localIsUpvoted
                 ? "bg-primary-600 text-white shadow-md shadow-primary-600/30 scale-105"
                 : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
             )}
           >
-            <ThumbsUp className={cn("w-3.5 h-3.5", issue.isUpvoted ? "fill-white" : "")} />
-            <span>{issue.upvotes}</span>
+            <ThumbsUp className={cn("w-3.5 h-3.5", localIsUpvoted ? "fill-white" : "")} />
+            <span>{localUpvotes}</span>
           </button>
 
           {/* Comments Link */}
