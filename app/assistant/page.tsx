@@ -41,120 +41,23 @@ export default function AssistantPage() {
     }
   };
 
-const handleVoiceSim = async () => {
-  if (isRecording) {
-    return;
-  }
-
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-    });
-
-    const mediaRecorder = new MediaRecorder(stream);
-    const audioChunks: BlobPart[] = [];
-
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        audioChunks.push(event.data);
-      }
-    };
-
-    mediaRecorder.onstop = async () => {
-      stream.getTracks().forEach((track) => track.stop());
-
-      const audioBlob = new Blob(audioChunks, {
-        type: "audio/webm",
-      });
-
+  const handleVoiceSim = () => {
+    if (!isRecording) {
+      setIsRecording(true);
+      setTimeout(() => {
+        setIsRecording(false);
+        sendChatMessage("Can you check the current water supply timings and pressure in Shanti Nagar Ward 42?");
+      }, 2400);
+    } else {
       setIsRecording(false);
+    }
+  };
 
-      const chatbotUrl =
-        process.env.NEXT_PUBLIC_CHATBOT_URL ||
-        "https://civic-issue-chatbot.onrender.com";
-
-      const formData = new FormData();
-
-      formData.append(
-        "audio",
-        audioBlob,
-        "voice-message.webm"
-      );
-
-      try {
-        const response = await fetch(
-          `${chatbotUrl}/chat/voice`,
-          {
-            method: "POST",
-            body: formData,
-          }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data.error || "Voice request failed"
-          );
-        }
-
-        if (data.transcription) {
-          setChatMessages((prev: ChatMessage[]) => [
-            ...prev,
-            {
-              id: `msg-${Date.now()}`,
-              sender: "user",
-              text: data.transcription,
-              timestamp: new Date().toISOString(),
-            },
-          ]);
-        }
-
-        if (data.answer) {
-          setChatMessages((prev: ChatMessage[]) => [
-            ...prev,
-            {
-              id: `msg-${Date.now() + 1}`,
-              sender: "assistant",
-              text: data.answer,
-              timestamp: new Date().toISOString(),
-            },
-          ]);
-        }
-      } catch (error) {
-        console.error("Voice chatbot error:", error);
-        setChatMessages((prev: ChatMessage[]) => [
-          ...prev,
-          {
-            id: `msg-${Date.now()}`,
-            sender: "assistant",
-            text: "Sorry, I couldn't process your voice message.",
-            timestamp: new Date().toISOString(),
-          },
-        ]);
-      }
-    };
-
-    setIsRecording(true);
-    mediaRecorder.start();
-
-    setTimeout(() => {
-      if (mediaRecorder.state === "recording") {
-        mediaRecorder.stop();
-      }
-    }, 5000);
-
-  } catch (error) {
-    console.error("Microphone error:", error);
-    setIsRecording(false);
-    alert("Unable to access your microphone.");
-  }
-};
   const quickPrompts = [
     "📸 How do I report a broken road with AI?",
     "🔍 Status of sewage issue #JS-101",
     "💧 Ward 42 Drinking Water Schedule",
-    "What is Janseva?",
+    "🏛️ Who is my Ward Corporator and office address?",
     "⚡ BESCOM Streetlight power outage helpline",
   ];
 
