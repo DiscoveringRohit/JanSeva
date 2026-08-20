@@ -81,10 +81,7 @@ export default function AssistantPage() {
     console.error("Microphone error:", error);
     setIsRecording(false);
 
-   } catch (error) {
-  console.error("Microphone error:", error);
-  setIsRecording(false);
-}
+  
 };
   const quickPrompts = [
     "📸 How do I report a broken road with AI?",
