@@ -1091,7 +1091,7 @@ export function AppProvider({
 
   try {
     const response = await fetch(
-      "https://civic-issue-chatbot.onrender.com/chat/",
+      "https://civic-issue-chatbot.onrender.com/chat",
       {
         method: "POST",
         headers: {
