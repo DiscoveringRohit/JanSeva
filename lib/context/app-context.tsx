@@ -1098,7 +1098,7 @@ export function AppProvider({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message: text,
+          query: text,
         }),
       }
     );
@@ -1112,7 +1112,7 @@ export function AppProvider({
     const botMsg: ChatMessage = {
       id: `msg-${Date.now() + 1}`,
       sender: "assistant",
-      text: data.response,
+      text: data.answer,
       timestamp: new Date().toISOString(),
     };
 
