@@ -27,6 +27,12 @@ export function UserAvatarBadge({ user, onLogout }: UserAvatarBadgeProps) {
     );
   }
 
+  const displayName = user.name || user.username || (user as any).full_name || (user as any).profile?.full_name || "User";
+  const firstName = displayName.split(" ")[0];
+  const karmaXP = user.karmaXP ?? (user as any).karma_xp ?? 10;
+  const level = user.level ?? 1;
+  const levelTitle = user.levelTitle || (user as any).level_title || "Active Citizen";
+
   return (
     <div className="relative">
       <button
@@ -37,24 +43,24 @@ export function UserAvatarBadge({ user, onLogout }: UserAvatarBadgeProps) {
         {user.avatar ? (
           <img
             src={user.avatar}
-            alt={user.name}
+            alt={displayName}
             className="w-7 h-7 rounded-full object-cover ring-2 ring-primary-500/20"
           />
         ) : (
           <div className="w-7 h-7 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-headline font-bold text-xs ring-2 ring-primary-500/20">
-            {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+            {displayName.charAt(0).toUpperCase()}
           </div>
         )}
         <div className="hidden lg:flex flex-col items-start text-left">
           <div className="flex items-center gap-1">
-            <span className="text-xs font-bold text-on-surface leading-none">{user.name.split(" ")[0]}</span>
+            <span className="text-xs font-bold text-on-surface leading-none">{firstName}</span>
             <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-primary-100 text-primary-800 capitalize">
               {user.role}
             </span>
           </div>
           <span className="text-[10px] font-semibold text-emerald-600 flex items-center gap-0.5">
             <Flame className="w-2.5 h-2.5" />
-            {user.karmaXP} XP
+            {karmaXP} XP
           </span>
         </div>
         <ChevronDown className="w-3.5 h-3.5 text-on-surface-variant" />
@@ -63,11 +69,11 @@ export function UserAvatarBadge({ user, onLogout }: UserAvatarBadgeProps) {
       {showRoleDropdown && (
         <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white p-3 shadow-xl border border-surface-container-high z-50 animate-fadeIn">
           <div className="pb-2 border-b border-surface-dim">
-            <p className="text-xs font-bold text-on-surface">{user.name}</p>
+            <p className="text-xs font-bold text-on-surface">{displayName}</p>
             <p className="text-[11px] text-on-surface-variant">{user.email}</p>
             <div className="mt-1 flex items-center justify-between text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-              <span>Level {user.level} {user.levelTitle}</span>
-              <span>{user.karmaXP} XP</span>
+              <span>Level {level} {levelTitle}</span>
+              <span>{karmaXP} XP</span>
             </div>
           </div>
 

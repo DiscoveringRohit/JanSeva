@@ -61,7 +61,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const response = await authApi.sendOtp(identifier, 'email');
-      if (response.success || response.message) {
+      if (response.success) {
         setSuccessMessage("OTP sent successfully!");
         setTimeout(() => {
           setSuccessMessage(null);

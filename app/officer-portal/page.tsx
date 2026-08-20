@@ -61,8 +61,8 @@ export default function OfficerPortalPage() {
 
     setIsLoading(true);
     try {
-      const res = await authApi.sendOtp(phone);
-      if (res.success || res.message) {
+      const res = await authApi.sendOtp(email || phone, 'email');
+      if (res.success) {
         setSuccessMessage("OTP sent successfully!");
         setTimeout(() => {
           setSuccessMessage(null);

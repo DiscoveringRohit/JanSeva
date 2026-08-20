@@ -9,14 +9,22 @@ const getApiUrl = () => {
   return "http://127.0.0.1:8000";
 };
 
+const getAuthHeaders = (extraHeaders: Record<string, string> = {}) => {
+  const headers: Record<string, string> = { ...extraHeaders };
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("janseva_token");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  }
+  return headers;
+};
+
 export async function submitIssue(payload: any) {
   try {
     const response = await fetch(`${getApiUrl()}/api/issues/`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        // Need auth token here if backend requires it, assuming it's handled by cookies or we need to pass it
-      },
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(payload),
     });
     
@@ -40,7 +48,9 @@ export async function submitIssue(payload: any) {
 
 export async function getFeed(wardId?: number): Promise<CivicIssue[]> {
   try {
-    const response = await fetch(`${getApiUrl()}/api/issues/${wardId ? `?ward=${wardId}` : ""}`);
+    const response = await fetch(`${getApiUrl()}/api/issues/${wardId ? `?ward=${wardId}` : ""}`, {
+      headers: getAuthHeaders(),
+    });
     if (!response.ok) throw new Error("Fallback to mock");
     const data = await response.json();
     return data;
@@ -56,7 +66,9 @@ export async function getFeed(wardId?: number): Promise<CivicIssue[]> {
 
 export async function getIssueById(id: string): Promise<CivicIssue | undefined> {
   try {
-    const response = await fetch(`${getApiUrl()}/api/issues/${id}/`);
+    const response = await fetch(`${getApiUrl()}/api/issues/${id}/`, {
+      headers: getAuthHeaders(),
+    });
     if (!response.ok) throw new Error("Fallback to mock");
     const data = await response.json();
     return data;
@@ -70,6 +82,7 @@ export async function upvoteIssue(id: string): Promise<boolean> {
   try {
     const response = await fetch(`${getApiUrl()}/api/issues/${id}/upvote/`, {
       method: "POST",
+      headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error("Fallback to mock");
     return true;
@@ -82,8 +95,9 @@ export async function upvoteIssue(id: string): Promise<boolean> {
 
 export async function downvoteIssue(id: string): Promise<boolean> {
   try {
-    const response = await fetch(`${getApiUrl()}/api/issues/${id}/downvote/`, {
+    const response = await fetch(`${getApiUrl()}/api/issues/${id}/upvote/`, {
       method: "POST",
+      headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error("Fallback to mock");
     return true;
@@ -98,9 +112,7 @@ export async function addComment(issueId: string, text: string): Promise<boolean
   try {
     const response = await fetch(`${getApiUrl()}/api/issues/${issueId}/comments/`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ text }),
     });
     if (!response.ok) throw new Error("Fallback to mock");

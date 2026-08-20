@@ -92,8 +92,8 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       const res = await authApi.sendOtp(email, 'email');
-      if (res.success || res.message) {
-        setSuccessMessage("OTP sent successfully!");
+      if (res.success) {
+        setSuccessMessage("OTP sent to your email!");
         setTimeout(() => {
           setSuccessMessage(null);
           setStep(2);
@@ -119,9 +119,9 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       const res = await authApi.verifyOtp(email, otp);
-      if (res.success || (res.message && res.message.includes("success"))) {
+      if (res.success) {
         setSuccessMessage("OTP verified!");
-        setUsername(phone); // default username suggestion
+        setUsername(email ? email.split('@')[0] : phone);
         setTimeout(() => {
           setSuccessMessage(null);
           setStep(3);
