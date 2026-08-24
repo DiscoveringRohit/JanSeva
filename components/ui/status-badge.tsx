@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { CheckCircle2, Clock, AlertTriangle, Sparkles, Wrench, ShieldCheck } from "lucide-react";
 
 interface StatusBadgeProps {
-  status: "Reported" | "AI Verified" | "Assigned" | "In Progress" | "Resolved";
+  status: "Reported" | "AI Verified" | "Assigned" | "In Progress" | "Resolved" | "Pending Citizen Verification" | "Verified Resolved";
   className?: string;
   size?: "sm" | "md" | "lg";
 }
@@ -16,6 +16,7 @@ export function StatusBadge({ status, className, size = "md" }: StatusBadgeProps
   };
 
   switch (status) {
+    case "Verified Resolved":
     case "Resolved":
       return (
         <span
@@ -26,7 +27,20 @@ export function StatusBadge({ status, className, size = "md" }: StatusBadgeProps
           )}
         >
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-          Resolved
+          {status === "Verified Resolved" ? "Verified Resolved" : "Resolved"}
+        </span>
+      );
+    case "Pending Citizen Verification":
+      return (
+        <span
+          className={cn(
+            "inline-flex items-center rounded-full bg-orange-50 text-orange-700 border border-orange-200/80 font-medium tracking-wide shadow-sm",
+            sizeClasses[size],
+            className
+          )}
+        >
+          <AlertTriangle className="w-3.5 h-3.5 text-orange-600" />
+          Verification Pending
         </span>
       );
     case "In Progress":

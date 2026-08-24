@@ -38,7 +38,8 @@ export function OfficerKanban({ departmentFilter }: { departmentFilter?: string 
     { title: "New AI Triage", status: "AI Verified", count: issues.filter((i) => i.status === "AI Verified").length },
     { title: "Dispatched Squad", status: "Assigned", count: issues.filter((i) => i.status === "Assigned").length },
     { title: "Field Work Active", status: "In Progress", count: issues.filter((i) => i.status === "In Progress").length },
-    { title: "Resolved & Closed", status: "Resolved", count: issues.filter((i) => i.status === "Resolved").length },
+    { title: "Pending Verification", status: "Pending Citizen Verification", count: issues.filter((i) => i.status === "Pending Citizen Verification").length },
+    { title: "Verified Resolved", status: "Verified Resolved", count: issues.filter((i) => i.status === "Verified Resolved").length },
   ];
 
   const handleOpenAction = (issue: CivicIssue, defaultNextStatus: CivicIssue["status"]) => {
@@ -47,8 +48,8 @@ export function OfficerKanban({ departmentFilter }: { departmentFilter?: string 
     setStatusUpdateNote(
       defaultNextStatus === "In Progress"
         ? "Assigned rapid response field squad. Excavation & repair equipment active on site."
-        : defaultNextStatus === "Resolved"
-        ? "Work completed and verified with quality standards. Flow/fixture fully restored."
+        : defaultNextStatus === "Pending Citizen Verification"
+        ? "Work completed by municipal squad. Requesting citizen verification."
         : "Dispatched to department specialist."
     );
     setShowModal(true);
@@ -116,7 +117,7 @@ export function OfficerKanban({ departmentFilter }: { departmentFilter?: string 
             </span>
           </div>
           <p className="text-2xl font-black text-rose-600 font-headline">
-            {issues.filter((i) => i.urgency === "Critical" && i.status !== "Resolved").length}
+            {issues.filter((i) => i.urgency === "Critical" && i.status !== "Pending Citizen Verification" && i.status !== "Verified Resolved").length}
           </p>
           <p className="text-[11px] text-rose-600 font-semibold mt-1">
             Priority Rapid Deployment
@@ -179,8 +180,11 @@ export function OfficerKanban({ departmentFilter }: { departmentFilter?: string 
 
                       {/* AI Snippet */}
                       <div className="p-2 rounded-xl bg-surface-container-low text-[10px] text-on-surface-variant font-medium flex items-center justify-between">
-                        <span>{issue.assignedDepartment}</span>
-                        <span className="font-bold text-primary-800">~{issue.aiAnalysis.suggestedSlaHours}h SLA</span>
+                        <span>{issue.assignedDepartment || "Unassigned"}</span>
+                        <div className="flex items-center">
+                            <Clock className="w-3 h-3 mr-1 opacity-70" />
+                            <span className="font-bold text-primary-800">~{issue.aiAnalysis?.suggestedSlaHours || 48}h SLA</span>
+                        </div>
                       </div>
 
                       {/* Action Transition Buttons */}
@@ -210,7 +214,7 @@ export function OfficerKanban({ departmentFilter }: { departmentFilter?: string 
                         {col.status === "In Progress" && (
                           <button
                             type="button"
-                            onClick={() => handleOpenAction(issue, "Resolved")}
+                            onClick={() => handleOpenAction(issue, "Pending Citizen Verification")}
                             className="w-full py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow transition-all flex items-center justify-center gap-1"
                           >
                             <CheckCircle2 className="w-3 h-3" />
@@ -218,9 +222,15 @@ export function OfficerKanban({ departmentFilter }: { departmentFilter?: string 
                           </button>
                         )}
 
-                        {col.status === "Resolved" && (
+                        {col.status === "Pending Citizen Verification" && (
+                          <div className="w-full py-1.5 rounded-xl bg-amber-50 text-amber-800 text-[10px] font-bold text-center border border-amber-200 shadow-sm animate-pulse">
+                            Awaiting Citizen Verification ({issue.verificationVotes?.yes || 0} ✓)
+                          </div>
+                        )}
+
+                        {col.status === "Verified Resolved" && (
                           <div className="w-full py-1 rounded-xl bg-emerald-50 text-emerald-800 text-[10px] font-bold text-center border border-emerald-200">
-                            {issue.verificationVotes.yes} Citizen Verifications ✓
+                            Closed & Verified ✓
                           </div>
                         )}
                       </div>
@@ -266,7 +276,7 @@ export function OfficerKanban({ departmentFilter }: { departmentFilter?: string 
                 >
                   <option value="Assigned">Dispatched & Assigned</option>
                   <option value="In Progress">In Progress (Field Work)</option>
-                  <option value="Resolved">Resolved & Citizen Verified</option>
+                  <option value="Pending Citizen Verification">Mark Resolved (Requires Citizen Verification)</option>
                 </select>
               </div>
 
@@ -283,7 +293,7 @@ export function OfficerKanban({ departmentFilter }: { departmentFilter?: string 
                 />
               </div>
 
-              {targetStatus === "Resolved" && (
+              {targetStatus === "Pending Citizen Verification" && (
                 <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-2">
                   <p className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
                     <Check className="w-4 h-4 text-emerald-600" />

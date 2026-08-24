@@ -1,4 +1,5 @@
 import { UserProfile } from "@/lib/data/mock-data";
+import { authService } from "@/lib/auth/auth-service-cookie3";
 
 const MOCK_AUTH_USER: UserProfile = {
   id: "USR-9482",
@@ -10,8 +11,9 @@ const MOCK_AUTH_USER: UserProfile = {
   avatar: "",
   ward: "Shanti Nagar",
   wardNumber: 42,
+  pincode: "751030",
   role: "citizen",
-  karmaXP: 10,
+  civicCitizenXP: 10,
   level: 1,
   levelTitle: "Active Citizen",
   verifiedCitizen: false,
@@ -55,14 +57,19 @@ export function normalizeUser(rawUser: any): UserProfile {
   const phone = rawUser.phone || rawUser.phone_number || rawUser.mobile || "";
   const avatar = rawUser.avatar || "";
   const role = rawUser.role || "citizen";
-  const department = rawUser.department || "";
+  
+  const levelTitle = rawUser.levelTitle || rawUser.level_title || (role === "officer" ? "Ward Officer" : "Active Citizen");
+  
+  let department = rawUser.department || "";
+  if (!department && role === "officer" && levelTitle.includes(" Officer")) {
+    department = levelTitle.replace(" Officer", "").trim();
+  }
   
   const ward = rawUser.ward_details?.name || rawUser.ward || "ITER College Road";
   const wardNumber = rawUser.ward_details?.ward_number || rawUser.wardNumber || 63;
 
-  const karmaXP = rawUser.karmaXP ?? rawUser.karma_xp ?? 10;
+  const civicCitizenXP = rawUser.civicCitizenXP ?? rawUser.karma_xp ?? 10;
   const level = rawUser.level ?? 1;
-  const levelTitle = rawUser.levelTitle || rawUser.level_title || (role === "officer" ? `${department || "Ward"} Officer` : "Active Citizen");
 
   const verifiedCitizen = rawUser.verifiedCitizen ?? rawUser.verified_citizen ?? false;
   const aadhaarLinked = rawUser.aadhaarLinked ?? rawUser.aadhaar_linked ?? false;
@@ -83,12 +90,15 @@ export function normalizeUser(rawUser: any): UserProfile {
     username,
     email,
     phone,
+    gender: rawUser.gender || "Prefer not to say",
     avatar,
     ward,
     wardNumber,
+    city: rawUser.city || rawUser.city_name || "",
+    pincode: rawUser.pin_code || rawUser.pincode || "751030",
     department,
     role,
-    karmaXP,
+    civicCitizenXP,
     level,
     levelTitle,
     verifiedCitizen,
@@ -175,7 +185,18 @@ export const authApi = {
           name: data.fullName || data.username || MOCK_AUTH_USER.name,
           username: data.username || MOCK_AUTH_USER.username,
           email: data.email || MOCK_AUTH_USER.email,
-          phone: data.mobile || data.phone || MOCK_AUTH_USER.phone
+          phone: data.mobile || data.phone || MOCK_AUTH_USER.phone,
+          ward: data.pincode === "751030" ? "Khandagiri Area" : (data.pincode ? `Area ${data.pincode}` : MOCK_AUTH_USER.ward),
+          wardNumber: data.pincode === "751030" ? 63 : (data.wardNumber || MOCK_AUTH_USER.wardNumber),
+          pincode: data.pincode || MOCK_AUTH_USER.pincode,
+          civicCitizenXP: 0,
+          stats: {
+            ...MOCK_AUTH_USER.stats,
+            issuesReported: 0,
+            issuesResolved: 0,
+            communityUpvotes: 0,
+            impactRating: 0
+          }
         }),
         token: "mock-jwt-token-register",
       };
@@ -247,7 +268,7 @@ export const authApi = {
         fullName: data.fullName,
         email: data.email,
         phone: data.mobile || data.phone,
-        username: data.username || (data.email ? data.email.split('@')[0] : 'officer'),
+        username: data.username || (data.email ? data.email.split('@')[0] + '_officer' : 'officer'),
         password: data.password,
         role: "officer",
         department: data.department,
@@ -267,6 +288,50 @@ export const authApi = {
         },
         token: "mock-jwt-token-officer-register",
       };
+    }
+  },
+
+  requestPasswordReset: async (email: string): Promise<AuthResponse> => {
+    try {
+      const res = await authService.requestPasswordReset(email);
+      return {
+        success: res.success,
+        message: res.message
+      };
+    } catch (err) {
+      console.warn("Using mock auth fallback: requestPasswordReset");
+      await delay(800);
+      return {
+        success: true,
+        message: "Password reset link sent successfully"
+      };
+    }
+  },
+
+  updateProfile: async (data: any): Promise<AuthResponse> => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
+      if (!token) return { success: false, message: "Not authenticated" };
+      
+      const res = await fetch(`${API}/api/auth/profile/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        return { success: false, message: errorData.detail || "Failed to update profile" };
+      }
+
+      const userData = await res.json();
+      return { success: true, user: normalizeUser(userData) };
+    } catch (error) {
+      console.error("Profile update error:", error);
+      return { success: false, message: "Network error occurred." };
     }
   },
 };

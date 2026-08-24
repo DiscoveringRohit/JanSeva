@@ -37,10 +37,10 @@ export function CategoryPill({ category, active, onClick, className, count }: Ca
       type="button"
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer select-none",
+        "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer select-none",
         active
-          ? "bg-primary-600 text-white shadow-md shadow-primary-600/25 scale-[1.02]"
-          : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container border border-surface-dim hover:text-on-surface",
+          ? "bg-[#134431] text-white shadow-md shadow-emerald-950/20 scale-[1.02]"
+          : "bg-[#f8faf9] text-slate-600 hover:bg-[#edf7f1] hover:text-[#134431] border border-slate-200/70",
         className
       )}
     >
@@ -50,7 +50,7 @@ export function CategoryPill({ category, active, onClick, className, count }: Ca
         <span
           className={cn(
             "ml-1 px-1.5 py-0.2 rounded-full text-[10px]",
-            active ? "bg-white/20 text-white" : "bg-surface-dim text-on-surface-variant"
+            active ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
           )}
         >
           {count}

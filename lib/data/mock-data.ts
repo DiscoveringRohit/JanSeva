@@ -3,12 +3,13 @@ export interface CivicIssue {
   title: string;
   description: string;
   category: "Roads" | "Water" | "Sanitation" | "Electricity" | "Waste" | "Traffic" | "Parks";
-  status: "Reported" | "AI Verified" | "Assigned" | "In Progress" | "Resolved";
+  status: "Reported" | "AI Verified" | "Assigned" | "In Progress" | "Resolved" | "Pending Citizen Verification" | "Verified Resolved";
   urgency: "Critical" | "High" | "Moderate" | "Low";
   location: {
     address: string;
     ward: string;
     wardNumber: number;
+    pincode?: string;
     lat: number;
     lng: number;
   };
@@ -126,9 +127,11 @@ export interface UserProfile {
   avatar: string;
   ward: string;
   wardNumber: number;
+  city?: string;
+  pincode: string;
   department?: string;
   role: "citizen" | "officer" | "corporator";
-  karmaXP: number;
+  civicCitizenXP: number;
   level: number;
   levelTitle: string;
   verifiedCitizen: boolean;
@@ -220,7 +223,7 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     location: {
       address: "4th Main Road, Behind City Market, Ward 63",
       ward: "Ward 63",
-      wardNumber: 42,
+      wardNumber: 42, pincode: "751030",
       lat: 12.9611,
       lng: 77.5975,
     },
@@ -297,7 +300,7 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     location: {
       address: "80 Feet Road, Near Metro Pillar 142, Ward 63",
       ward: "Ward 63",
-      wardNumber: 42,
+      wardNumber: 42, pincode: "751030",
       lat: 12.9634,
       lng: 77.5998,
     },
@@ -366,7 +369,7 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     location: {
       address: "8th Cross, Sector 3, Ward 63",
       ward: "Ward 63",
-      wardNumber: 42,
+      wardNumber: 42, pincode: "751030",
       lat: 12.9589,
       lng: 77.5942,
     },
@@ -443,7 +446,7 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     location: {
       address: "Main Gate, Ward 63 Community Park, 2nd Stage",
       ward: "Ward 63",
-      wardNumber: 42,
+      wardNumber: 42, pincode: "751030",
       lat: 12.9655,
       lng: 77.5921,
     },
@@ -500,7 +503,7 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     location: {
       address: "Opposite BMC Substation, 1st Cross, Ward 63",
       ward: "Ward 63",
-      wardNumber: 42,
+      wardNumber: 42, pincode: "751030",
       lat: 12.9602,
       lng: 77.5961,
     },
@@ -575,7 +578,7 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     location: {
       address: "Double Road & Lalbagh Road Junction, Ward 63",
       ward: "Ward 63",
-      wardNumber: 42,
+      wardNumber: 42, pincode: "751030",
       lat: 12.9554,
       lng: 77.5933,
     },
@@ -645,7 +648,7 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     location: {
       address: "Near St. Joseph High School, 3rd Cross, Ward 63",
       ward: "Ward 63",
-      wardNumber: 42,
+      wardNumber: 42, pincode: "751030",
       lat: 12.9641,
       lng: 77.5982,
     },
@@ -714,7 +717,7 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     location: {
       address: "Rose Garden Park, 6th Cross, Ward 63",
       ward: "Ward 63",
-      wardNumber: 42,
+      wardNumber: 42, pincode: "751030",
       lat: 12.9572,
       lng: 77.5958,
     },
@@ -797,7 +800,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: "notif-4",
     title: "New Civic Badge Unlocked: Ward Hero 🏆",
-    message: "You've earned +250 Karma XP for active contributions to Ward 63 cleanliness metrics.",
+    message: "You've earned +250 Civic Citizen XP for active contributions to Ward 63 cleanliness metrics.",
     type: "badge",
     timestamp: "2026-08-14T18:00:00Z",
     read: true,

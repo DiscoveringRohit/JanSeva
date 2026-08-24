@@ -3,6 +3,7 @@ import { Outfit, Inter } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/lib/context/app-context";
 import { LayoutWrapper } from "@/components/layout/layout-wrapper";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -37,9 +38,11 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen flex flex-col bg-[#f7f9fb] text-[#191c1e] antialiased">
-        <AppProvider>
-          <LayoutWrapper>{children}</LayoutWrapper>
-        </AppProvider>
+        <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "973723561970-o3gh3qu53a4c52tmdim4h3gq7r79vakc.apps.googleusercontent.com"}>
+          <AppProvider>
+            <LayoutWrapper>{children}</LayoutWrapper>
+          </AppProvider>
+        </GoogleOAuthProvider>
       </body>
     </html>
   );

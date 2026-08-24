@@ -73,20 +73,11 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
     <header className="sticky top-0 z-40 w-full border-b border-surface-container-high bg-white/95 backdrop-blur-md transition-all">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         
-        {/* Left: Brand & Mobile Menu Toggle */}
+        {/* Left: Brand */}
         <div className="flex items-center gap-3 lg:gap-6">
-          <button
-            type="button"
-            onClick={onToggleMobileMenu}
-            className="lg:hidden p-2 rounded-xl text-on-surface-variant hover:bg-surface-container-low"
-            aria-label="Toggle Navigation Menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-tr from-primary-600 via-primary-500 to-indigo-700 text-white shadow-md shadow-primary-500/20 group-hover:scale-105 transition-transform">
-              <Sparkles className="w-5 h-5" />
+            <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-[#134431] text-white shadow-md shadow-emerald-950/20 group-hover:scale-105 transition-transform">
+              <Sparkles className="w-5 h-5 text-emerald-300" />
               <span className="absolute -top-1 -right-1 flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
@@ -94,14 +85,14 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
-                <span className="font-headline font-black text-xl tracking-tight text-on-surface">
-                  Jan<span className="text-primary-600">Seva</span>
+                <span className="font-headline font-black text-xl tracking-tight text-slate-900">
+                  Jan<span className="text-[#134431]">Seva</span>
                 </span>
-                <span className="text-[10px] uppercase font-bold tracking-widest px-1.5 py-0.5 rounded-md bg-indigo-50 text-primary-700 border border-primary-100">
+                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-md bg-[#edf7f1] text-[#134431] border border-[#cbe7d7]">
                   AI 2.0
                 </span>
               </div>
-              <span className="text-[10px] font-medium text-on-surface-variant hidden sm:block -mt-1">
+              <span className="text-[10px] font-medium text-slate-500 hidden sm:block -mt-0.5">
                 Civic Social Network
               </span>
             </div>
@@ -110,24 +101,24 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
           {/* Ward Location Tag */}
           <Link
             href="/ward"
-            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container border border-surface-dim text-xs font-semibold text-on-surface-variant transition-colors"
+            className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#f8faf9] hover:bg-[#edf7f1] border border-slate-200/80 text-xs font-bold text-slate-700 hover:text-[#134431] transition-colors shadow-2xs"
           >
-            <MapPin className="w-3.5 h-3.5 text-primary-600" />
-            <span>Ward {DEFAULT_LOCATION.wardNumber} • {DEFAULT_LOCATION.city}</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <MapPin className="w-3.5 h-3.5 text-[#134431]" />
+            <span>{user?.pincode === "751030" ? "Ward 63 • Khandagiri" : (user?.pincode ? `Area ${user.pincode} • ${(user as any).city || "Local"}` : `Ward ${DEFAULT_LOCATION.wardNumber} • ${DEFAULT_LOCATION.city}`)}</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]"></span>
           </Link>
         </div>
 
         {/* Center: Search Bar */}
         <div className="hidden md:flex flex-1 max-w-md mx-4">
           <form onSubmit={handleSearch} className="w-full relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant/70" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search potholes, water leaks, ward issues, tickets..."
-              className="w-full pl-10 pr-4 py-2 text-xs rounded-full bg-surface-container-low border border-surface-dim focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-600 focus:bg-white text-on-surface placeholder:text-on-surface-variant/60 transition-all shadow-inner"
+              className="w-full pl-10 pr-4 py-2 text-xs rounded-full bg-[#f8faf9] border border-slate-200/80 focus:outline-none focus:ring-2 focus:ring-[#134431]/20 focus:border-[#134431] focus:bg-white text-slate-900 placeholder:text-slate-400 transition-all shadow-2xs"
             />
           </form>
         </div>
@@ -139,17 +130,17 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
           <button
             type="button"
             onClick={() => setIsAiDrawerOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-primary-50 to-indigo-100/70 border border-primary-200 text-primary-700 hover:from-primary-100 hover:to-indigo-200 text-xs font-semibold shadow-sm hover:scale-[1.02] transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#edf7f1] border border-[#cbe7d7] text-[#134431] hover:bg-[#e1f2e8] text-xs font-bold shadow-2xs hover:scale-[1.02] transition-all select-none"
             title="Open JanSeva AI Civic Assistant"
           >
-            <Sparkles className="w-3.5 h-3.5 text-primary-600 animate-pulseSlow" />
+            <Sparkles className="w-3.5 h-3.5 text-emerald-600 animate-pulseSlow" />
             <span className="hidden sm:inline">AI Assistant</span>
           </button>
 
           {/* Quick Report Button */}
           <Link
             href="/report"
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold shadow-md shadow-primary-600/30 hover:scale-[1.02] transition-all"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#134431] hover:bg-[#0c2e21] text-white text-xs font-bold shadow-md shadow-emerald-950/20 hover:scale-[1.02] active:scale-98 transition-all"
           >
             <PlusCircle className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Report Issue</span>
@@ -166,29 +157,29 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
             >
               <Bell className="w-5 h-5" />
               {unreadNotifsCount > 0 && (
-                <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-tertiary text-[10px] font-bold text-white shadow">
+                <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#f06424] text-[10px] font-black text-white shadow-sm">
                   {unreadNotifsCount}
                 </span>
               )}
             </button>
 
             {showNotifDropdown && (
-              <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white p-3 shadow-xl border border-surface-container-high z-50 animate-fadeIn">
-                <div className="flex items-center justify-between pb-2 border-b border-surface-dim">
-                  <div className="flex items-center gap-1.5 font-headline font-bold text-sm text-on-surface">
-                    <Bell className="w-4 h-4 text-primary-600" />
+              <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white p-3 shadow-xl border border-slate-100 z-50 animate-fadeIn">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <div className="flex items-center gap-1.5 font-headline font-bold text-sm text-slate-900">
+                    <Bell className="w-4 h-4 text-[#134431]" />
                     <span>Notifications</span>
                   </div>
                   <Link
                     href="/notifications"
                     onClick={() => setShowNotifDropdown(false)}
-                    className="text-xs text-primary-600 hover:underline font-semibold"
+                    className="text-xs text-[#134431] hover:underline font-bold"
                   >
                     View All
                   </Link>
                 </div>
 
-                <div className="divide-y divide-surface-container-low max-h-72 overflow-y-auto mt-2">
+                <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto mt-2">
                   {notifications.slice(0, 4).map((n) => (
                     <div
                       key={n.id}
@@ -200,15 +191,15 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
                         }
                       }}
                       className={cn(
-                        "p-2.5 rounded-xl cursor-pointer transition-colors hover:bg-surface-container-low",
-                        !n.read ? "bg-primary-50/50" : ""
+                        "p-2.5 rounded-xl cursor-pointer transition-colors hover:bg-[#f8faf9]",
+                        !n.read ? "bg-[#edf7f1]/60" : ""
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <span className="text-xs font-bold text-on-surface">{n.title}</span>
-                        {!n.read && <span className="w-2 h-2 rounded-full bg-primary-600 shrink-0 mt-1"></span>}
+                        <span className="text-xs font-bold text-slate-900">{n.title}</span>
+                        {!n.read && <span className="w-2 h-2 rounded-full bg-[#134431] shrink-0 mt-1"></span>}
                       </div>
-                      <p className="text-[11px] text-on-surface-variant line-clamp-2 mt-0.5">
+                      <p className="text-[11px] text-slate-500 line-clamp-2 mt-0.5">
                         {n.message}
                       </p>
                     </div>
