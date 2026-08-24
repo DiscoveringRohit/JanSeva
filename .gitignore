@@ -1,8 +1,12 @@
 node_modules/
 .next/
 .env
+.env*
 .env.local
 .env*.local
+client_secret*.json
+*.pem
+*.key
 
 dist/
 build/

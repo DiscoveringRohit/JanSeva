@@ -22,7 +22,10 @@ import {
   Building,
   User,
   AlertTriangle,
-  Flame
+  Flame,
+  MoreVertical,
+  Edit,
+  Trash2
 } from "lucide-react";
 import { formatDate, cn } from "@/lib/utils";
 
@@ -30,21 +33,33 @@ export default function IssueDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const { voteVerification, user } = useApp();
+  const { voteVerification, user, deleteIssue } = useApp();
 
   const [issue, setIssue] = useState<CivicIssue | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   React.useEffect(() => {
-    getIssueById(id).then((data) => {
-      if (data) setIssue(data);
-      setIsLoading(false);
-    });
+    const fetchIssue = () => {
+      getIssueById(id).then((data) => {
+        if (data) setIssue(data);
+        setIsLoading(false);
+      });
+    };
+
+    fetchIssue();
+
+    // Poll for real-time cross-tab sync without WebSockets
+    const pollInterval = setInterval(fetchIssue, 5000);
+
+    return () => clearInterval(pollInterval);
   }, [id]);
 
   const [commentText, setCommentText] = useState("");
   const [copied, setCopied] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activePhotoTab, setActivePhotoTab] = useState<"reported" | "resolved">("reported");
+
+  const isOwner = user && (user.username === issue?.reporter.username || user.name === issue?.reporter.name);
 
   // Local optimistic state for upvoting
   const [localUpvotes, setLocalUpvotes] = useState(0);
@@ -136,7 +151,10 @@ export default function IssueDetailPage() {
   }
 
   const stages = ["Reported", "AI Verified", "Assigned", "In Progress", "Resolved"];
-  const currentStageIndex = stages.indexOf(issue.status);
+  let currentStageIndex = stages.indexOf(issue.status);
+  if (issue.status === "Pending Citizen Verification" || issue.status === "Verified Resolved") {
+    currentStageIndex = 4; // Resolved stage
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-fadeIn pb-12">
@@ -161,6 +179,49 @@ export default function IssueDetailPage() {
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
             <span>{copied ? "Link Copied!" : "Share Issue"}</span>
           </button>
+          
+          {isOwner && (
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsMenuOpen(!isMenuOpen);
+                }}
+                className="flex items-center p-1.5 rounded-2xl bg-white border border-surface-dim hover:bg-surface-container text-on-surface-variant transition-all shadow-sm"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+              {isMenuOpen && (
+                <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-xl shadow-lg border border-surface-container z-10 py-1 overflow-hidden">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs font-medium text-on-surface hover:bg-surface-container flex items-center gap-2"
+                  >
+                    <Edit className="w-3.5 h-3.5" /> Edit
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (confirm("Are you sure you want to delete this issue?")) {
+                        deleteIssue(issue.id);
+                        router.push("/feed");
+                      }
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs font-medium text-error hover:bg-error/10 flex items-center gap-2"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -330,7 +391,7 @@ export default function IssueDetailPage() {
             <div className="text-left">
               <p className="text-xs font-bold text-on-surface">@{issue.reporter.username || issue.reporter.name}</p>
               <p className="text-[10px] text-emerald-700 font-semibold">
-                {(user && (issue.reporter.username === user.username || issue.reporter.name === user.name)) ? user.karmaXP : issue.reporter.karma} Karma XP
+                {(user && (issue.reporter.username === user.username || issue.reporter.name === user.name)) ? user.civicCitizenXP : issue.reporter.karma} Civic Citizen XP
               </p>
             </div>
           </div>
@@ -356,36 +417,40 @@ export default function IssueDetailPage() {
           </div>
 
           <span className="px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 text-xs font-bold">
-            {issue.aiAnalysis.confidence}% Confidence
+            {issue.aiAnalysis?.confidence || 0}% Confidence
           </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
           <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10">
             <p className="text-white/60 font-medium">Identified Hazard</p>
-            <p className="font-bold text-white mt-1">{issue.aiAnalysis.detectedObject}</p>
+            <p className="font-bold text-white mt-1">{issue.aiAnalysis?.detectedObject || "Unknown"}</p>
           </div>
           <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10">
             <p className="text-white/60 font-medium">Assigned Department</p>
-            <p className="font-bold text-emerald-300 mt-1">{issue.assignedDepartment}</p>
+            <p className="font-bold text-emerald-300 mt-1">{issue.assignedDepartment || "Unassigned"}</p>
           </div>
           <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10">
-            <p className="text-white/60 font-medium">Assigned Officer</p>
-            <p className="font-bold text-cyan-300 mt-1">{issue.assignedOfficer?.name || "Ward Dispatch Squad"}</p>
+            <p className="text-white/60 font-medium">Priority Level</p>
+            <p className="font-bold text-rose-400 mt-1">{issue.aiAnalysis?.estimatedSeverity || issue.urgency}</p>
           </div>
           <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10">
-            <p className="text-white/60 font-medium">SLA Resolution Target</p>
-            <p className="font-bold text-amber-300 mt-1">~{issue.aiAnalysis.suggestedSlaHours} Hours Max</p>
+            <p className="text-white/60 font-medium">SLA Resolution Goal</p>
+            <p className="font-bold text-amber-300 mt-1">
+              Under {issue.aiAnalysis?.suggestedSlaHours || 48} Hours
+            </p>
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-xs text-white/90 leading-relaxed">
-          <strong className="text-cyan-300">AI Summary: </strong>
-          {issue.aiAnalysis.summary}
+        <div className="mt-4 p-3.5 rounded-2xl bg-white/5 border border-white/10">
+          <p className="text-white/80 leading-relaxed text-sm">
+            {issue.aiAnalysis?.summary || "No AI summary available."}
+          </p>
         </div>
       </div>
 
       {/* CITIZEN SATISFACTION & VERIFICATION AUDIT BOX */}
+      {(issue.status === "Pending Citizen Verification" || issue.status === "Verified Resolved") && (
       <div className="rounded-3xl bg-white border border-surface-container-high p-6 sm:p-8 shadow-soft space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -403,7 +468,7 @@ export default function IssueDetailPage() {
           </div>
 
           <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-            +15 Karma XP
+            +15 Civic Citizen XP
           </span>
         </div>
 
@@ -452,7 +517,7 @@ export default function IssueDetailPage() {
           <div className="flex gap-3 pt-2">
             <button
               type="button"
-              onClick={() => voteVerification(issue.id, "yes")}
+              onClick={() => router.push(`/verify/${issue.id}`)}
               className={cn(
                 "flex-1 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5",
                 issue.verificationVotes.userVoted === "yes"
@@ -479,6 +544,7 @@ export default function IssueDetailPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* OFFICIAL TIMELINE & ACTION LOG */}
       <div className="rounded-3xl bg-white border border-surface-container-high p-6 sm:p-8 shadow-soft space-y-6">
@@ -522,13 +588,12 @@ export default function IssueDetailPage() {
               type="text"
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              placeholder={user ? "Add your neighbor update or question..." : "Please login to join the discussion"}
-              disabled={!user}
-              className="flex-1 px-4 py-2.5 text-xs rounded-2xl bg-surface-container-low border border-surface-dim focus:outline-none focus:ring-2 focus:ring-primary-500 text-on-surface disabled:opacity-60 disabled:cursor-not-allowed"
+              placeholder="Add your neighbor update or question..."
+              className="flex-1 px-4 py-2.5 text-xs rounded-2xl bg-surface-container-low border border-surface-dim focus:outline-none focus:ring-2 focus:ring-primary-500 text-on-surface"
             />
             <button
               type="submit"
-              disabled={!commentText.trim() || !user}
+              disabled={!commentText.trim()}
               className="px-5 py-2.5 rounded-2xl bg-primary-600 hover:bg-primary-700 disabled:opacity-40 text-white font-bold text-xs shadow-md shadow-primary-600/30 transition-all flex items-center gap-1.5"
             >
               <Send className="w-3.5 h-3.5" />

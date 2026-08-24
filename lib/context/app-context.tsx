@@ -45,6 +45,7 @@ interface ChatMessage {
 
 interface AppContextType {
   user: UserProfile | null;
+  isLoadingAuth: boolean;
   setUser: React.Dispatch<React.SetStateAction<UserProfile | null>>;
   switchRole: (
     role: "citizen" | "officer" | "corporator"
@@ -53,6 +54,7 @@ interface AppContextType {
   issues: CivicIssue[];
   toggleUpvote: (issueId: string) => void;
   addIssue: (issue: Partial<CivicIssue>) => CivicIssue;
+  deleteIssue: (issueId: string) => void;
 
   updateIssueStatus: (
     issueId: string,
@@ -107,8 +109,8 @@ export function AppProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [user, setUser] =
-    useState<UserProfile | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
   const [issues, setIssues] =
     useState<CivicIssue[]>(INITIAL_ISSUES);
@@ -259,6 +261,7 @@ export function AppProvider({
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
+          cache: "no-store",
         }
       );
 
@@ -299,36 +302,15 @@ export function AppProvider({
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
+          cache: "no-store",
         }
       );
 
       if (res.ok) {
         const userProfile = await res.json();
-
-        const formattedUser: UserProfile = {
-          id: userProfile.id.toString(),
-          name: userProfile.name || userProfile.username,
-          username: userProfile.username,
-          email: userProfile.email,
-          phone: userProfile.phone_number || "",
-          avatar: userProfile.avatar || DEFAULT_USER_FALLBACK.avatar,
-          ward: userProfile.ward || DEFAULT_USER_FALLBACK.ward,
-          wardNumber: userProfile.ward_number || DEFAULT_USER_FALLBACK.wardNumber,
-          role: userProfile.role,
-          karmaXP: userProfile.karma_xp,
-          level: userProfile.level,
-          levelTitle: userProfile.level_title,
-          verifiedCitizen: userProfile.verified_citizen,
-          aadhaarLinked: userProfile.aadhaar_linked,
-          stats: userProfile.stats || {
-            issuesReported: 0,
-            issuesResolved: 0,
-            upvotesGiven: 0,
-            verificationVotes: 0,
-            civicImpactScore: 10,
-          },
-          badges: userProfile.badges || [],
-        };
+        
+        const { normalizeUser } = await import("@/lib/api/auth");
+        const formattedUser = normalizeUser(userProfile);
 
         setUser(formattedUser);
 
@@ -384,16 +366,33 @@ export function AppProvider({
 
       await fetchIssues();
 
-      const restoredAfter =
-        await authService.tryRestoreSession();
-
-      if (restoredAfter) {
+      const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
+      if (token) {
         await fetchUserProfile();
         await fetchNotifications();
+      } else {
+        const restoredAfter = await authService.tryRestoreSession();
+        if (restoredAfter) {
+          await fetchUserProfile();
+          await fetchNotifications();
+        }
       }
+      
+      setIsLoadingAuth(false);
     };
 
     initData();
+
+    // Set up polling for real-time cross-tab sync without WebSockets
+    const pollInterval = setInterval(() => {
+      const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
+      if (token) {
+        fetchIssues();
+        fetchNotifications();
+      }
+    }, 5000);
+
+    return () => clearInterval(pollInterval);
   }, []);
 
   // Save issues to localStorage
@@ -484,10 +483,10 @@ export function AppProvider({
       })
     );
 
-    // Give user Karma XP optimistically
+    // Give user Civic Citizen XP optimistically
     setUser((prev: UserProfile | null) => prev ? ({
       ...prev,
-      karmaXP: prev.karmaXP + 5,
+      civicCitizenXP: prev.civicCitizenXP + 5,
       stats: {
         ...prev.stats,
         upvotesGiven: prev.stats.upvotesGiven + 1,
@@ -562,7 +561,7 @@ export function AppProvider({
         username: user.username,
         avatar: user.avatar,
         isVerified: user.verifiedCitizen,
-        karma: user.karmaXP,
+        karma: user.civicCitizenXP,
       },
       images: {
         reported:
@@ -612,10 +611,10 @@ export function AppProvider({
       ...prev,
     ]);
 
-    // Give user Karma XP & update stats optimistically
+    // Give user Civic Citizen XP & update stats optimistically
     setUser((prev: UserProfile | null) => prev ? ({
       ...prev,
-      karmaXP: prev.karmaXP + 50,
+      civicCitizenXP: prev.civicCitizenXP + 50,
       stats: {
         ...prev.stats,
         issuesReported:
@@ -660,12 +659,12 @@ export function AppProvider({
           title: createdIssue.title,
           description: createdIssue.description,
           category: createdIssue.category,
+          status: createdIssue.status,
           urgency: createdIssue.urgency,
           location: createdIssue.location,
           images: createdIssue.images,
-          ai_analysis: createdIssue.aiAnalysis,
-          assigned_department:
-            createdIssue.assignedDepartment,
+          aiAnalysis: createdIssue.aiAnalysis,
+          assignedDepartment: createdIssue.assignedDepartment,
         }),
       })
         .then(async (res) => {
@@ -693,6 +692,25 @@ export function AppProvider({
     }
 
     return createdIssue;
+  };
+
+  const deleteIssue = async (issueId: string) => {
+    setIssues((prev) => prev.filter((i) => i.id !== issueId));
+    
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
+    
+    if (token) {
+      try {
+        await fetch(`${API_URL}/api/issues/${issueId}/`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        fetchIssues();
+      } catch (e) {
+        console.error("Failed to delete issue on backend", e);
+      }
+    }
   };
 
   const updateIssueStatus = async (
@@ -799,54 +817,30 @@ export function AppProvider({
     issueId: string,
     vote: "yes" | "no"
   ) => {
+    if (!user) return;
+
+    // Optimistically update
     setIssues((prev: CivicIssue[]) =>
       prev.map((issue: CivicIssue) => {
         if (issue.id === issueId) {
-          const currentVotes = {
-            ...issue.verificationVotes,
-          };
+          const currentVote = issue.verificationVotes.userVoted;
+          const votes = { ...issue.verificationVotes };
+          
+          if (currentVote === vote) return issue;
 
-          if (currentVotes.userVoted === vote) {
-            return issue;
-          }
+          if (currentVote === "yes") votes.yes = Math.max(0, votes.yes - 1);
+          if (currentVote === "no") votes.no = Math.max(0, votes.no - 1);
+          
+          if (vote === "yes") votes.yes += 1;
+          if (vote === "no") votes.no += 1;
+          
+          votes.userVoted = vote;
 
-          if (currentVotes.userVoted === "yes") {
-            currentVotes.yes -= 1;
-          }
-
-          if (currentVotes.userVoted === "no") {
-            currentVotes.no -= 1;
-          }
-
-          if (vote === "yes") {
-            currentVotes.yes += 1;
-          }
-
-          if (vote === "no") {
-            currentVotes.no += 1;
-          }
-
-          currentVotes.userVoted = vote;
-
-          return {
-            ...issue,
-            verificationVotes: currentVotes,
-          };
+          return { ...issue, verificationVotes: votes };
         }
-
         return issue;
       })
     );
-
-    setUser((prev: UserProfile | null) => prev ? ({
-      ...prev,
-      karmaXP: prev.karmaXP + 15,
-      stats: {
-        ...prev.stats,
-        verificationVotes:
-          prev.stats.verificationVotes + 1,
-      },
-    }) : prev);
 
     const API_URL =
       process.env.NEXT_PUBLIC_API_URL ||
@@ -859,7 +853,7 @@ export function AppProvider({
 
     if (token) {
       try {
-        await fetch(
+        const res = await fetch(
           `${API_URL}/api/issues/${issueId}/verify/`,
           {
             method: "POST",
@@ -867,19 +861,28 @@ export function AppProvider({
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-              vote,
-            }),
+            body: JSON.stringify({ vote }),
           }
         );
 
+        if (res.ok) {
+          const data = await res.json();
+          // Update issue status if returned by backend
+          if (data.issueStatus) {
+            setIssues((prev: CivicIssue[]) =>
+              prev.map((issue: CivicIssue) => {
+                if (issue.id === issueId) {
+                  return { ...issue, status: data.issueStatus };
+                }
+                return issue;
+              })
+            );
+          }
+        }
         fetchUserProfile();
         fetchIssues();
       } catch (e) {
-        console.error(
-          "Failed to submit verification vote",
-          e
-        );
+        console.error("Failed to vote verification on backend", e);
       }
     }
   };
@@ -959,9 +962,10 @@ export function AppProvider({
         ? localStorage.getItem("janseva_token")
         : null;
 
-    const dbId = id.includes("-")
-      ? id.split("-")[1]
-      : id;
+    const idStr = String(id);
+    const dbId = idStr.includes("-")
+      ? idStr.split("-")[1]
+      : idStr;
 
     if (
       token &&
@@ -1073,7 +1077,7 @@ export function AppProvider({
 
     setUser((prev: UserProfile | null) => prev ? ({
       ...prev,
-      karmaXP: prev.karmaXP + 20,
+      civicCitizenXP: prev.civicCitizenXP + 20,
     }) : prev);
   };
 
@@ -1201,11 +1205,13 @@ const sendVoiceMessage = async (audioBlob: Blob) => {
     <AppContext.Provider
       value={{
         user,
+        isLoadingAuth,
         setUser,
         switchRole,
         issues,
         toggleUpvote,
         addIssue,
+        deleteIssue,
         updateIssueStatus,
         voteVerification,
         addComment,

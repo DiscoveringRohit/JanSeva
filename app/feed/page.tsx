@@ -6,9 +6,8 @@ import { useApp } from "@/lib/context/app-context";
 import { getFeed } from "@/lib/api/issues";
 import { CivicIssue } from "@/lib/data/mock-data";
 import { IssueCard } from "@/components/feed/issue-card";
-import { WardStatsWidget } from "@/components/feed/ward-stats-widget";
+import { WeatherWidget } from "@/components/feed/weather-widget";
 import { LeaderboardWidget } from "@/components/feed/leaderboard-widget";
-import { ActivePollWidget } from "@/components/feed/active-poll-widget";
 import { CategoryPill } from "@/components/ui/category-pill";
 import { Award, Camera, MapPin, Search, Filter, TrendingUp, AlertCircle, CheckCircle2, ChevronRight, X, Clock, Settings, LogOut, Sparkles, Layers, ArrowUpDown } from "lucide-react";
 import { GUEST_USER } from "@/lib/data/default-location";
@@ -73,45 +72,26 @@ export default function FeedPage() {
       {/* Top Header & Quick Report Trigger */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="font-headline font-black text-2xl sm:text-3xl text-on-surface">
-              Ward 42 Community Feed
+          <div className="flex items-center gap-2.5">
+            <h1 className="font-headline font-black text-2xl sm:text-3xl text-slate-900 tracking-tight">
+              {user?.pincode === "751030" ? "Khandagiri Area Feed" : (user?.pincode ? `Area ${user.pincode} Feed` : "Community Feed")}
             </h1>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#edf7f1] text-[#134431] border border-[#cbe7d7] flex items-center gap-1.5 shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
               Live Pulse
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-on-surface-variant mt-0.5">
+          <p className="text-xs sm:text-sm text-slate-600 mt-1">
             Real-time public incident reports, verified municipal repairs, and neighbor upvotes.
           </p>
         </div>
 
         <Link
           href={user ? "/report" : "/login"}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-primary-600 to-indigo-700 hover:brightness-110 text-white font-headline font-bold text-xs shadow-lg shadow-primary-600/30 hover:scale-102 active:scale-98 transition-all shrink-0"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#134431] hover:bg-[#0c2e21] text-white font-headline font-bold text-xs shadow-md shadow-emerald-950/20 hover:scale-102 active:scale-98 transition-all shrink-0"
         >
-          <Camera className="w-4 h-4" />
+          <Camera className="w-4 h-4 text-emerald-300" />
           <span>AI Quick Snap Report</span>
-        </Link>
-      </div>
-
-      {/* Quick Report Bar for Citizens */}
-      <div className="rounded-3xl bg-white border border-surface-container-high p-4 shadow-soft flex items-center gap-3">
-        <img
-          src={user?.avatar || GUEST_USER.avatar}
-          alt={user?.name || GUEST_USER.name}
-          className="w-10 h-10 rounded-full object-cover ring-2 ring-primary-100 shrink-0"
-        />
-        <Link
-          href={user ? "/report" : "/login"}
-          className="flex-1 px-4 py-2.5 rounded-2xl bg-surface-container-low hover:bg-surface-container border border-surface-dim text-xs text-on-surface-variant font-medium transition-colors flex items-center justify-between"
-        >
-          <span>What civic problem did you spot in Ward 42 today?</span>
-          <span className="text-primary-600 font-bold flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>AI Auto-Detect</span>
-          </span>
         </Link>
       </div>
 
@@ -122,7 +102,7 @@ export default function FeedPage() {
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           {[
             { id: "all", label: "All Reports" },
-            { id: "ward", label: "My Ward (Ward 42)" },
+            { id: "ward", label: `📍 My Area (${user?.pincode ? user.pincode : "Local"})` },
             { id: "critical", label: "🔥 Critical Urgency" },
             { id: "in_progress", label: "⚡ In Progress" },
             { id: "resolved", label: "✓ Resolved & Verified" },
@@ -134,8 +114,8 @@ export default function FeedPage() {
               className={cn(
                 "px-4 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 select-none",
                 activeTab === tab.id
-                  ? "bg-primary-600 text-white shadow-md shadow-primary-600/25"
-                  : "bg-white text-on-surface-variant hover:bg-surface-container border border-surface-dim hover:text-on-surface"
+                  ? "bg-[#134431] text-white shadow-md shadow-emerald-950/15"
+                  : "bg-white text-slate-700 hover:bg-[#edf7f1] hover:text-[#134431] border border-slate-200/80 shadow-2xs"
               )}
             >
               {tab.label}
@@ -144,7 +124,7 @@ export default function FeedPage() {
         </div>
 
         {/* Category Pills & Sorting Bar */}
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-surface-container-high shadow-sm">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white p-3.5 rounded-3xl border border-slate-200/80 shadow-sm">
           
           {/* Category Pills */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
@@ -159,24 +139,24 @@ export default function FeedPage() {
           </div>
 
           {/* Search & Sort Dropdown */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="relative flex-1 md:w-56">
-              <Search className="w-3.5 h-3.5 text-on-surface-variant absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Filter by keyword / ID..."
-                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-surface-container-low border border-surface-dim focus:outline-none focus:ring-1 focus:ring-primary-500 text-on-surface"
+                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-[#f8faf9] border border-slate-200/80 focus:outline-none focus:ring-1 focus:ring-[#134431] text-slate-900 placeholder:text-slate-400"
               />
             </div>
 
-            <div className="flex items-center gap-1 text-xs font-bold text-on-surface-variant shrink-0">
-              <ArrowUpDown className="w-3.5 h-3.5 text-primary-600" />
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 shrink-0 bg-[#f8faf9] px-2.5 py-1 rounded-xl border border-slate-200/80">
+              <ArrowUpDown className="w-3.5 h-3.5 text-[#134431]" />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-surface-container-low text-on-surface text-xs font-semibold rounded-xl px-2 py-1.5 border border-surface-dim focus:outline-none"
+                className="bg-transparent text-slate-800 text-xs font-bold focus:outline-none cursor-pointer"
               >
                 <option value="upvotes">Most Upvoted</option>
                 <option value="recent">Newest First</option>
@@ -228,8 +208,7 @@ export default function FeedPage() {
 
         {/* Right 1 Column: Sticky Civic Intelligence Widgets */}
         <div className="space-y-6">
-          <WardStatsWidget />
-          <ActivePollWidget />
+          <WeatherWidget />
           <LeaderboardWidget />
         </div>
 

@@ -8,7 +8,7 @@ import { useApp } from "@/lib/context/app-context";
 import { ShieldCheck, UserCheck, Sparkles, Building2 } from "lucide-react";
 
 export default function DepartmentOfficerPage() {
-  const { user } = useApp();
+  const { user, isLoadingAuth } = useApp();
   const router = useRouter();
   const params = useParams();
   const departmentSlug = params.department as string;
@@ -26,6 +26,8 @@ export default function DepartmentOfficerPage() {
   if (!isClient) return null;
 
   const isWrongDepartment = user && user.role === "officer" && user.department && user.department.toLowerCase() !== departmentSlug.toLowerCase();
+
+  if (isLoadingAuth) return null;
 
   if (!user || user.role !== "officer" || isWrongDepartment) {
     return (

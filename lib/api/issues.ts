@@ -46,9 +46,15 @@ export async function submitIssue(payload: any) {
   }
 }
 
-export async function getFeed(wardId?: number): Promise<CivicIssue[]> {
+export async function getFeed(wardId?: number, pincode?: string): Promise<CivicIssue[]> {
   try {
-    const response = await fetch(`${getApiUrl()}/api/issues/${wardId ? `?ward=${wardId}` : ""}`, {
+    let url = `${getApiUrl()}/api/issues/`;
+    const params = new URLSearchParams();
+    if (wardId) params.append("ward", wardId.toString());
+    if (pincode) params.append("pincode", pincode);
+    if (params.toString()) url += `?${params.toString()}`;
+
+    const response = await fetch(url, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error("Fallback to mock");
@@ -57,6 +63,9 @@ export async function getFeed(wardId?: number): Promise<CivicIssue[]> {
   } catch (e) {
     // Mock Fallback
     const issues = MockContextBridge.getIssues();
+    if (pincode) {
+      return issues.filter((i) => i.location.pincode === pincode);
+    }
     if (wardId) {
       return issues.filter((i) => i.location.wardNumber === wardId);
     }
@@ -68,6 +77,7 @@ export async function getIssueById(id: string): Promise<CivicIssue | undefined> 
   try {
     const response = await fetch(`${getApiUrl()}/api/issues/${id}/`, {
       headers: getAuthHeaders(),
+      cache: "no-store"
     });
     if (!response.ok) throw new Error("Fallback to mock");
     const data = await response.json();

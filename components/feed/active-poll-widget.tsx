@@ -84,7 +84,7 @@ export function ActivePollWidget() {
       <div className="flex items-center justify-between text-[11px] text-on-surface-variant font-medium pt-1">
         <span className="flex items-center gap-1 text-emerald-700 font-bold">
           <Sparkles className="w-3 h-3 text-emerald-600" />
-          +20 Karma XP on vote
+          +20 Civic Citizen XP on vote
         </span>
         <span>Poll closes in 2 days</span>
       </div>

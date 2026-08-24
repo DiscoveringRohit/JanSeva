@@ -80,6 +80,7 @@ export async function fetchWithAuth(
     ...init,
     headers,
     credentials: "include",
+    cache: "no-store",
   };
 
   try {

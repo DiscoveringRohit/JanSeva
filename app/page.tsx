@@ -155,7 +155,7 @@ export default function LandingPage() {
               <Award className="w-6 h-6" />
             </div>
             <h3 className="font-headline font-bold text-lg text-on-surface">
-              Civic Karma & Verification
+              Civic Citizen XP & Verification
             </h3>
             <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
               Earn XP for reporting verified hazards and participating in satisfaction polls. A ticket is only marked completed when neighborhood citizens confirm the fix.

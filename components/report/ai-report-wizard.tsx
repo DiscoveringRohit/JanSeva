@@ -198,13 +198,13 @@ export function AiReportWizard() {
         comments: 0
       } as any);
 
-      // Update user karma and stats locally
+      // Update user Civic Citizen XP and stats locally
       if (user && !isAnonymous && setUser) {
         setUser(prev => {
           if (!prev) return prev;
           return {
             ...prev,
-            karmaXP: prev.karmaXP + 15,
+            civicCitizenXP: (prev.civicCitizenXP || 0) + 15,
             stats: {
               ...prev.stats,
               issuesReported: (prev.stats.issuesReported || 0) + 1
@@ -596,7 +596,7 @@ export function AiReportWizard() {
                 <div>
                   <p className="text-xs font-bold text-on-surface">Submit as Verified Citizen</p>
                   <p className="text-[10px] text-on-surface-variant">
-                    Logged in as <strong>{user.name}</strong> • Earn +50 Civic Karma XP
+                    Logged in as <strong>{user.name}</strong> • Earn +50 Civic Citizen XP
                   </p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
@@ -690,7 +690,7 @@ export function AiReportWizard() {
               <span className="font-bold text-emerald-700">~{aiData.suggestedSlaHours} Hours</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-on-surface-variant font-medium">Karma Reward:</span>
+              <span className="text-on-surface-variant font-medium">Civic Citizen XP Reward:</span>
               <span className="font-bold text-primary-600">+50 XP Awarded</span>
             </div>
           </div>
