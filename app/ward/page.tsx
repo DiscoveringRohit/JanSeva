@@ -51,16 +51,6 @@ export default function WardPage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.message.trim()) return;
-    setIsSubmitted(true);
-    setTimeout(() => {
-      setIsSubmitted(false);
-      setFormData({ name: user?.name || "", email: user?.email || "", subject: "", message: "" });
-    }, 4000);
-  };
-
   // Visual Audit Hotspot Gallery (5-Column Showcase)
   const auditGallery = [
     {
