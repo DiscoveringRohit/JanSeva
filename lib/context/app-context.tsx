@@ -383,14 +383,14 @@ export function AppProvider({
 
     initData();
 
-    // Set up polling for real-time cross-tab sync without WebSockets
+    // Set up reasonable polling for background sync without clogging backend Gunicorn workers
     const pollInterval = setInterval(() => {
       const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
       if (token) {
         fetchIssues();
         fetchNotifications();
       }
-    }, 5000);
+    }, 60000);
 
     return () => clearInterval(pollInterval);
   }, []);

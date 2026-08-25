@@ -108,48 +108,60 @@ export function normalizeUser(rawUser: any): UserProfile {
   };
 }
 
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 12000): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 export const authApi = {
   sendOtp: async (target: string, channel: 'email' | 'sms' = 'sms'): Promise<AuthResponse> => {
     try {
-      const res = await fetch(`${API}/api/auth/send-otp/`, {
+      const res = await fetchWithTimeout(`${API}/api/auth/send-otp/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target, channel }),
-      });
+      }, 12000);
       const data = await res.json();
-      if (!res.ok) return { success: false, message: data.error || data.detail || "Failed to send OTP" };
+      if (!res.ok) return { success: false, message: data.error || data.detail || data.message || "Failed to send OTP" };
       return { success: true, message: data.message || `OTP sent via ${channel}` };
-    } catch (err) {
-      console.warn("Using mock auth fallback: sendOtp");
-      await delay(500);
-      return { success: true, message: `OTP sent to ${target} via ${channel}` };
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        return { success: false, message: "OTP request timed out. Please try again." };
+      }
+      return { success: false, message: err.message || "Network connection error. Please check your connection." };
     }
   },
 
   verifyOtp: async (target: string, otp_code: string): Promise<AuthResponse> => {
     try {
-      const res = await fetch(`${API}/api/auth/verify-otp/`, {
+      const res = await fetchWithTimeout(`${API}/api/auth/verify-otp/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target, otp_code }),
-      });
+      }, 10000);
       const data = await res.json();
-      if (!res.ok) return { success: false, message: data.error || data.detail || "Invalid OTP" };
+      if (!res.ok) return { success: false, message: data.error || data.detail || data.message || "Invalid or expired OTP" };
       return { success: true, message: data.message || "OTP verified successfully" };
-    } catch (err) {
-      console.warn("Using mock auth fallback: verifyOtp");
-      await delay(500);
-      if (otp_code === "123456") {
-        return { success: true, message: "OTP verified successfully" };
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        return { success: false, message: "Verification request timed out." };
       }
-      return { success: true, message: "OTP verified successfully (Mock)" };
+      return { success: false, message: err.message || "Network error during OTP verification." };
     }
   },
 
   register: async (data: any): Promise<AuthResponse> => {
     try {
       const payload = {
-        phone: data.phone || data.mobile || "+919876543210",
+        phone: data.phone || data.mobile || "",
         email: data.email,
         password: data.password,
         public_username: data.username || data.public_username || (data.email ? data.email.split('@')[0] : "user"),
@@ -160,11 +172,11 @@ export const authApi = {
         pincode: data.pincode || "751030",
       };
 
-      const res = await fetch(`${API}/api/auth/register/`, {
+      const res = await fetchWithTimeout(`${API}/api/auth/register/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      });
+      }, 15000);
       const resData = await res.json();
       if (!res.ok) {
         const errorMsg = resData.error || resData.detail || (resData.non_field_errors ? resData.non_field_errors[0] : "Registration failed");
@@ -175,31 +187,11 @@ export const authApi = {
         user: normalizeUser(resData.user),
         token: resData.access,
       };
-    } catch (err) {
-      console.warn("Using mock auth fallback: register");
-      await delay(800);
-      return {
-        success: true,
-        user: normalizeUser({ 
-          ...MOCK_AUTH_USER, 
-          name: data.fullName || data.username || MOCK_AUTH_USER.name,
-          username: data.username || MOCK_AUTH_USER.username,
-          email: data.email || MOCK_AUTH_USER.email,
-          phone: data.mobile || data.phone || MOCK_AUTH_USER.phone,
-          ward: data.pincode === "751030" ? "Khandagiri Area" : (data.pincode ? `Area ${data.pincode}` : MOCK_AUTH_USER.ward),
-          wardNumber: data.pincode === "751030" ? 63 : (data.wardNumber || MOCK_AUTH_USER.wardNumber),
-          pincode: data.pincode || MOCK_AUTH_USER.pincode,
-          civicCitizenXP: 0,
-          stats: {
-            ...MOCK_AUTH_USER.stats,
-            issuesReported: 0,
-            issuesResolved: 0,
-            communityUpvotes: 0,
-            impactRating: 0
-          }
-        }),
-        token: "mock-jwt-token-register",
-      };
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        return { success: false, message: "Registration request timed out." };
+      }
+      return { success: false, message: err.message || "Network error during registration." };
     }
   },
 
@@ -215,14 +207,14 @@ export const authApi = {
         payload.username = identifier;
       }
 
-      const res = await fetch(`${API}/api/auth/login/`, {
+      const res = await fetchWithTimeout(`${API}/api/auth/login/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      });
+      }, 10000);
       const resData = await res.json();
       if (!res.ok) {
-        return { success: false, message: resData.error || resData.detail || "Invalid credentials" };
+        return { success: false, message: resData.error || resData.detail || resData.message || "Invalid credentials" };
       }
       return {
         success: true,
