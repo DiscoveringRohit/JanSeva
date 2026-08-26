@@ -30,6 +30,11 @@ import {
   authService,
   fetchWithAuth,
 } from "@/lib/auth/auth-service-cookie3";
+import {
+  translations,
+  Language,
+  TranslationKey,
+} from "@/i18n/translations";
 
 interface ChatMessage {
   id: string;
@@ -87,6 +92,11 @@ interface AppContextType {
 
   activeFilter: string;
   setActiveFilter: (filter: string) => void;
+
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: (key: TranslationKey) => string;
+  allLanguages: { code: Language; name: string }[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(
@@ -100,8 +110,8 @@ export const MockContextBridge: {
   addComment: (issueId: string, text: string) => void;
 } = {
   getIssues: () => [],
-  toggleUpvote: () => {},
-  addComment: () => {},
+  toggleUpvote: () => { },
+  addComment: () => { },
 };
 
 export function AppProvider({
@@ -127,36 +137,74 @@ export function AppProvider({
   const [isAiDrawerOpen, setIsAiDrawerOpen] =
     useState(false);
 
+  const [language, setLanguageState] =
+    useState<Language>("en");
+
+  // Load language preference from localStorage
+  useEffect(() => {
+    try {
+      const savedLang = localStorage.getItem("janseva_lang") as Language;
+      if (savedLang && translations[savedLang]) {
+        setLanguageState(savedLang);
+      }
+    } catch (e) { }
+  }, []);
+
+  const setLanguage = (newLang: Language) => {
+    if (translations[newLang]) {
+      setLanguageState(newLang);
+      try {
+        localStorage.setItem("janseva_lang", newLang);
+      } catch (e) { }
+    }
+  };
+
+  const t = (key: TranslationKey): string => {
+    const currentLangDict = translations[language] || translations.en;
+    if (key in currentLangDict) {
+      return (currentLangDict as any)[key] || (translations.en as any)[key] || key;
+    }
+    return (translations.en as any)[key] || key;
+  };
+
+  const allLanguages = (Object.keys(translations) as Language[]).map((code) => ({
+    code,
+    name: translations[code].name,
+  }));
+
   const [activeFilter, setActiveFilter] =
     useState("all");
 
   const [chatMessages, setChatMessages] =
-    useState<ChatMessage[]>([
-      {
-        id: "msg-1",
-        sender: "assistant",
-        text: `Namaste! I am your JanSeva AI Civic Assistant. How can I assist you in ${DEFAULT_LOCATION.ward} today?`,
-        timestamp: new Date().toISOString(),
-        quickActions: [
-          {
-            label: "📸 Report a New Problem",
-            action: "report",
-          },
-          {
-            label: "🔍 Check Status of #JS-101",
-            action: "track_js101",
-          },
-          {
-            label: "🏛️ Who is my Corporator?",
-            action: "corporator_info",
-          },
-          {
-            label: "💧 Water Supply Schedule",
-            action: "water_timing",
-          },
-        ],
-      },
-    ]);
+    useState<ChatMessage[]>([]);
+
+  // Load user-specific chat history from localStorage
+  useEffect(() => {
+    if (!user) return;
+    const storageKey = `janseva_chat_history_${user.id || user.username}`;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        setChatMessages(JSON.parse(saved));
+        return;
+      }
+    } catch (e) {
+      console.warn("Failed to load user chat history:", e);
+    }
+
+    const defaultMsg: ChatMessage = {
+      id: `msg-welcome-${Date.now()}`,
+      sender: "assistant",
+      text: `Hello ${user.name.split(" ")[0]}! I'm JanSeva AI. Ask me anything about your reported tickets, municipal SLA targets, or how to level up your Civic Citizen XP.`,
+      timestamp: new Date().toISOString(),
+      quickActions: [
+        { label: "⚡ My Active Tickets", action: "my_tickets" },
+        { label: "📍 Ward SLA Status", action: "ward_sla" },
+        { label: "🏆 My XP & Badges", action: "my_xp" },
+      ],
+    };
+    setChatMessages([defaultMsg]);
+  }, [user?.id, user?.username]);
 
   // Sync state to MockContextBridge so that non-React API files can access it during mock fallbacks
   useEffect(() => {
@@ -223,13 +271,13 @@ export function AppProvider({
 
       if (res.ok) {
         const data = await res.json();
-        
+
         setIssues((prevIssues) => {
           // If the backend returns data, we still want to keep any local mock issues 
           // (like those submitted during the demo) that haven't been synced to the backend yet.
           const backendIds = new Set(data.map((i: any) => i.id));
           const localOnlyIssues = prevIssues.filter(i => !backendIds.has(i.id));
-          
+
           return [...data, ...localOnlyIssues];
         });
       }
@@ -267,7 +315,7 @@ export function AppProvider({
 
       if (res.ok) {
         const data = await res.json();
-        
+
         setNotifications((prevNotifs) => {
           const backendIds = new Set(data.map((n: any) => n.id));
           const localOnlyNotifs = prevNotifs.filter(n => !backendIds.has(n.id));
@@ -308,7 +356,7 @@ export function AppProvider({
 
       if (res.ok) {
         const userProfile = await res.json();
-        
+
         const { normalizeUser } = await import("@/lib/api/auth");
         const formattedUser = normalizeUser(userProfile);
 
@@ -377,7 +425,7 @@ export function AppProvider({
           await fetchNotifications();
         }
       }
-      
+
       setIsLoadingAuth(false);
     };
 
@@ -442,7 +490,7 @@ export function AppProvider({
     role: "citizen" | "officer" | "corporator"
   ) => {
     if (!user) return;
-    
+
     if (role === "citizen") {
       setUser({
         ...user,
@@ -696,10 +744,10 @@ export function AppProvider({
 
   const deleteIssue = async (issueId: string) => {
     setIssues((prev) => prev.filter((i) => i.id !== issueId));
-    
+
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
     const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
-    
+
     if (token) {
       try {
         await fetch(`${API_URL}/api/issues/${issueId}/`, {
@@ -744,11 +792,11 @@ export function AppProvider({
             images: {
               ...issue.images,
               ...(status === "Resolved" &&
-              !issue.images.resolved
+                !issue.images.resolved
                 ? {
-                    resolved:
-                      "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&auto=format&fit=crop&q=80",
-                  }
+                  resolved:
+                    "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&auto=format&fit=crop&q=80",
+                }
                 : {}),
             },
           };
@@ -825,15 +873,15 @@ export function AppProvider({
         if (issue.id === issueId) {
           const currentVote = issue.verificationVotes.userVoted;
           const votes = { ...issue.verificationVotes };
-          
+
           if (currentVote === vote) return issue;
 
           if (currentVote === "yes") votes.yes = Math.max(0, votes.yes - 1);
           if (currentVote === "no") votes.no = Math.max(0, votes.no - 1);
-          
+
           if (vote === "yes") votes.yes += 1;
           if (vote === "no") votes.no += 1;
-          
+
           votes.userVoted = vote;
 
           return { ...issue, verificationVotes: votes };
@@ -946,9 +994,9 @@ export function AppProvider({
       prev.map((n: NotificationItem) =>
         n.id === id
           ? {
-              ...n,
-              read: true,
-            }
+            ...n,
+            read: true,
+          }
           : n
       )
     );
@@ -1073,7 +1121,7 @@ export function AppProvider({
         "janseva_poll_vote",
         optionId
       );
-    } catch (e) {}
+    } catch (e) { }
 
     setUser((prev: UserProfile | null) => prev ? ({
       ...prev,
@@ -1081,113 +1129,154 @@ export function AppProvider({
     }) : prev);
   };
 
- const sendChatMessage = async (text: string) => {
-  const userMsg: ChatMessage = {
-    id: `msg-${Date.now()}`,
-    sender: "user",
-    text,
-    timestamp: new Date().toISOString(),
+  const persistChat = (messages: ChatMessage[]) => {
+    if (!user) return;
+    const storageKey = `janseva_chat_history_${user.id || user.username}`;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(messages));
+    } catch (e) {
+      console.warn("Failed to save user chat history:", e);
+    }
   };
 
-  setChatMessages((prev: ChatMessage[]) => [
-    ...prev,
-    userMsg,
-  ]);
+  const sendChatMessage = async (text: string) => {
+    const userMsg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      sender: "user",
+      text,
+      timestamp: new Date().toISOString(),
+    };
 
-  try {
-    const response = await fetch(
-      "https://civic-issue-chatbot.onrender.com/chat",
-      {
+    const updatedWithUser = [...chatMessages, userMsg];
+    setChatMessages(updatedWithUser);
+    persistChat(updatedWithUser);
+
+    // Build user-specific context from active state
+    const userIssues = issues.filter(
+      (i: any) =>
+        i.reporterId === user?.id ||
+        i.reporter?.username === user?.username ||
+        i.reporter?.name === user?.name
+    );
+
+    const userContext = {
+      name: user?.name,
+      username: user?.username,
+      city: user?.city,
+      pincode: user?.pincode,
+      civicCitizenXP: user?.civicCitizenXP,
+      level: user?.level,
+      levelTitle: user?.levelTitle,
+      badges: user?.badges || [],
+      myReportsCount: userIssues.length,
+      resolvedCount: userIssues.filter(
+        (i: any) => i.status === "Resolved" || i.status === "Verified Resolved"
+      ).length,
+      myIssues: userIssues.map((i: any) => ({
+        id: i.id,
+        title: i.title,
+        category: i.category,
+        status: i.status,
+        urgency: i.urgency,
+        slaHours:
+          i.aiAnalysis?.suggestedSlaHours ||
+          (i.urgency === "Critical" ? 12 : i.urgency === "High" ? 24 : 48),
+      })),
+    };
+
+    try {
+      const response = await fetch("/api/gemini", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          query: text,
+          type: "chat",
+          message: text,
+          userContext,
         }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Gemini request failed: ${response.status}`);
       }
-    );
 
-    if (!response.ok) {
-      throw new Error(`Chatbot request failed: ${response.status}`);
+      const data = await response.json();
+
+      const botMsg: ChatMessage = {
+        id: `msg-${Date.now() + 1}`,
+        sender: "assistant",
+        text:
+          data.reply ||
+          "I am here to assist with all your municipal tickets and civic inquiries.",
+        timestamp: new Date().toISOString(),
+      };
+
+      const finalMessages = [...updatedWithUser, botMsg];
+      setChatMessages(finalMessages);
+      persistChat(finalMessages);
+    } catch (error) {
+      console.error("Gemini Chatbot error:", error);
+
+      const errorMsg: ChatMessage = {
+        id: `msg-${Date.now() + 1}`,
+        sender: "assistant",
+        text: "Sorry, I couldn't reach JanSeva AI right now. Please verify your connection or try again in a moment.",
+        timestamp: new Date().toISOString(),
+      };
+
+      const finalMessages = [...updatedWithUser, errorMsg];
+      setChatMessages(finalMessages);
+      persistChat(finalMessages);
     }
+  };
+  const sendVoiceMessage = async (audioBlob: Blob) => {
+    try {
+      const formData = new FormData();
 
-    const data = await response.json();
+      formData.append("audio", audioBlob, "recording.webm");
 
-    const botMsg: ChatMessage = {
-      id: `msg-${Date.now() + 1}`,
-      sender: "assistant",
-      text: data.answer,
-      timestamp: new Date().toISOString(),
-    };
+      const response = await fetch(
+        "https://civic-issue-chatbot.onrender.com/chat/voice",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
-    setChatMessages((prev: ChatMessage[]) => [
-      ...prev,
-      botMsg,
-    ]);
-  } catch (error) {
-    console.error("Chatbot error:", error);
-
-    const errorMsg: ChatMessage = {
-      id: `msg-${Date.now() + 1}`,
-      sender: "assistant",
-      text: "Sorry, I couldn't connect to the JanSeva chatbot right now. Please try again.",
-      timestamp: new Date().toISOString(),
-    };
-
-    setChatMessages((prev: ChatMessage[]) => [
-      ...prev,
-      errorMsg,
-    ]);
-  }
-};
-const sendVoiceMessage = async (audioBlob: Blob) => {
-  try {
-    const formData = new FormData();
-
-    formData.append("audio", audioBlob, "recording.webm");
-
-    const response = await fetch(
-      "https://civic-issue-chatbot.onrender.com/chat/voice",
-      {
-        method: "POST",
-        body: formData,
+      if (!response.ok) {
+        throw new Error(`Voice request failed: ${response.status}`);
       }
-    );
 
-    if (!response.ok) {
-      throw new Error(`Voice request failed: ${response.status}`);
+      const data = await response.json();
+
+      const botMsg: ChatMessage = {
+        id: `msg-${Date.now()}`,
+        sender: "assistant",
+        text: data.answer,
+        timestamp: new Date().toISOString(),
+      };
+
+      setChatMessages((prev: ChatMessage[]) => [
+        ...prev,
+        botMsg,
+      ]);
+    } catch (error) {
+      console.error("Voice chatbot error:", error);
+
+      const errorMsg: ChatMessage = {
+        id: `msg-${Date.now()}`,
+        sender: "assistant",
+        text: "Sorry, I couldn't process your voice message. Please try again.",
+        timestamp: new Date().toISOString(),
+      };
+
+      setChatMessages((prev: ChatMessage[]) => [
+        ...prev,
+        errorMsg,
+      ]);
     }
-
-    const data = await response.json();
-
-    const botMsg: ChatMessage = {
-      id: `msg-${Date.now()}`,
-      sender: "assistant",
-      text: data.answer,
-      timestamp: new Date().toISOString(),
-    };
-
-    setChatMessages((prev: ChatMessage[]) => [
-      ...prev,
-      botMsg,
-    ]);
-  } catch (error) {
-    console.error("Voice chatbot error:", error);
-
-    const errorMsg: ChatMessage = {
-      id: `msg-${Date.now()}`,
-      sender: "assistant",
-      text: "Sorry, I couldn't process your voice message. Please try again.",
-      timestamp: new Date().toISOString(),
-    };
-
-    setChatMessages((prev: ChatMessage[]) => [
-      ...prev,
-      errorMsg,
-    ]);
-  }
-};
+  };
 
   const unreadNotifsCount =
     notifications.filter(
@@ -1229,6 +1318,10 @@ const sendVoiceMessage = async (audioBlob: Blob) => {
         setIsAiDrawerOpen,
         activeFilter,
         setActiveFilter,
+        language,
+        setLanguage,
+        t,
+        allLanguages,
       }}
     >
       {children}

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { OfficerKanban } from "@/components/officer/officer-kanban";
-import { CivicMapView } from "@/components/map/civic-map-view";
+import { CivicMapView } from "@/components/map/JanSevaMap";
 import { useApp } from "@/lib/context/app-context";
 import { ShieldCheck, UserCheck, Sparkles, Building2 } from "lucide-react";
 
@@ -65,7 +65,7 @@ export default function DepartmentOfficerPage() {
               {departmentName} Department Operations
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary-50 text-primary-800 border border-primary-200">
-              Ward 42
+              PIN 751030 • Khandagiri
             </span>
           </div>
           <p className="text-xs sm:text-sm text-on-surface-variant mt-0.5">

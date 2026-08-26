@@ -36,17 +36,12 @@ export default function EditProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [smsAlerts, setSmsAlerts] = useState(true);
-  const [whatsappAlerts, setWhatsappAlerts] = useState(true);
-  const [townHallAlerts, setTownHallAlerts] = useState(true);
-  const [language, setLanguage] = useState("English");
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     setIsSaving(true);
     setError(null);
-    
+
     // We send data to backend. Backend uses `phone_number`, `pin_code`, `first_name`, `last_name` etc.
     // authApi.updateProfile handles the fetch.
     const res = await authApi.updateProfile({
@@ -61,14 +56,17 @@ export default function EditProfilePage() {
     });
 
     setIsSaving(false);
-    
+
     if (res.success && res.user) {
       setUser(res.user);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("janseva_user", JSON.stringify(res.user));
+      }
       setSavedToast(true);
       setTimeout(() => {
         setSavedToast(false);
         router.push("/profile");
-      }, 1000);
+      }, 800);
     } else {
       setError(res.message || "Failed to save profile");
     }
@@ -84,7 +82,7 @@ export default function EditProfilePage() {
           <h2 className="font-headline font-bold text-xl text-slate-800">Access Denied</h2>
           <p className="text-sm text-slate-500 mt-1">Please login to edit your profile.</p>
         </div>
-        <button 
+        <button
           onClick={() => router.push("/login")}
           className="px-6 py-2.5 bg-primary-600 text-white font-bold text-sm rounded-xl mt-4"
         >
@@ -96,7 +94,7 @@ export default function EditProfilePage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn pb-12">
-      
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <button
@@ -140,23 +138,52 @@ export default function EditProfilePage() {
                 {name ? name.charAt(0).toUpperCase() : "U"}
               </div>
             )}
-            <label className="absolute inset-0 flex items-center justify-center bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+            <label className="absolute inset-0 flex items-center justify-center bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" title="Click to upload profile photo (No AI verification required)">
               <Camera className="w-5 h-5" />
-              <input 
-                type="file" 
-                accept="image/*" 
-                className="hidden" 
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
                 onChange={(e) => {
                   if (e.target.files && e.target.files[0]) {
+                    const file = e.target.files[0];
                     const reader = new FileReader();
                     reader.onload = (ev) => {
-                      if (ev.target?.result) {
-                        setAvatar(ev.target.result as string);
-                      }
+                      const img = document.createElement("img");
+                      img.onload = () => {
+                        const canvas = document.createElement("canvas");
+                        const MAX_SIZE = 256;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                          if (width > MAX_SIZE) {
+                            height = Math.round((height * MAX_SIZE) / width);
+                            width = MAX_SIZE;
+                          }
+                        } else {
+                          if (height > MAX_SIZE) {
+                            width = Math.round((width * MAX_SIZE) / height);
+                            height = MAX_SIZE;
+                          }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext("2d");
+                        if (ctx) {
+                          ctx.drawImage(img, 0, 0, width, height);
+                          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+                          setAvatar(compressedDataUrl);
+                        } else {
+                          setAvatar(ev.target?.result as string);
+                        }
+                      };
+                      img.src = ev.target?.result as string;
                     };
-                    reader.readAsDataURL(e.target.files[0]);
+                    reader.readAsDataURL(file);
                   }
-                }} 
+                }}
               />
             </label>
           </div>
@@ -164,9 +191,10 @@ export default function EditProfilePage() {
             <p className="text-xs font-bold text-on-surface">{name}</p>
             <p className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Aadhaar Verified Resident</span>
+              <span>Verified Resident</span>
             </p>
             <span className="text-[10px] text-on-surface-variant">Civic Level {user.level} ({user.civicCitizenXP} XP)</span>
+            <p className="text-[10px] text-slate-400 mt-0.5">Direct photo upload • No AI inspection required</p>
           </div>
         </div>
 
@@ -245,7 +273,7 @@ export default function EditProfilePage() {
               </div>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
             <div>
@@ -265,45 +293,8 @@ export default function EditProfilePage() {
               </div>
             </div>
           </div>
-
-          {/* Preferences */}
-          <div className="p-4 rounded-2xl bg-surface-container-low border border-surface-dim space-y-3">
-            <h4 className="text-xs font-bold uppercase text-on-surface-variant tracking-wider">
-              Notification Channels
-            </h4>
-
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-on-surface">SMS SLA Progression Alerts</span>
-              <input
-                type="checkbox"
-                checked={smsAlerts}
-                onChange={(e) => setSmsAlerts(e.target.checked)}
-                className="rounded accent-primary-600 w-4 h-4"
-              />
-            </div>
-
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-on-surface">WhatsApp Officer Updates</span>
-              <input
-                type="checkbox"
-                checked={whatsappAlerts}
-                onChange={(e) => setWhatsappAlerts(e.target.checked)}
-                className="rounded accent-primary-600 w-4 h-4"
-              />
-            </div>
-
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-on-surface">Ward Town Hall Emergency Notices</span>
-              <input
-                type="checkbox"
-                checked={townHallAlerts}
-                onChange={(e) => setTownHallAlerts(e.target.checked)}
-                className="rounded accent-primary-600 w-4 h-4"
-              />
-            </div>
-          </div>
         </div>
-        
+
         {error && (
           <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-medium">
             {error}

@@ -27,7 +27,7 @@ export function IssueCard({ issue }: IssueCardProps) {
   const { deleteIssue, user } = useApp();
   const [copied, setCopied] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  
+
   const isOwner = user && (user.username === issue.reporter.username || user.name === issue.reporter.name || user.email === issue.reporter.name);
 
   const [localUpvotes, setLocalUpvotes] = useState(issue.upvotes);
@@ -46,7 +46,7 @@ export function IssueCard({ issue }: IssueCardProps) {
   const handleUpvote = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const wasUpvoted = localIsUpvoted;
     setLocalIsUpvoted(!wasUpvoted);
     setLocalUpvotes(prev => wasUpvoted ? prev - 1 : prev + 1);
@@ -102,12 +102,12 @@ export function IssueCard({ issue }: IssueCardProps) {
   return (
     <article className="rounded-3xl bg-white border border-slate-200/80 p-5 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
       <div>
-        
+
         {/* Top Header: Avatar + Handle + Timestamp + Location & Badges + 3-dots */}
-        <div className="flex items-start justify-between gap-2 mb-3">
-          
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5 mb-3">
+
           {/* Author Info */}
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-2.5 min-w-0">
             <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-slate-200 shadow-2xs">
               <img
                 src={issue.reporter.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80"}
@@ -116,29 +116,35 @@ export function IssueCard({ issue }: IssueCardProps) {
               />
             </div>
 
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-xs sm:text-sm text-slate-900 leading-tight">
+            <div className="space-y-0.5 min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-bold text-xs sm:text-sm text-slate-900 leading-tight truncate">
                   @{issue.reporter.username || issue.reporter.name}
                 </span>
                 {/* Green verified check badge */}
-                <span className="w-3.5 h-3.5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px] font-bold">
+                <span className="w-3.5 h-3.5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px] font-bold shrink-0">
                   ✓
                 </span>
-                <span className="text-xs text-slate-400 font-normal">
+                <span className="text-[11px] sm:text-xs text-slate-400 font-normal shrink-0">
                   - {formatDate(issue.createdAt)}
                 </span>
               </div>
 
               <div className="flex items-center gap-1 text-xs text-slate-500">
                 <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                <span className="truncate max-w-[200px] sm:max-w-xs">{issue.location.address}</span>
+                <span className="truncate max-w-[180px] sm:max-w-xs">{issue.location.address}</span>
               </div>
             </div>
           </div>
 
           {/* Right Section: 3 dots + Status & Urgency Badges */}
-          <div className="flex flex-col items-end gap-2 shrink-0">
+          <div className="flex items-center sm:flex-col sm:items-end justify-between gap-2 shrink-0 pt-1 sm:pt-0">
+            {/* Badges Row */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {renderStatusBadge(issue.status)}
+              {renderUrgencyBadge(issue.urgency)}
+            </div>
+
             {/* 3-dots Menu */}
             <div className="relative">
               <button
@@ -148,7 +154,7 @@ export function IssueCard({ issue }: IssueCardProps) {
                   e.stopPropagation();
                   setIsMenuOpen(!isMenuOpen);
                 }}
-                className="p-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors"
+                className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors min-w-[32px] min-h-[32px] flex items-center justify-center"
               >
                 <MoreVertical className="w-4 h-4" />
               </button>
@@ -178,12 +184,6 @@ export function IssueCard({ issue }: IssueCardProps) {
                   </button>
                 </div>
               )}
-            </div>
-
-            {/* Badges Row */}
-            <div className="flex items-center gap-1.5">
-              {renderStatusBadge(issue.status)}
-              {renderUrgencyBadge(issue.urgency)}
             </div>
           </div>
 
@@ -217,7 +217,7 @@ export function IssueCard({ issue }: IssueCardProps) {
 
         {/* AI Triage Card (Blue/Teal Tinted Box) */}
         <div className="rounded-2xl p-3.5 sm:p-4 bg-[#f4f9f8] border border-[#d6ebe2] mb-3 space-y-2">
-          
+
           {/* Top Row: AI Triage Label + Confidence */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm text-[#0f5b49]">
@@ -252,10 +252,10 @@ export function IssueCard({ issue }: IssueCardProps) {
 
       {/* Bottom Action Footer */}
       <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
-        
+
         {/* Left Actions: Upvote, Comment, Share */}
         <div className="flex items-center gap-4">
-          
+
           {/* Upvote */}
           <button
             type="button"

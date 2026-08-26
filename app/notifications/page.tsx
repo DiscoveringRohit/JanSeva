@@ -112,7 +112,7 @@ export default function NotificationsPage() {
           <div className="rounded-3xl bg-white border border-surface-container-high p-12 text-center space-y-2">
             <Bell className="w-8 h-8 text-on-surface-variant/40 mx-auto" />
             <p className="font-headline font-bold text-sm text-on-surface">No alerts in this category</p>
-            <p className="text-xs text-on-surface-variant">You're all caught up with Ward 42 updates!</p>
+            <p className="text-xs text-on-surface-variant">You're all caught up with neighborhood updates!</p>
           </div>
         ) : (
           filtered.map((n) => (

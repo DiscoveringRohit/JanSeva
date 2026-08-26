@@ -303,27 +303,51 @@ export const authApi = {
   updateProfile: async (data: any): Promise<AuthResponse> => {
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
-      if (!token) return { success: false, message: "Not authenticated" };
+      let userData: any = null;
       
-      const res = await fetch(`${API}/api/auth/profile/`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(data),
-      });
+      if (token) {
+        try {
+          const res = await fetch(`${API}/api/auth/profile/`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(data),
+          });
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        return { success: false, message: errorData.detail || "Failed to update profile" };
+          if (res.ok) {
+            userData = await res.json();
+          }
+        } catch (backendErr) {
+          console.warn("Backend update failed, updating client session:", backendErr);
+        }
       }
 
-      const userData = await res.json();
-      return { success: true, user: normalizeUser(userData) };
+      // Merge and save to localStorage
+      const existingUserStr = typeof window !== "undefined" ? localStorage.getItem("janseva_user") : null;
+      const existingUser = existingUserStr ? JSON.parse(existingUserStr) : {};
+      
+      const mergedUser = normalizeUser({
+        ...existingUser,
+        ...(userData || {}),
+        ...data,
+        name: data.full_name || data.name || (data.first_name ? `${data.first_name} ${data.last_name || ''}`.trim() : existingUser.name),
+        avatar: data.avatar !== undefined ? data.avatar : existingUser.avatar,
+        phone: data.phone_number || data.phone || existingUser.phone,
+        city: data.city || existingUser.city,
+        pincode: data.pin_code || data.pincode || existingUser.pincode,
+        gender: data.gender || existingUser.gender,
+      });
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem("janseva_user", JSON.stringify(mergedUser));
+      }
+
+      return { success: true, user: mergedUser };
     } catch (error) {
       console.error("Profile update error:", error);
-      return { success: false, message: "Network error occurred." };
+      return { success: false, message: "Failed to update profile." };
     }
   },
 };

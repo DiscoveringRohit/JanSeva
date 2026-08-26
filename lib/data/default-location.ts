@@ -1,7 +1,7 @@
 export const DEFAULT_LOCATION = {
   state: "Odisha",
   city: "Bhubaneswar",
-  ward: "Ward 63",
+  ward: "Khandagiri (PIN 751030)",
   wardNumber: 63,
   pincode: "751030",
   municipalBody: "BMC",

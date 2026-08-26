@@ -88,7 +88,7 @@ export default function LoginPage() {
 
       if (response.success && response.user) {
         setSuccessMessage("Login successful! Redirecting...");
-        
+
         if (response.token) {
           localStorage.setItem("janseva_token", response.token);
         }
@@ -113,7 +113,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen relative flex items-center justify-center p-4 sm:p-6 bg-slate-950 font-body overflow-hidden">
-      
+
       {/* 1. Fullscreen Foggy Forest Background */}
       <div
         className="absolute inset-0 bg-cover bg-center"
@@ -127,7 +127,7 @@ export default function LoginPage() {
 
       {/* 2. Glassmorphic Login Card - Wider, more compact & ultra-transparent */}
       <div className="relative z-10 w-full max-w-[560px] rounded-[2rem] bg-slate-950/30 backdrop-blur-xl border border-white/20 p-6 sm:p-8 shadow-2xl shadow-black/60 space-y-4 text-white animate-fadeIn">
-        
+
         {/* Top Centered Glowing Sun Emblem */}
         <div className="text-center space-y-2">
           <div className="w-10 h-10 rounded-full border border-white/30 bg-white/10 backdrop-blur-md flex items-center justify-center mx-auto text-white shadow-inner">
@@ -161,7 +161,7 @@ export default function LoginPage() {
 
         {/* Login Form */}
         <form onSubmit={handleLogin} className="space-y-3 text-left">
-          
+
           {/* Email / Username Field */}
           <div className="space-y-1">
             <label

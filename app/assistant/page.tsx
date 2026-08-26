@@ -23,10 +23,17 @@ import { cn } from "@/lib/utils";
 
 export default function AssistantPage() {
   const router = useRouter();
-  const { chatMessages, sendChatMessage, sendVoiceMessage } = useApp();
+  const {
+    chatMessages,
+    sendChatMessage,
+    sendVoiceMessage,
+    language,
+    setLanguage,
+    allLanguages,
+    t,
+  } = useApp();
   const [input, setInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
-  const [selectedLang, setSelectedLang] = useState("English");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   useEffect(() => {
@@ -117,17 +124,17 @@ export default function AssistantPage() {
 
           {/* Language Switcher */}
           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-2xl border border-surface-container-high shadow-sm text-xs">
-            <span className="text-on-surface-variant font-bold">Language:</span>
+            <span className="text-on-surface-variant font-bold">{t("language")}:</span>
             <select
-              value={selectedLang}
-              onChange={(e) => setSelectedLang(e.target.value)}
-              className="bg-transparent font-bold text-primary-700 focus:outline-none cursor-pointer"
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as any)}
+              className="bg-transparent font-bold text-[#134431] focus:outline-none cursor-pointer"
             >
-              <option value="English">English</option>
-              <option value="Hindi">हिन्दी (Hindi)</option>
-              <option value="Kannada">ಕನ್ನಡ (Kannada)</option>
-              <option value="Marathi">मराठी (Marathi)</option>
-              <option value="Tamil">தமிழ் (Tamil)</option>
+              {allLanguages.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -199,7 +206,11 @@ export default function AssistantPage() {
             {isRecording && (
               <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-3 animate-pulse">
                 <span className="w-3 h-3 rounded-full bg-rose-600 animate-ping"></span>
-                <span>Recording microphone input in {selectedLang}... Speak now.</span>
+                <span>
+                  Recording microphone input in{" "}
+                  {allLanguages.find((l) => l.code === language)?.name || "selected language"}
+                  ... Speak now.
+                </span>
               </div>
             )}
 
@@ -240,7 +251,7 @@ export default function AssistantPage() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={`Ask in ${selectedLang} (e.g. status of complaint, corporator info, waste rules)...`}
+              placeholder={`Ask in ${allLanguages.find((l) => l.code === language)?.name || "your language"} (e.g. status of complaint, corporator info, waste rules)...`}
               className="flex-1 px-4 py-3 text-xs sm:text-sm rounded-2xl bg-surface-container-low border border-surface-dim focus:outline-none focus:ring-2 focus:ring-primary-500 text-on-surface"
             />
 

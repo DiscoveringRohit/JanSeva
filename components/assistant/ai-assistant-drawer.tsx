@@ -28,11 +28,14 @@ export function AiAssistantDrawer() {
     setIsAiDrawerOpen,
     chatMessages,
     sendChatMessage,
+    language,
+    setLanguage,
+    allLanguages,
+    t,
   } = useApp();
 
   const [input, setInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState("English");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -85,7 +88,7 @@ export function AiAssistantDrawer() {
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm animate-fadeIn">
       <div className="w-full sm:w-[460px] h-full bg-white flex flex-col justify-between shadow-2xl border-l border-surface-container-high animate-slideUp">
-        
+
         {/* Header */}
         <div className="p-4 border-b border-surface-container-high bg-gradient-to-r from-primary-700 via-primary-600 to-indigo-700 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -100,7 +103,7 @@ export function AiAssistantDrawer() {
                 </span>
               </div>
               <p className="text-[11px] text-white/80 mt-0.5">
-                Ward 42 • Multilingual Civic Intelligence
+                PIN 751030 • Multilingual Civic Intelligence
               </p>
             </div>
           </div>
@@ -108,15 +111,19 @@ export function AiAssistantDrawer() {
           <div className="flex items-center gap-1.5">
             {/* Language Selector */}
             <select
-              value={selectedLanguage}
-              onChange={(e) => setSelectedLanguage(e.target.value)}
-              className="bg-white/20 text-white text-[11px] font-bold rounded-lg px-2 py-1 border border-white/20 focus:outline-none"
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as any)}
+              className="bg-white/20 text-white text-[11px] font-bold rounded-lg px-2 py-1 border border-white/20 focus:outline-none cursor-pointer"
             >
-              <option value="English" className="text-black">EN</option>
-              <option value="Hindi" className="text-black">हिन्दी</option>
-              <option value="Kannada" className="text-black">ಕನ್ನಡ</option>
-              <option value="Marathi" className="text-black">मराठी</option>
-              <option value="Tamil" className="text-black">தமிழ்</option>
+              {allLanguages.map((lang) => (
+                <option
+                  key={lang.code}
+                  value={lang.code}
+                  className="text-slate-900 bg-white"
+                >
+                  {lang.name}
+                </option>
+              ))}
             </select>
 
             <button
@@ -131,7 +138,7 @@ export function AiAssistantDrawer() {
 
         {/* Chat Message Stream */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-surface/50">
-          
+
           {/* Welcome Banner */}
           <div className="rounded-2xl p-3 bg-gradient-to-r from-primary-50 to-indigo-50 border border-primary-200 text-xs space-y-1">
             <div className="flex items-center gap-1.5 font-bold text-primary-900">
@@ -196,7 +203,11 @@ export function AiAssistantDrawer() {
           {isRecording && (
             <div className="flex items-center gap-2 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold animate-pulse">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping"></span>
-              <span>Listening to voice in {selectedLanguage}... Speak your civic grievance...</span>
+              <span>
+                Listening to voice in{" "}
+                {allLanguages.find((l) => l.code === language)?.name || "selected language"}
+                ... Speak your civic grievance...
+              </span>
             </div>
           )}
 
@@ -207,7 +218,7 @@ export function AiAssistantDrawer() {
         <div className="p-2 border-t border-surface-dim bg-white overflow-x-auto flex gap-1.5 no-scrollbar">
           <button
             type="button"
-            onClick={() => sendChatMessage("Report a streetlight failure in Ward 42")}
+            onClick={() => sendChatMessage("Report a streetlight failure in Khandagiri")}
             className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-surface-container-low hover:bg-surface-container text-on-surface-variant hover:text-on-surface border border-surface-dim shrink-0"
           >
             💡 Report streetlight
@@ -221,20 +232,20 @@ export function AiAssistantDrawer() {
           </button>
           <button
             type="button"
-            onClick={() => sendChatMessage("When is the next Ward 42 committee meeting?")}
+            onClick={() => sendChatMessage("When is the next Khandagiri committee meeting?")}
             className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-surface-container-low hover:bg-surface-container text-on-surface-variant hover:text-on-surface border border-surface-dim shrink-0"
           >
-            📅 Ward 42 town hall
+            📅 Community town hall
           </button>
         </div>
 
         {/* Input Bar */}
-        <form onSubmit={handleSubmit} className="p-3 border-t border-surface-container-high bg-white flex items-center gap-2">
+        <form onSubmit={handleSubmit} className="p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-surface-container-high bg-white flex items-center gap-2">
           <button
             type="button"
             onClick={handleVoiceToggle}
             className={cn(
-              "p-2.5 rounded-2xl border transition-all",
+              "p-2.5 rounded-2xl border transition-all shrink-0 min-w-[40px] min-h-[40px] flex items-center justify-center",
               isRecording
                 ? "bg-rose-500 text-white border-rose-600 animate-bounce"
                 : "bg-surface-container-low hover:bg-surface-container text-on-surface-variant border-surface-dim"
@@ -248,14 +259,14 @@ export function AiAssistantDrawer() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={`Ask in ${selectedLanguage} or describe a problem...`}
-            className="flex-1 px-3.5 py-2.5 text-xs rounded-2xl bg-surface-container-low border border-surface-dim focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-600 focus:bg-white text-on-surface"
+            placeholder={`Ask in ${allLanguages.find((l) => l.code === language)?.name || "your language"} or describe a problem...`}
+            className="flex-1 px-3.5 py-2.5 text-xs rounded-2xl bg-surface-container-low border border-surface-dim focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-600 focus:bg-white text-on-surface min-w-0"
           />
 
           <button
             type="submit"
             disabled={!input.trim()}
-            className="p-2.5 rounded-2xl bg-primary-600 hover:bg-primary-700 disabled:opacity-40 text-white font-bold transition-all shadow-md shadow-primary-600/30"
+            className="p-2.5 rounded-2xl bg-primary-600 hover:bg-primary-700 disabled:opacity-40 text-white font-bold transition-all shadow-md shadow-primary-600/30 shrink-0 min-w-[40px] min-h-[40px] flex items-center justify-center"
           >
             <Send className="w-4 h-4" />
           </button>

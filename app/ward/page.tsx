@@ -95,7 +95,7 @@ export default function WardPage() {
     {
       quote: "The chronic drainage block near 5th cross was cleared in 12 hours after 40 residents upvoted on JanSeva. Remarkable transparency from our corporator!",
       author: "Dr. Soumya Mishra",
-      role: "Ward 63 Resident & Physician",
+      role: "Khandagiri Resident & Physician",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
     },
     {
@@ -113,11 +113,11 @@ export default function WardPage() {
   ];
 
   return (
-    <div className="space-y-0 animate-fadeIn pb-20 -mx-4 sm:-mx-6 lg:-mx-8">
-      
+    <div className="overflow-x-hidden space-y-0 animate-fadeIn pb-20 -mx-4 sm:-mx-6 lg:-mx-8">
+
       {/* 1. CINEMATIC PARALLAX HERO SECTION (Image 1 Style) */}
       <section className="relative min-h-[580px] sm:min-h-[640px] flex items-center justify-center overflow-hidden bg-slate-950 text-white px-6 sm:px-12 py-16">
-        
+
         {/* Parallax Background Image */}
         <div
           className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-45 scale-105 transition-transform duration-75 ease-out"
@@ -133,12 +133,12 @@ export default function WardPage() {
 
         {/* Hero Content */}
         <div className="relative z-10 max-w-4xl mx-auto text-center space-y-6">
-          
+
           {/* Top Label */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-emerald-300 shadow-lg">
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />
             <span className="tracking-widest uppercase text-[11px]">
-              WARD 63 • BHUBANESWAR MUNICIPAL CORPORATION
+              KHANDAGIRI ZONE • PIN 751030 • BHUBANESWAR
             </span>
           </div>
 
@@ -156,7 +156,7 @@ export default function WardPage() {
           </div>
 
           <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mx-auto leading-relaxed font-medium">
-            Explore live neighborhood telemetry, public municipal budget allocations, SLA resolution benchmarks, and verified corporator stewardship in Ward 63.
+            Explore live neighborhood telemetry, public municipal budget allocations, SLA resolution benchmarks, and verified community stewardship in Khandagiri (PIN 751030).
           </p>
 
           {/* CTA Buttons */}
@@ -185,29 +185,29 @@ export default function WardPage() {
 
       {/* 2. LAYERED PARCHMENT ABOUT SECTION (Meet Your Corporator - Image 2 Style) */}
       <section id="corporator-about-section" className="relative bg-[#fcfaf7] text-slate-900 px-6 sm:px-12 py-16 sm:py-20 border-y border-[#eadfcb] shadow-inner overflow-hidden">
-        
+
         {/* Faint Stamp Watermark */}
         <div className="absolute top-12 right-12 w-48 h-48 rounded-full border-4 border-dashed border-[#d8c7a8]/50 flex items-center justify-center pointer-events-none rotate-12 opacity-60">
           <div className="text-center text-[#9b835e] font-serif uppercase tracking-widest text-[10px] font-bold">
             Municipal Citizen Council<br />
-            ★ WARD 63 ★<br />
+            ★ PIN 751030 ★<br />
             Verified Seal
           </div>
         </div>
 
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 items-center relative z-10">
-          
+
           {/* Left Narrative Letter */}
           <div className="lg:col-span-7 space-y-5">
             <span className="text-xs uppercase font-bold tracking-widest text-[#134431] flex items-center gap-1.5">
-              <span>About Ward 63 Leadership</span>
+              <span>About Khandagiri Leadership</span>
               <span>—</span>
             </span>
 
             <h2 className="font-headline font-black text-2xl sm:text-4xl text-slate-900 leading-tight">
               Hi, I'm Smt. Rajeshwari N. <br />
               <span className="font-serif italic font-normal text-[#134431]">
-                A public servant dedicated to a cleaner, safer ward.
+                A public servant dedicated to a cleaner, safer community.
               </span>
             </h2>
 
@@ -226,7 +226,7 @@ export default function WardPage() {
                   Smt. Rajeshwari N.
                 </p>
                 <p className="text-[11px] text-slate-500 font-medium">
-                  Elected Corporator • Ward 63, BMC Bhubaneswar
+                  Elected Corporator • Khandagiri (PIN 751030), BMC Bhubaneswar
                 </p>
               </div>
 
@@ -244,7 +244,7 @@ export default function WardPage() {
           {/* Right Taped Polaroid Photo Frame */}
           <div className="lg:col-span-5 flex justify-center">
             <div className="relative bg-white p-4 pb-6 rounded-2xl shadow-2xl border border-slate-200 rotate-1 hover:rotate-0 transition-transform duration-300 max-w-sm w-full">
-              
+
               {/* Tape Effect on Top */}
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-24 h-7 bg-amber-100/80 backdrop-blur-xs border border-amber-200/60 shadow-xs -rotate-2 rounded-xs"></div>
 
@@ -279,7 +279,7 @@ export default function WardPage() {
         <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-6xl mx-auto space-y-12 relative z-10">
-          
+
           {/* Section Header */}
           <div className="text-center space-y-2 max-w-xl mx-auto">
             <span className="text-xs uppercase font-bold tracking-widest text-emerald-300">
@@ -295,7 +295,7 @@ export default function WardPage() {
 
           {/* 4 Infrastructure Pillar Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            
+
             {/* Pillar 1: Water */}
             <div className="rounded-3xl p-6 bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-all duration-300 space-y-4 group">
               <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
@@ -395,7 +395,7 @@ export default function WardPage() {
 
       {/* 4. VISUAL AUDIT & LIVE HOTSPOTS (5-Column Photo Showcase - Image 4 Style) */}
       <section className="bg-white text-slate-900 px-6 sm:px-12 py-16 sm:py-20 space-y-8">
-        
+
         {/* Section Header */}
         <div className="text-center space-y-1 max-w-xl mx-auto">
           <span className="text-xs uppercase font-bold tracking-widest text-[#134431]">
@@ -456,7 +456,7 @@ export default function WardPage() {
       {/* 5. DARK WOOD / LEATHER COUNTER STRIP (Stats Banner - Image 5 Style) */}
       <section className="bg-[#1b140e] text-[#f2e5d5] px-6 sm:px-12 py-10 border-y border-[#3a2c1f] shadow-2xl">
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-6 text-center">
-          
+
           <div className="space-y-1">
             <p className="font-headline font-black text-3xl sm:text-4xl text-[#e8b574]">67</p>
             <p className="text-[10px] uppercase font-bold tracking-widest text-[#a89078]">Connected Wards</p>
@@ -487,7 +487,7 @@ export default function WardPage() {
 
       {/* 6. KIND WORDS: VERIFIED CITIZEN REVIEWS (Image 6 Style) */}
       <section className="bg-[#fcfaf7] text-slate-900 px-6 sm:px-12 py-16 sm:py-20 relative overflow-hidden">
-        
+
         {/* Postage Stamp Watermark */}
         <div className="absolute bottom-6 right-8 w-40 h-40 rounded-full border-4 border-dashed border-[#d8c7a8]/40 pointer-events-none rotate-45 flex items-center justify-center opacity-50">
           <span className="text-[#a48c66] text-[9px] font-mono uppercase text-center font-bold">
@@ -496,7 +496,7 @@ export default function WardPage() {
         </div>
 
         <div className="max-w-6xl mx-auto space-y-10 relative z-10">
-          
+
           <div className="text-center space-y-1 max-w-xl mx-auto">
             <span className="text-xs uppercase font-bold tracking-widest text-[#134431]">
               COMMUNITY IMPACT STORIES
@@ -505,7 +505,7 @@ export default function WardPage() {
               Stories From Citizens We've Served
             </h2>
             <p className="text-xs text-slate-500">
-              Real testimonials from verified residents in Ward 63.
+              Real testimonials from verified residents in Khandagiri (PIN 751030).
             </p>
           </div>
 
