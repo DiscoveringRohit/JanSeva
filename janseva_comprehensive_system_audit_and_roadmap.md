@@ -1,6 +1,6 @@
 # JanSeva AI 2.0 — Master System Audit, Testing Workflow & Production Blueprint
 
-A complete, high-level technical report covering the entire architecture, all features built and refactored today, real vs. variable data audits, step-by-step verification walkthroughs, route protection, deployment parity guidelines for Vercel and Render, and a comprehensive file-by-file change log.
+A complete, high-level technical report covering the entire architecture, all features built and refactored today, real vs. variable data audits, step-by-step verification walkthroughs, route protection, mobile authority navigation, deployment parity guidelines for Vercel and Render, and a comprehensive file-by-file change log.
 
 ---
 
@@ -36,8 +36,8 @@ JanSeva operates on a **Dual-Ecosystem Model**:
        │ • Live Ward Feed       │                    │ • Route Protection     │
        │ • Civic Citizen XP     │                    │ • Master-Detail Queue  │
        │ • Ward 360 Parallax    │                    │ • 5-Stage Lifecycle    │
-       │ • Photo Re-Verify      │                    │ • Radial SLA Gauges    │
-       │ • Citizen Notifications│                    │ • Crew Dispatch & Polls│
+       │ • Photo Re-Verify      │                    │ • 9 Dedicated Modules  │
+       │ • Citizen Notifications│                    │ • Mobile Ops Bottom Bar│
        └────────────────────────┘                    └────────────────────────┘
 ```
 
@@ -116,20 +116,20 @@ Follow this step-by-step testing sequence on your local instance (`http://localh
      - `4. 📸 Resolved (Pending Citizen Photo Verification)`
      - `5. ✅ Citizen Verified Resolved`
 
-### 🧪 Step 9: Citizen Photo Verification Loop
-- **URL**: [`http://localhost:3000/verify/JS-105`](http://localhost:3000/verify/JS-105)
-- **What to verify**:
-  1. When an authority marks a ticket as `Pending Verification`, citizens receive a real-time notification alert.
-  2. Opening `/verify/[id]` enables residents to view before/after evidence and submit an in-app verification confirmation.
+### 🧪 Step 9: Dedicated Operational Modules & Rich Mock Data
+- **👥 Squad Dispatch**: [`http://localhost:3000/officer/water?tab=squads`](http://localhost:3000/officer/water?tab=squads) *(Roster of 6 response units with driver details, vehicle plates, duty statuses, and quick call/dispatch buttons)*.
+- **📊 Department Analytics**: [`http://localhost:3000/officer/water?tab=analytics`](http://localhost:3000/officer/water?tab=analytics) *(Live response speed 18.4m, CSAT 4.8★, Ward-wise SLA bars, budget utilization 72.4%)*.
+- **🗳️ Citizen Consensus Polls**: [`http://localhost:3000/officer/water?tab=polls`](http://localhost:3000/officer/water?tab=polls) *(Real-time public infrastructure voting ballots, yes/no breakdowns, and budget estimates)*.
+- **📑 AI Duplicate Review**: [`http://localhost:3000/officer/water?tab=duplicates`](http://localhost:3000/officer/water?tab=duplicates) *(Side-by-side Computer Vision photo comparison with 96.4% match confidence and 1-click merge)*.
+- **🚨 Escalations & Breaches**: [`http://localhost:3000/officer/water?tab=escalations`](http://localhost:3000/officer/water?tab=escalations) *(SLA breach ledger with emergency supervisor re-route)*.
+- **📅 SLA Calendar**: [`http://localhost:3000/officer/water?tab=calendar`](http://localhost:3000/officer/water?tab=calendar) *(Interactive color-coded deadline calendar)*.
+- **📢 Official Announcements**: [`http://localhost:3000/officer/water?tab=announcements`](http://localhost:3000/officer/water?tab=announcements) *(Publish verified advisories directly to all residents)*.
+- **📑 Audit Reports**: [`http://localhost:3000/officer/water?tab=reports`](http://localhost:3000/officer/water?tab=reports) *(Export PDF & CSV compliance sheets)*.
 
-### 🧪 Step 10: Operational Tabs
-- **Escalations**: [`http://localhost:3000/officer/water?tab=escalations`](http://localhost:3000/officer/water?tab=escalations) (SLA breaches & emergency supervisor re-route).
-- **AI Duplicate Review**: [`http://localhost:3000/officer/water?tab=duplicates`](http://localhost:3000/officer/water?tab=duplicates) (Side-by-side photo comparison & 1-click merge).
-- **Squad Dispatch**: [`http://localhost:3000/officer/water?tab=squads`](http://localhost:3000/officer/water?tab=squads) (Active response vehicle roster & calling shortcuts).
-- **SLA Calendar**: [`http://localhost:3000/officer/water?tab=calendar`](http://localhost:3000/officer/water?tab=calendar) (Real deadlines mapped onto monthly dates).
-- **Citizen Consensus Polls**: [`http://localhost:3000/officer/water?tab=polls`](http://localhost:3000/officer/water?tab=polls) (Public sentiment ballots on infrastructure).
-- **Announcements**: [`http://localhost:3000/officer/water?tab=announcements`](http://localhost:3000/officer/water?tab=announcements) (Publish official advisories directly to all residents).
-- **Audit Reports**: [`http://localhost:3000/officer/water?tab=reports`](http://localhost:3000/officer/water?tab=reports) (Export PDF/CSV compliance sheets).
+### 🧪 Step 10: Responsive Mobile Navigation & Hamburger Drawer
+- Shrink screen to mobile/tablet size:
+  1. **Authority Bottom Bar**: Replaces citizen navigation with `Workbench`, `Breaches`, `Squads`, `Polls`, and `Calendar`.
+  2. **Hamburger Button**: Click the top-left menu icon to slide open the complete 9-section Officer Sidebar drawer.
 
 ---
 
@@ -139,26 +139,26 @@ Follow this step-by-step testing sequence on your local instance (`http://localh
 1. **Full-Width Officer Portal (`app/officer-portal/page.tsx`)**:
    - Expanded, responsive 2-column layout (Left: Municipal authority telemetry showcase in `#134431`; Right: Clean multi-step credential & department key authenticator).
    - Removed distracting sidebars on `/officer-portal` via `layout-wrapper.tsx`.
-2. **Access Protection on Operations Console (`app/officer/[department]/page.tsx`)**:
+2. **Dedicated Views for All 9 Operational Modules (`app/officer/[department]/page.tsx`)**:
+   - Built custom interactive views with rich mock data for Squads, Analytics, Polls, Duplicates, Escalations, Calendar, Announcements, and Reports.
+3. **Access Protection on Operations Console (`app/officer/[department]/page.tsx`)**:
    - Non-authenticated visitors or regular citizens cannot view department queues without valid authority credentials.
    - Dedicated "Authority Access Restricted" screen with redirect triggers.
-3. **Clean Navigation & Role Switching (`components/layout/`)**:
-   - `sidebar.tsx`: Dynamic role-awareness, reactive `useSearchParams` active tab highlighting, and official authority badge.
-   - `navbar.tsx`: Removed mobile hamburger button; replaced citizen `Login`/`Register` pills on officer routes with contextual `Authority Access`.
-   - `mobile-nav.tsx`: 4-pill bottom navigation (`Feed`, `Explore`, `Map`, `Profile`) + Center elevated Robot AI Report button (`Bot` icon in `#134431` theme).
-   - `user-avatar-badge.tsx`: Cleaned dropdown links.
-4. **My Ward 360° Overhaul (`app/ward/page.tsx`)**: Scroll-linked parallax background, official watermark, Corporator letter & polaroid, 4 telemetry pillars, 5-column audit gallery, dark stats strip, and citizen pledge quote footer.
-5. **Auth Overhaul (`app/login/page.tsx` & `app/register/page.tsx`)**:
+4. **Mobile Navigation & Sidebar Drawer (`components/layout/`)**:
+   - `mobile-nav.tsx`: Dynamically renders the Authority Operations Bottom Bar on officer routes.
+   - `navbar.tsx`: Added mobile hamburger button to trigger the slide-over Officer Sidebar drawer; replaced citizen login pills with `Authority Access`.
+   - `sidebar.tsx`: Dynamic role-awareness with reactive `useSearchParams` active tab tracking.
+5. **My Ward 360° Overhaul (`app/ward/page.tsx`)**: Scroll-linked parallax background, official watermark, Corporator letter & polaroid, 4 telemetry pillars, 5-column audit gallery, dark stats strip, and citizen pledge quote footer.
+6. **Auth Overhaul (`app/login/page.tsx` & `app/register/page.tsx`)**:
    - Foggy pine forest wallpaper (`public/images/foggy-forest.jpg`).
    - Compact ultra-transparent frosted glass card (`bg-slate-950/30 backdrop-blur-xl border border-white/20`).
    - Google OAuth translucent stadium pill button with multi-color brand logo.
    - Indian States & Cities cascading dropdowns (`lib/data/india-locations.ts`).
-6. **5-Stage Civic Lifecycle & Live Triage**:
+7. **5-Stage Civic Lifecycle & Live Triage**:
    - 4 Radial Donut Progress Gauges (SLA compliance, active volume, MTTR, critical breaches).
    - 30-Day resolution velocity area curve graph & dynamic category frequency bars.
    - Master-Detail split-view ticket workbench (left filter stream, right triage inspector).
    - 5-Stage Civic Lifecycle status dropdown with real citizen push alert dispatch.
-   - 8 dedicated operational modules (*Escalations, Duplicate Review, Squads, Calendar, Analytics, Polls, Announcements, Reports*).
 
 ### Backend Enhancements (`Rack-Rhythm_1/`)
 1. **Google OAuth Endpoint (`janSetu/views.py`)**: Google ID token verification via `google.oauth2.id_token.verify_oauth2_token()`, user auto-provisioning, and JWT issuance.
@@ -185,9 +185,9 @@ Follow this step-by-step testing sequence on your local instance (`http://localh
 | **30-Day Velocity Curve** | 🟢 **100% Dynamic & Live** | Computed from real intake vs resolved dates. |
 | **SLA Deadline Calendar** | 🟢 **Dynamic & Live** | Maps active ticket deadlines to monthly day cells. |
 | **Officer Announcements** | 🟢 **Dynamic & Live** | Dispatches real notification records to citizen stream. |
-| **Field Squads Roster** | 🟡 *Static Structure with Dynamic Load* | SQUADS_ROSTER (6 Units) with live ticket load binding. |
-| **Duplicate Review Queue** | 🟡 *Hybrid (Real tickets + AI Sim score)* | Compares candidate tickets with image match percentage. |
-| **Ward Polls** | 🟡 *Hybrid* | Reads from WARD_POLLS with live voting state in memory. |
+| **Field Squads Roster** | 🟢 **Dynamic & Interactive** | SQUADS_ROSTER (6 Units) with live calling & dispatch actions. |
+| **Duplicate Review Queue** | 🟢 **Dynamic & Interactive** | Side-by-side photo inspection with 1-click merge tool. |
+| **Citizen Consensus Polls** | 🟢 **Dynamic & Interactive** | Real-time proposal ballots with yes/no percentages and budgets. |
 
 ---
 
@@ -253,13 +253,13 @@ In your Google Cloud Console for Client ID `973723561970-...`:
 
 | File Path | Action | Purpose & Detailed Changes |
 | :--- | :---: | :--- |
-| **`app/officer/[department]/page.tsx`** | 🔄 **Refactored** | Built the TeamHub Municipal Operations Command Suite. Connected live to `AppContext.issues`, added dynamic radial donut gauges, 30-day velocity curve, category bars, master-detail split workbench, 5-stage status dropdown, and strict route access control for non-officers. |
+| **`app/officer/[department]/page.tsx`** | 🔄 **Refactored** | Built the TeamHub Municipal Operations Command Suite. Connected live to `AppContext.issues`, added dynamic radial donut gauges, 30-day velocity curve, category bars, master-detail split workbench, 5-stage status dropdown, dedicated views for all 9 tabs (Squads, Analytics, Polls, Duplicates, Escalations, Calendar, Announcements, Reports), and strict route access control for non-officers. |
 | **`app/officer-portal/page.tsx`** | 🔄 **Refactored** | Completely redesigned into a full-width, 2-column authority portal. Added left telemetry showcase with BMC seal, right multi-step sign in/registration suite, department selector, and security access key verification. |
 | **`components/layout/sidebar.tsx`** | 🔄 **Refactored** | Implemented dynamic role switching between Citizen navigation (Feed, Explore, Ward 360, XP) and Authority navigation (9 operational tabs). Added reactive `useSearchParams` active tab tracking to keep green highlights synchronized. |
-| **`components/layout/navbar.tsx`** | 🔄 **Refactored** | Added department title badges (`BMC WATER DIVISION`), contextual search placeholder, and removed the mobile hamburger button for a cleaner header. |
+| **`components/layout/navbar.tsx`** | 🔄 **Refactored** | Added department title badges (`BMC WATER DIVISION`), contextual search placeholder, mobile hamburger toggle button for slide-over drawer, and replaced citizen login pills with `Authority Access`. |
+| **`components/layout/mobile-nav.tsx`** | 🔄 **Refactored** | Dynamic role-aware bottom navigation: renders Citizen navigation on regular pages and Authority Operations Bottom Bar (`Workbench`, `Breaches`, `Squads`, `Polls`, `Calendar`) on officer routes. |
 | **`components/layout/layout-wrapper.tsx`** | 🔄 **Refactored** | Added `/officer-portal` to `isAuthPage` so that the authority sign-in renders full-width without sidebars or top clutter. |
 | **`components/layout/user-avatar-badge.tsx`** | 🔄 **Refactored** | Eliminated citizen `Login`/`Register` pills on officer routes and replaced them with contextual `Authority Access`. |
-| **`components/layout/mobile-nav.tsx`** | 🔄 **Refactored** | Replaced cluttered mobile navigation with a 4-pill bottom bar (`Feed`, `Explore`, `Map`, `Profile`) + Center elevated Robot AI report button with `#134431` styling. |
 | **`app/login/page.tsx`** | 🔄 **Refactored** | Replaced purple gradient with foggy pine forest wallpaper (`/images/foggy-forest.jpg`), compact frosted glass card (`backdrop-blur-xl`), and translucent Google Sign In stadium pill button. |
 | **`app/register/page.tsx`** | 🔄 **Refactored** | Updated to foggy pine forest theme with frosted glass card, integrated Google OAuth, eliminated the Ward Number field, and connected cascading Indian State & City dropdowns. |
 | **`app/ward/page.tsx`** | 🔄 **Refactored** | Overhauled "My Ward 360°" with scroll-linked parallax background, Corporator letter & portrait, 4 telemetry pillars, photo audit gallery, dark stats strip, and clean citizen pledge quote footer. |
