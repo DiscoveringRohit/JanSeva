@@ -204,7 +204,7 @@ function matchesDepartment(issue: CivicIssue, deptSlug: string): boolean {
   return true;
 }
 
-export default function DepartmentOfficerPage() {
+function DepartmentOfficerContent() {
   const { user, issues, updateIssueStatus, notifications, setNotifications } = useApp();
   const router = useRouter();
   const params = useParams();
@@ -250,10 +250,10 @@ export default function DepartmentOfficerPage() {
   // Filtered tickets stream
   const filteredTickets = useMemo(() => {
     return deptIssues.filter((t) => {
-      if (ticketFilter === "active" && (t.status === "Resolved" || t.status === "Verified")) return false;
-      if (ticketFilter === "critical" && t.urgency !== "Emergency" && t.urgency !== "High") return false;
+      if (ticketFilter === "active" && (t.status === "Resolved" || t.status === "Verified Resolved")) return false;
+      if (ticketFilter === "critical" && t.urgency !== "Critical" && t.urgency !== "High") return false;
       if (ticketFilter === "overdue" && t.status !== "In Progress") return false;
-      if (ticketFilter === "resolved" && t.status !== "Resolved" && t.status !== "Verified") return false;
+      if (ticketFilter === "resolved" && t.status !== "Resolved" && t.status !== "Verified Resolved") return false;
       if (searchKeyword.trim()) {
         const q = searchKeyword.toLowerCase();
         const matchTitle = (t.title || "").toLowerCase().includes(q);
@@ -267,9 +267,9 @@ export default function DepartmentOfficerPage() {
   }, [deptIssues, ticketFilter, searchKeyword]);
 
   // ================= DYNAMIC KPI METRICS =================
-  const activeTicketsCount = deptIssues.filter((i) => i.status !== "Resolved" && i.status !== "Verified").length;
-  const resolvedCount = deptIssues.filter((i) => i.status === "Resolved" || i.status === "Verified").length;
-  const criticalCount = deptIssues.filter((i) => i.urgency === "Emergency" || i.urgency === "High").length;
+  const activeTicketsCount = deptIssues.filter((i) => i.status !== "Resolved" && i.status !== "Verified Resolved").length;
+  const resolvedCount = deptIssues.filter((i) => i.status === "Resolved" || i.status === "Verified Resolved").length;
+  const criticalCount = deptIssues.filter((i) => i.urgency === "Critical" || i.urgency === "High").length;
   
   // Real dynamic SLA compliance calculation
   const slaComplianceRate = deptIssues.length > 0 
@@ -309,9 +309,9 @@ export default function DepartmentOfficerPage() {
     setStatusDropdownOpen(false);
     
     let note = `Officer ${user?.name || "Municipal Authority"} updated status to ${newStatus}.`;
-    if (newStatus === "Pending Verification") {
+    if (newStatus === "Pending Citizen Verification") {
       note = `Field repairs completed by assigned crew. Awaiting citizen in-app photo verification.`;
-    } else if (newStatus === "Resolved") {
+    } else if (newStatus === "Resolved" || newStatus === "Verified Resolved") {
       note = `Issue verified as 100% resolved and closed in municipal ledger.`;
     }
 
@@ -323,7 +323,7 @@ export default function DepartmentOfficerPage() {
     if (!selectedIssue) return;
     updateIssueStatus(
       selectedIssue.id,
-      "Dispatched",
+      "Assigned",
       `Dispatched municipal crew: ${selectedSquad}. Unit mobilized to location.`
     );
   };
@@ -662,7 +662,7 @@ export default function DepartmentOfficerPage() {
                 ) : (
                   filteredTickets.map((ticket) => {
                     const isSelected = selectedIssue?.id === ticket.id;
-                    const isCritical = ticket.urgency === "Emergency" || ticket.urgency === "High";
+                    const isCritical = ticket.urgency === "Critical" || ticket.urgency === "High";
 
                     return (
                       <div
@@ -693,11 +693,11 @@ export default function DepartmentOfficerPage() {
                           <span
                             className={cn(
                               "text-[10px] font-bold px-2.5 py-0.5 rounded-full",
-                              ticket.status === "Resolved" || ticket.status === "Verified"
+                              ticket.status === "Resolved" || ticket.status === "Verified Resolved"
                                 ? "bg-emerald-100 text-emerald-800"
-                                : ticket.status === "Pending Verification"
+                                : ticket.status === "Pending Citizen Verification"
                                 ? "bg-purple-100 text-purple-800"
-                                : ticket.status === "Dispatched"
+                                : ticket.status === "Assigned"
                                 ? "bg-indigo-100 text-indigo-800"
                                 : "bg-amber-100 text-amber-800"
                             )}
@@ -740,11 +740,11 @@ export default function DepartmentOfficerPage() {
                       <span
                         className={cn(
                           "px-2.5 py-0.5 rounded-full text-xs font-bold uppercase",
-                          selectedIssue.status === "Resolved" || selectedIssue.status === "Verified"
+                          selectedIssue.status === "Resolved" || selectedIssue.status === "Verified Resolved"
                             ? "bg-emerald-100 text-emerald-800"
-                            : selectedIssue.status === "Pending Verification"
+                            : selectedIssue.status === "Pending Citizen Verification"
                             ? "bg-purple-100 text-purple-800"
-                            : selectedIssue.status === "Dispatched"
+                            : selectedIssue.status === "Assigned"
                             ? "bg-indigo-100 text-indigo-800"
                             : "bg-amber-100 text-amber-800"
                         )}
@@ -786,10 +786,10 @@ export default function DepartmentOfficerPage() {
                         </button>
 
                         <button
-                          onClick={() => handleStatusChange("Dispatched")}
+                          onClick={() => handleStatusChange("Assigned")}
                           className={cn(
                             "w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-100 transition-colors",
-                            selectedIssue.status === "Dispatched" ? "bg-indigo-50 text-indigo-900 font-black" : "text-slate-700"
+                            selectedIssue.status === "Assigned" ? "bg-indigo-50 text-indigo-900 font-black" : "text-slate-700"
                           )}
                         >
                           <Users className="w-3.5 h-3.5 text-indigo-600" />
@@ -808,10 +808,10 @@ export default function DepartmentOfficerPage() {
                         </button>
 
                         <button
-                          onClick={() => handleStatusChange("Pending Verification")}
+                          onClick={() => handleStatusChange("Pending Citizen Verification")}
                           className={cn(
                             "w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-purple-50 transition-colors",
-                            selectedIssue.status === "Pending Verification" ? "bg-purple-50 text-purple-900 font-black" : "text-slate-700"
+                            selectedIssue.status === "Pending Citizen Verification" ? "bg-purple-50 text-purple-900 font-black" : "text-slate-700"
                           )}
                         >
                           <Camera className="w-3.5 h-3.5 text-purple-600" />
@@ -819,10 +819,10 @@ export default function DepartmentOfficerPage() {
                         </button>
 
                         <button
-                          onClick={() => handleStatusChange("Resolved")}
+                          onClick={() => handleStatusChange("Verified Resolved")}
                           className={cn(
                             "w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-emerald-50 transition-colors",
-                            selectedIssue.status === "Resolved" ? "bg-emerald-50 text-emerald-900 font-black" : "text-slate-700"
+                            selectedIssue.status === "Verified Resolved" || selectedIssue.status === "Resolved" ? "bg-emerald-50 text-emerald-900 font-black" : "text-slate-700"
                           )}
                         >
                           <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
@@ -1290,7 +1290,7 @@ export default function DepartmentOfficerPage() {
               </p>
             </div>
             <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-800 font-bold text-xs border border-rose-200">
-              {deptIssues.filter(i => i.urgency === "Emergency").length} Critical Breaches
+              {deptIssues.filter(i => i.urgency === "Critical").length} Critical Breaches
             </span>
           </div>
 
@@ -1307,7 +1307,7 @@ export default function DepartmentOfficerPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                {deptIssues.filter(i => i.urgency === "Emergency" || i.urgency === "High").map((t) => (
+                {deptIssues.filter(i => i.urgency === "Critical" || i.urgency === "High").map((t) => (
                   <tr key={t.id} className="hover:bg-rose-50/40 transition-colors">
                     <td className="py-3 px-4 font-headline font-black text-[#134431]">#{t.id}</td>
                     <td className="py-3 px-4 font-bold text-slate-900">{t.title}</td>
@@ -1513,5 +1513,13 @@ export default function DepartmentOfficerPage() {
       )}
 
     </div>
+  );
+}
+
+export default function DepartmentOfficerPage() {
+  return (
+    <React.Suspense fallback={<div className="p-8 text-center text-slate-500 font-bold">Loading Operations Command...</div>}>
+      <DepartmentOfficerContent />
+    </React.Suspense>
   );
 }
