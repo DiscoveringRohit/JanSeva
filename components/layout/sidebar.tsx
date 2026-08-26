@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
 import { authService } from "@/lib/auth/auth-service-cookie3";
 import {
@@ -41,6 +41,7 @@ interface SidebarProps {
 export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, setUser, unreadNotifsCount } = useApp();
   const isProfilePage = pathname === "/profile";
   
@@ -51,6 +52,8 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
   );
 
   const officerDept = user?.department ? user.department.toLowerCase() : "water";
+  const currentTab = searchParams ? searchParams.get("tab") : null;
+  const activeOfficerTab = currentTab || "workbench";
 
   const handleLogout = async () => {
     try {
@@ -69,6 +72,7 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
   interface NavItem {
     label: string;
     href: string;
+    tab?: string;
     icon: any;
     badge?: string;
     badgeColor?: string;
@@ -93,10 +97,11 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
 
   // Authority / Officer operational items
   const officerNavItems: NavItem[] = [
-    { label: "Command Workbench", href: `/officer/${officerDept}`, icon: LayoutGrid },
+    { label: "Command Workbench", href: `/officer/${officerDept}`, tab: "workbench", icon: LayoutGrid },
     { 
       label: "Escalations & Breaches", 
       href: `/officer/${officerDept}?tab=escalations`, 
+      tab: "escalations",
       icon: AlertTriangle,
       badge: "2 Overdue",
       badgeColor: "bg-rose-100 text-rose-800"
@@ -104,16 +109,17 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
     { 
       label: "AI Duplicate Review", 
       href: `/officer/${officerDept}?tab=duplicates`, 
+      tab: "duplicates",
       icon: Layers,
       badge: "3 Matches",
       badgeColor: "bg-amber-100 text-amber-800"
     },
-    { label: "Squad Dispatch", href: `/officer/${officerDept}?tab=squads`, icon: Users },
-    { label: "SLA Calendar", href: `/officer/${officerDept}?tab=calendar`, icon: Calendar },
-    { label: "Department Analytics", href: `/officer/${officerDept}?tab=analytics`, icon: BarChart3 },
-    { label: "Citizen Consensus Polls", href: `/officer/${officerDept}?tab=polls`, icon: Vote },
-    { label: "Official Announcements", href: `/officer/${officerDept}?tab=announcements`, icon: Megaphone },
-    { label: "Audit Reports & Export", href: `/officer/${officerDept}?tab=reports`, icon: FileSpreadsheet },
+    { label: "Squad Dispatch", href: `/officer/${officerDept}?tab=squads`, tab: "squads", icon: Users },
+    { label: "SLA Calendar", href: `/officer/${officerDept}?tab=calendar`, tab: "calendar", icon: Calendar },
+    { label: "Department Analytics", href: `/officer/${officerDept}?tab=analytics`, tab: "analytics", icon: BarChart3 },
+    { label: "Citizen Consensus Polls", href: `/officer/${officerDept}?tab=polls`, tab: "polls", icon: Vote },
+    { label: "Official Announcements", href: `/officer/${officerDept}?tab=announcements`, tab: "announcements", icon: Megaphone },
+    { label: "Audit Reports & Export", href: `/officer/${officerDept}?tab=reports`, tab: "reports", icon: FileSpreadsheet },
   ];
 
   const activeNavList = isOfficer ? officerNavItems : citizenNavItems;
@@ -284,9 +290,9 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
           <nav className="space-y-1 pt-2 border-t border-slate-100">
             {activeNavList.map((item) => {
               const Icon = item.icon;
-              // Check active URL
+              // Check active URL reactively
               const isActive = isOfficer 
-                ? (item.href.includes("?tab=") ? pathname + (typeof window !== "undefined" ? window.location.search : "") === item.href : pathname === item.href.split("?")[0])
+                ? (item.tab ? item.tab === activeOfficerTab : activeOfficerTab === "workbench")
                 : (pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href)));
 
               return (
