@@ -48,18 +48,92 @@ import {
   Trash2,
   Award,
   Camera,
-  CheckCheck
+  CheckCheck,
+  ThumbsUp,
+  Activity,
+  Compass,
+  PieChart,
+  Sliders,
+  Share2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Mock Field Squads Roster
+// Comprehensive Mock Field Squads Roster
 const SQUADS_ROSTER = [
-  { id: "sq-1", name: "Unit 1 - Rapid Response Hydro Van", leader: "Er. Bikram Rout", phone: "+91 94371 00112", status: "Available", activeTickets: 0, vehicle: "Tata Ace OD-02-B-1092", zone: "Ward 63, Khandagiri" },
-  { id: "sq-2", name: "Unit 2 - Road Cold-Mix Paving Van", leader: "Er. Santosh Jena", phone: "+91 94371 00113", status: "In Field", activeTickets: 1, vehicle: "Mahindra Bolero OD-02-C-4491", zone: "Ward 34, Saheed Nagar" },
-  { id: "sq-3", name: "Unit 3 - Heavy Suction & Conduit Van", leader: "Er. Rajesh Mahapatra", phone: "+91 94371 00114", status: "In Field", activeTickets: 2, vehicle: "Ashok Leyland Vacuum OD-02-F-8821", zone: "South Zone Main Lines" },
-  { id: "sq-4", name: "Unit 4 - Sewerage Canal Desilter", leader: "Er. Tanmay Das", phone: "+91 94371 00115", status: "Available", activeTickets: 0, vehicle: "JCB Excavator OD-02-E-3301", zone: "Ward 12, Patia" },
-  { id: "sq-5", name: "Unit 5 - Smart Grid & Sensor Crew", leader: "Er. Deepak Swain", phone: "+91 94371 00116", status: "In Field", activeTickets: 1, vehicle: "Eicher Hydraulic OD-02-K-9012", zone: "Tech Corridor" },
-  { id: "sq-6", name: "Unit 6 - Emergency Night Triage Van", leader: "Er. Manoj Pradhan", phone: "+91 94371 00117", status: "Off Shift", activeTickets: 0, vehicle: "Force Emergency OD-02-M-1122", zone: "Central BMC Depot" },
+  { id: "sq-1", name: "Unit 1 - Rapid Response Hydro Van", leader: "Er. Bikram Rout", phone: "+91 94371 00112", status: "Available", activeTickets: 0, vehicle: "Tata Ace OD-02-B-1092", zone: "Ward 63, Khandagiri", specialization: "Pipe clamp & pressure relief" },
+  { id: "sq-2", name: "Unit 2 - Road Cold-Mix Paving Van", leader: "Er. Santosh Jena", phone: "+91 94371 00113", status: "In Field", activeTickets: 1, vehicle: "Mahindra Bolero OD-02-C-4491", zone: "Ward 34, Saheed Nagar", specialization: "Bitumen patch & asphalt seal" },
+  { id: "sq-3", name: "Unit 3 - Heavy Suction & Conduit Van", leader: "Er. Rajesh Mahapatra", phone: "+91 94371 00114", status: "In Field", activeTickets: 2, vehicle: "Ashok Leyland Vacuum OD-02-F-8821", zone: "South Zone Main Lines", specialization: "Underground culvert suction" },
+  { id: "sq-4", name: "Unit 4 - Sewerage Canal Desilter", leader: "Er. Tanmay Das", phone: "+91 94371 00115", status: "Available", activeTickets: 0, vehicle: "JCB Excavator OD-02-E-3301", zone: "Ward 12, Patia", specialization: "Storm canal declogging" },
+  { id: "sq-5", name: "Unit 5 - Smart Grid & Sensor Crew", leader: "Er. Deepak Swain", phone: "+91 94371 00116", status: "In Field", activeTickets: 1, vehicle: "Eicher Hydraulic OD-02-K-9012", zone: "Tech Corridor", specialization: "High-mast & transformer phase" },
+  { id: "sq-6", name: "Unit 6 - Emergency Night Triage Van", leader: "Er. Manoj Pradhan", phone: "+91 94371 00117", status: "Off Shift", activeTickets: 0, vehicle: "Force Emergency OD-02-M-1122", zone: "Central BMC Depot", specialization: "Hazard barrier & night diversion" },
+];
+
+// Department-Specific Consensus Polls
+const INITIAL_POLLS = [
+  {
+    id: "poll-1",
+    title: "24x7 Pressurized Drinking Water Metering Installation",
+    department: "Water",
+    ward: "Ward 63, Khandagiri",
+    description: "Proposal to replace legacy gravity mains with automated smart digital telemetry water meters across 1,800 households.",
+    yesVotes: 1420,
+    noVotes: 190,
+    status: "Active Ballot",
+    daysLeft: 4,
+    budgetEstimate: "₹ 48.5 Lakhs"
+  },
+  {
+    id: "poll-2",
+    title: "Underground Stormwater Canal Enclosure on Main Road",
+    department: "Roads",
+    ward: "Ward 34, Saheed Nagar",
+    description: "Install pre-cast RCC culverts to box-in open roadside stormwater drains and widen pedestrian sidewalks by 2.4 meters.",
+    yesVotes: 2105,
+    noVotes: 180,
+    status: "Active Ballot",
+    daysLeft: 7,
+    budgetEstimate: "₹ 82.0 Lakhs"
+  },
+  {
+    id: "poll-3",
+    title: "Smart Solar High-Mast Illumination Grid with Motion Sensors",
+    department: "Electricity",
+    ward: "Ward 12, Patia Tech Zone",
+    description: "Replace sodium-vapor streetlights with dual-frequency solar LEDs and IoT ambient daylight auto-dimming sensors.",
+    yesVotes: 980,
+    noVotes: 45,
+    status: "Approved",
+    daysLeft: 0,
+    budgetEstimate: "₹ 24.0 Lakhs"
+  }
+];
+
+// Mock Duplicate Candidate Pairs for AI Review
+const INITIAL_DUPLICATES = [
+  {
+    id: "dup-1",
+    primaryId: "JS-105",
+    primaryTitle: "Major Drinking Water Pipeline Rupture & Road Flooding",
+    duplicateId: "JS-108",
+    duplicateTitle: "Heavy water pipe leak outside BMC sub-station",
+    confidence: "96.4% Match",
+    location: "Opposite BMC Substation, Khandagiri",
+    reportedTime: "18 mins apart",
+    primaryPhoto: "https://images.unsplash.com/photo-1584467735815-f778f274e296?w=800&auto=format&fit=crop&q=80",
+    duplicatePhoto: "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=800&auto=format&fit=crop&q=80",
+  },
+  {
+    id: "dup-2",
+    primaryId: "JS-102",
+    primaryTitle: "Deep Pothole & Damaged Manhole Lid on Main Bus Corridor",
+    duplicateId: "JS-111",
+    duplicateTitle: "Broken manhole rim causing traffic jam at Sector 5",
+    confidence: "93.8% Match",
+    location: "Sector 5 Market Road, Ward 34",
+    reportedTime: "45 mins apart",
+    primaryPhoto: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&auto=format&fit=crop&q=80",
+    duplicatePhoto: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800&auto=format&fit=crop&q=80",
+  }
 ];
 
 // Helper to filter issues strictly by department
@@ -157,6 +231,10 @@ export default function DepartmentOfficerPage() {
   const [broadcastSent, setBroadcastSent] = useState(false);
   const [selectedSquad, setSelectedSquad] = useState("Unit 1 - Rapid Response Hydro Van");
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+
+  // Polls state
+  const [polls, setPolls] = useState(INITIAL_POLLS);
+  const [duplicates, setDuplicates] = useState(INITIAL_DUPLICATES);
 
   // Default selected issue
   useEffect(() => {
@@ -275,6 +353,13 @@ export default function DepartmentOfficerPage() {
     }, 4000);
   };
 
+  // Merge Duplicate Handler
+  const handleMergeDuplicate = (dupId: string) => {
+    setDuplicates(prev => prev.filter(d => d.id !== dupId));
+    alert("AI Duplicate merged successfully! Upvotes consolidated into primary ticket.");
+  };
+
+  // Strict route protection: unauthenticated visitors cannot view department data
   const isOfficer = Boolean(user && (user.role === "officer" || user.role === "corporator"));
 
   if (!isOfficer) {
@@ -365,25 +450,10 @@ export default function DepartmentOfficerPage() {
               <span>Target: &lt; 24h SLA</span>
             </p>
           </div>
-          {/* Circular Gauge Graphic */}
           <div className="relative w-16 h-16 flex items-center justify-center">
             <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
-              <path
-                className="text-slate-100"
-                strokeWidth="3.5"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <path
-                className="text-emerald-500"
-                strokeDasharray={`${slaComplianceRate}, 100`}
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
+              <path className="text-slate-100" strokeWidth="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path className="text-emerald-500" strokeDasharray={`${slaComplianceRate}, 100`} strokeWidth="3.5" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
             </svg>
             <span className="absolute font-headline font-black text-xs text-slate-900">{slaComplianceRate}%</span>
           </div>
@@ -398,25 +468,10 @@ export default function DepartmentOfficerPage() {
               {resolvedCount} Resolved in Ward
             </p>
           </div>
-          {/* Circular Gauge Graphic */}
           <div className="relative w-16 h-16 flex items-center justify-center">
             <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
-              <path
-                className="text-slate-100"
-                strokeWidth="3.5"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <path
-                className="text-[#134431]"
-                strokeDasharray={`${Math.min(100, activeTicketsCount * 15)}, 100`}
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
+              <path className="text-slate-100" strokeWidth="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path className="text-[#134431]" strokeDasharray={`${Math.min(100, activeTicketsCount * 15)}, 100`} strokeWidth="3.5" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
             </svg>
             <span className="absolute font-headline font-black text-xs text-slate-900">{activeTicketsCount}</span>
           </div>
@@ -432,31 +487,16 @@ export default function DepartmentOfficerPage() {
               <span>4.2 hrs faster than city avg</span>
             </p>
           </div>
-          {/* Circular Gauge Graphic */}
           <div className="relative w-16 h-16 flex items-center justify-center">
             <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
-              <path
-                className="text-slate-100"
-                strokeWidth="3.5"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <path
-                className="text-emerald-600"
-                strokeDasharray="78, 100"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
+              <path className="text-slate-100" strokeWidth="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path className="text-emerald-600" strokeDasharray="78, 100" strokeWidth="3.5" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
             </svg>
             <span className="absolute font-headline font-black text-xs text-slate-900">78%</span>
           </div>
         </div>
 
-        {/* Metric 4: Critical Urgency & Breaches */}
+        {/* Metric 4: Critical Incidents */}
         <div className="p-5 rounded-3xl bg-white border border-slate-100 shadow-soft flex items-center justify-between hover:shadow-md transition-all">
           <div className="space-y-1">
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Critical Incidents</p>
@@ -466,25 +506,10 @@ export default function DepartmentOfficerPage() {
               <span>Rapid Deployment Ready</span>
             </p>
           </div>
-          {/* Circular Gauge Graphic */}
           <div className="relative w-16 h-16 flex items-center justify-center">
             <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
-              <path
-                className="text-slate-100"
-                strokeWidth="3.5"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <path
-                className="text-rose-500"
-                strokeDasharray={`${Math.min(100, criticalCount * 25)}, 100`}
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
+              <path className="text-slate-100" strokeWidth="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path className="text-rose-500" strokeDasharray={`${Math.min(100, criticalCount * 25)}, 100`} strokeWidth="3.5" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
             </svg>
             <span className="absolute font-headline font-black text-xs text-rose-600">{criticalCount}</span>
           </div>
@@ -492,501 +517,773 @@ export default function DepartmentOfficerPage() {
 
       </div>
 
-      {/* 3. PERFORMANCE TREND GRAPH & DYNAMIC CATEGORY BARS */}
+      {/* 3. WORKBENCH TAB: MASTER-DETAIL WORKSPACE */}
       {currentTab === "workbench" && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          {/* Performance Trend Graph (7 Cols) */}
-          <div className="lg:col-span-8 p-6 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-headline font-bold text-base text-slate-900">
-                  30-Day Operational Velocity & Turnaround Trend
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Complaint Intake vs Completed Field Resolutions in {departmentName}
-                </p>
+        <>
+          {/* Performance Velocity & Category Breakdown */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            {/* Performance Trend Graph */}
+            <div className="lg:col-span-8 p-6 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-headline font-bold text-base text-slate-900">
+                    30-Day Operational Velocity &amp; Turnaround Trend
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Complaint Intake vs Completed Field Resolutions in {departmentName}
+                  </p>
+                </div>
+                <span className="text-xs font-bold text-emerald-800 bg-[#edf7f1] px-3 py-1 rounded-full border border-[#cbe7d7]">
+                  +14.8% Resolution Efficiency
+                </span>
               </div>
-              <span className="text-xs font-bold text-emerald-800 bg-[#edf7f1] px-3 py-1 rounded-full border border-[#cbe7d7]">
-                +14.8% Resolution Efficiency
-              </span>
+
+              {/* Interactive SVG Area Curve Chart */}
+              <div className="h-44 w-full relative pt-4">
+                <svg className="w-full h-full overflow-visible" viewBox="0 0 500 120" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="mintGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+                  <line x1="0" y1="20" x2="500" y2="20" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+                  <line x1="0" y1="60" x2="500" y2="60" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+                  <line x1="0" y1="100" x2="500" y2="100" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+
+                  <polygon
+                    fill="url(#mintGrad)"
+                    points="0,95 50,80 100,85 150,60 200,65 250,45 300,50 350,30 400,35 450,20 500,15 500,120 0,120"
+                  />
+                  <polyline
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    points="0,95 50,80 100,85 150,60 200,65 250,45 300,50 350,30 400,35 450,20 500,15"
+                  />
+                  <polyline
+                    fill="none"
+                    stroke="#94a3b8"
+                    strokeWidth="2"
+                    strokeDasharray="4 4"
+                    points="0,105 50,90 100,95 150,80 200,85 250,65 300,70 350,55 400,50 450,40 500,35"
+                  />
+                </svg>
+
+                <div className="flex justify-between text-[10px] font-bold text-slate-400 mt-2">
+                  <span>Aug 1</span>
+                  <span>Aug 7</span>
+                  <span>Aug 14</span>
+                  <span>Aug 21</span>
+                  <span>Today (Live {deptIssues.length} Tickets)</span>
+                </div>
+              </div>
             </div>
 
-            {/* Interactive SVG Area Curve Chart */}
-            <div className="h-44 w-full relative pt-4">
-              <svg className="w-full h-full overflow-visible" viewBox="0 0 500 120" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="mintGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
-                {/* Horizontal Grid lines */}
-                <line x1="0" y1="20" x2="500" y2="20" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
-                <line x1="0" y1="60" x2="500" y2="60" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
-                <line x1="0" y1="100" x2="500" y2="100" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+            {/* Dynamic Category Breakdown Bars */}
+            <div className="lg:col-span-4 p-6 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-4">
+              <h3 className="font-headline font-bold text-base text-slate-900">
+                Department Incidents by Type
+              </h3>
 
-                {/* Shaded Area */}
-                <polygon
-                  fill="url(#mintGrad)"
-                  points="0,95 50,80 100,85 150,60 200,65 250,45 300,50 350,30 400,35 450,20 500,15 500,120 0,120"
-                />
-
-                {/* Resolutions Polyline (Green) */}
-                <polyline
-                  fill="none"
-                  stroke="#10b981"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  points="0,95 50,80 100,85 150,60 200,65 250,45 300,50 350,30 400,35 450,20 500,15"
-                />
-
-                {/* Complaint Intake Polyline (Slate dashed) */}
-                <polyline
-                  fill="none"
-                  stroke="#94a3b8"
-                  strokeWidth="2"
-                  strokeDasharray="4 4"
-                  points="0,105 50,90 100,95 150,80 200,85 250,65 300,70 350,55 400,50 450,40 500,35"
-                />
-              </svg>
-
-              {/* X Axis Labels */}
-              <div className="flex justify-between text-[10px] font-bold text-slate-400 mt-2">
-                <span>Aug 1</span>
-                <span>Aug 7</span>
-                <span>Aug 14</span>
-                <span>Aug 21</span>
-                <span>Today (Live {deptIssues.length} Tickets)</span>
+              <div className="space-y-3 pt-1">
+                {categoryCounts.slice(0, 4).map((cat, idx) => (
+                  <div key={cat.name} className="space-y-1">
+                    <div className="flex justify-between text-xs font-bold text-slate-700">
+                      <span className="truncate">{cat.name}</span>
+                      <span className="text-[#134431] shrink-0 ml-2">{cat.percentage}% ({cat.count})</span>
+                    </div>
+                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all duration-500",
+                          idx === 0 ? "bg-[#134431]" : idx === 1 ? "bg-emerald-500" : idx === 2 ? "bg-amber-500" : "bg-teal-500"
+                        )}
+                        style={{ width: `${Math.max(8, cat.percentage)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
               </div>
+            </div>
+
+          </div>
+
+          {/* Master-Detail Split Workspace */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            {/* Left Stream */}
+            <div className="lg:col-span-5 space-y-4">
+              <div className="p-4 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Filter by ticket #, ward, citizen..."
+                    value={searchKeyword}
+                    onChange={(e) => setSearchKeyword(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-medium focus:outline-none focus:bg-white focus:border-[#134431] transition-all"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 text-xs font-bold">
+                  {[
+                    { id: "all", label: `All (${deptIssues.length})` },
+                    { id: "active", label: `⚡ Active (${activeTicketsCount})` },
+                    { id: "critical", label: `🔥 Critical (${criticalCount})` },
+                    { id: "overdue", label: "⏱ Overdue" },
+                    { id: "resolved", label: `✓ Fixed (${resolvedCount})` }
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setTicketFilter(tab.id as any)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full transition-all whitespace-nowrap text-[11px]",
+                        ticketFilter === tab.id
+                          ? "bg-[#134431] text-white shadow-xs"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      )}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3 max-h-[640px] overflow-y-auto no-scrollbar pr-1">
+                {filteredTickets.length === 0 ? (
+                  <div className="p-8 text-center bg-white rounded-3xl border border-slate-100 space-y-2">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                    <p className="font-headline font-bold text-sm text-slate-800">No tickets matching this filter</p>
+                    <p className="text-xs text-slate-500">All {departmentName} issues in this view are up to date.</p>
+                  </div>
+                ) : (
+                  filteredTickets.map((ticket) => {
+                    const isSelected = selectedIssue?.id === ticket.id;
+                    const isCritical = ticket.urgency === "Emergency" || ticket.urgency === "High";
+
+                    return (
+                      <div
+                        key={ticket.id}
+                        onClick={() => setSelectedIssueId(ticket.id)}
+                        className={cn(
+                          "p-4 rounded-3xl border transition-all cursor-pointer group space-y-2.5",
+                          isSelected
+                            ? "bg-[#edf7f1] border-[#134431] shadow-md ring-1 ring-[#134431]"
+                            : "bg-white border-slate-100 hover:border-emerald-300 shadow-soft"
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-headline font-black text-xs text-[#134431] bg-white px-2.5 py-0.5 rounded-full border border-[#cbe7d7]">
+                              #{ticket.id}
+                            </span>
+                            <span
+                              className={cn(
+                                "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
+                                isCritical ? "bg-rose-100 text-rose-700" : "bg-slate-100 text-slate-700"
+                              )}
+                            >
+                              {ticket.urgency || "MODERATE"}
+                            </span>
+                          </div>
+
+                          <span
+                            className={cn(
+                              "text-[10px] font-bold px-2.5 py-0.5 rounded-full",
+                              ticket.status === "Resolved" || ticket.status === "Verified"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : ticket.status === "Pending Verification"
+                                ? "bg-purple-100 text-purple-800"
+                                : ticket.status === "Dispatched"
+                                ? "bg-indigo-100 text-indigo-800"
+                                : "bg-amber-100 text-amber-800"
+                            )}
+                          >
+                            {ticket.status}
+                          </span>
+                        </div>
+
+                        <h4 className="font-headline font-bold text-sm text-slate-900 leading-snug group-hover:text-[#134431] transition-colors">
+                          {ticket.title}
+                        </h4>
+
+                        <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100/80">
+                          <span className="flex items-center gap-1 truncate max-w-[200px]">
+                            <MapPin className="w-3 h-3 text-[#134431] shrink-0" />
+                            <span className="truncate">{typeof ticket.location === "object" ? ticket.location.address : ticket.location}</span>
+                          </span>
+
+                          <span className="font-semibold text-slate-700 text-[10px] bg-white/80 px-2 py-0.5 rounded-md border border-slate-200">
+                            {ticket.category}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Right Inspector */}
+            {selectedIssue ? (
+              <div className="lg:col-span-7 p-6 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-6">
+                
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-headline font-black text-lg text-slate-900">
+                        Ticket #{selectedIssue.id}
+                      </span>
+                      <span
+                        className={cn(
+                          "px-2.5 py-0.5 rounded-full text-xs font-bold uppercase",
+                          selectedIssue.status === "Resolved" || selectedIssue.status === "Verified"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : selectedIssue.status === "Pending Verification"
+                            ? "bg-purple-100 text-purple-800"
+                            : selectedIssue.status === "Dispatched"
+                            ? "bg-indigo-100 text-indigo-800"
+                            : "bg-amber-100 text-amber-800"
+                        )}
+                      >
+                        {selectedIssue.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Reported by {selectedIssue.reporter?.name || "Verified Citizen"} • {selectedIssue.createdAt ? new Date(selectedIssue.createdAt).toLocaleDateString() : "Active"}
+                    </p>
+                  </div>
+
+                  {/* 5-Stage Lifecycle Status Dropdown */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
+                      className="px-4 py-2 rounded-2xl bg-[#134431] hover:bg-[#0c2e21] text-white text-xs font-bold shadow-md transition-all flex items-center gap-2"
+                    >
+                      <span>Update Lifecycle Status</span>
+                      <ChevronRight className={cn("w-3.5 h-3.5 transition-transform", statusDropdownOpen && "rotate-90")} />
+                    </button>
+
+                    {statusDropdownOpen && (
+                      <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-slate-200 shadow-xl p-2 z-50 animate-fadeIn space-y-1">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 py-1">
+                          Select Operational Stage
+                        </p>
+
+                        <button
+                          onClick={() => handleStatusChange("AI Verified")}
+                          className={cn(
+                            "w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-100 transition-colors",
+                            selectedIssue.status === "AI Verified" ? "bg-amber-50 text-amber-900 font-black" : "text-slate-700"
+                          )}
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                          <span>1. 🤖 New AI Triage (Verified)</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleStatusChange("Dispatched")}
+                          className={cn(
+                            "w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-100 transition-colors",
+                            selectedIssue.status === "Dispatched" ? "bg-indigo-50 text-indigo-900 font-black" : "text-slate-700"
+                          )}
+                        >
+                          <Users className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>2. 🚛 Squad Dispatched</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleStatusChange("In Progress")}
+                          className={cn(
+                            "w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-100 transition-colors",
+                            selectedIssue.status === "In Progress" ? "bg-blue-50 text-blue-900 font-black" : "text-slate-700"
+                          )}
+                        >
+                          <Construction className="w-3.5 h-3.5 text-blue-600" />
+                          <span>3. ⚡ Field Work Active</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleStatusChange("Pending Verification")}
+                          className={cn(
+                            "w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-purple-50 transition-colors",
+                            selectedIssue.status === "Pending Verification" ? "bg-purple-50 text-purple-900 font-black" : "text-slate-700"
+                          )}
+                        >
+                          <Camera className="w-3.5 h-3.5 text-purple-600" />
+                          <span>4. 📸 Resolved (Pending Citizen Verification)</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleStatusChange("Resolved")}
+                          className={cn(
+                            "w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-emerald-50 transition-colors",
+                            selectedIssue.status === "Resolved" ? "bg-emerald-50 text-emerald-900 font-black" : "text-slate-700"
+                          )}
+                        >
+                          <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>5. ✅ Citizen Verified Resolved</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Title & Location Box */}
+                <div className="space-y-2">
+                  <h2 className="font-headline font-bold text-lg text-slate-900 leading-snug">
+                    {selectedIssue.title}
+                  </h2>
+                  <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs text-slate-700 font-medium">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-[#134431]" />
+                      <span>{typeof selectedIssue.location === "object" ? selectedIssue.location.address : selectedIssue.location}</span>
+                    </div>
+                    <span className="font-mono text-[11px] text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                      {typeof selectedIssue.location === "object" ? `${selectedIssue.location.lat?.toFixed(4)}° N, ${selectedIssue.location.lng?.toFixed(4)}° E` : "Geo-Verified ✓"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* AI Computer Vision Triage Card */}
+                <div className="p-4 rounded-2xl bg-[#edf7f1] border border-[#cbe7d7] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-bold text-[#134431]">
+                      <Sparkles className="w-4 h-4 text-emerald-600" />
+                      <span>AI Computer Vision Triage Audit</span>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-200 text-[#134431] font-bold text-[10px]">
+                      {selectedIssue.aiAnalysis?.confidence || 98.4}% Confidence
+                    </span>
+                  </div>
+                  <p className="font-headline font-bold text-sm text-slate-900">
+                    {selectedIssue.aiAnalysis?.detectedObject || selectedIssue.title}
+                  </p>
+                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                    💡 <span className="font-bold">Recommended Protocol:</span> {selectedIssue.aiAnalysis?.summary || "Dispatch standard field unit with replacement materials."}
+                  </p>
+                </div>
+
+                {/* Photo Evidence & Complainant Details Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 block">
+                      Field Photo Evidence
+                    </label>
+                    <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-slate-100 border border-slate-200 group">
+                      <img
+                        src={selectedIssue.images?.reported || "https://images.unsplash.com/photo-1584467735815-f778f274e296?w=800&auto=format&fit=crop&q=80"}
+                        alt={selectedIssue.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/60 text-white font-mono text-[10px] font-bold backdrop-blur-xs">
+                        IN-APP GEO STAMP
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Complainant Context
+                      </label>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-headline font-bold text-sm text-slate-900">
+                            {selectedIssue.reporter?.name || "Verified Citizen"}
+                          </p>
+                          <p className="text-xs text-slate-500 font-mono">
+                            @{selectedIssue.reporter?.username || "citizen"}
+                          </p>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold flex items-center gap-1 border border-emerald-200">
+                          <UserCheck className="w-3 h-3" />
+                          <span>Aadhaar Verified ✓</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-white border border-slate-200 space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Assign Municipal Response Squad
+                      </label>
+                      <div className="space-y-2">
+                        <select
+                          value={selectedSquad}
+                          onChange={(e) => setSelectedSquad(e.target.value)}
+                          className="w-full p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none"
+                        >
+                          {SQUADS_ROSTER.map((sq) => (
+                            <option key={sq.id} value={sq.name}>
+                              {sq.name} ({sq.status})
+                            </option>
+                          ))}
+                        </select>
+
+                        <button
+                          type="button"
+                          onClick={handleDispatchSquad}
+                          className="w-full py-2 rounded-xl bg-[#134431] hover:bg-[#0c2e21] text-white font-headline font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5"
+                        >
+                          <Users className="w-3.5 h-3.5" />
+                          <span>Assign Squad &amp; Dispatch</span>
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* Internal Remarks Timeline */}
+                <div className="space-y-3 pt-3 border-t border-slate-100">
+                  <h4 className="font-headline font-bold text-sm text-slate-900">
+                    Internal Operational Remarks &amp; Timeline ({selectedIssue.timeline?.length || 0})
+                  </h4>
+
+                  <div className="space-y-2 max-h-36 overflow-y-auto no-scrollbar pr-1">
+                    {selectedIssue.timeline?.map((item, idx) => (
+                      <div key={idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/60 text-xs space-y-0.5">
+                        <div className="flex items-center justify-between text-[10px] font-bold text-slate-500">
+                          <span className="text-[#134431] font-bold">{item.actor || "System"}</span>
+                          <span>{item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Recent"}</span>
+                        </div>
+                        <p className="text-slate-700 leading-relaxed font-medium">
+                          {item.note}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <form onSubmit={handleAddNote} className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Add internal operational remark..."
+                      value={newNote}
+                      onChange={(e) => setNewNote(e.target.value)}
+                      className="flex-1 px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:outline-none focus:bg-white focus:border-[#134431]"
+                    />
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-xl bg-[#134431] hover:bg-[#0c2e21] text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1"
+                    >
+                      <Send className="w-3 h-3" />
+                      <span>Add</span>
+                    </button>
+                  </form>
+                </div>
+
+              </div>
+            ) : null}
+
+          </div>
+        </>
+      )}
+
+      {/* 4. DEDICATED TAB: SQUAD DISPATCH & VEHICLE ROSTER */}
+      {currentTab === "squads" && (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="p-6 rounded-3xl bg-white border border-slate-100 shadow-soft flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="font-headline font-black text-xl text-slate-900 flex items-center gap-2">
+                <Users className="w-5 h-5 text-emerald-700" />
+                <span>Field Squads &amp; Rapid Response Vehicles</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Active roster of municipal engineers, response vans, and real-time zone assignments for {departmentName}.
+              </p>
+            </div>
+            <span className="px-3.5 py-1.5 rounded-full bg-[#edf7f1] text-[#134431] font-bold text-xs border border-[#cbe7d7] flex items-center gap-1.5 self-start">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>4 Units Active on Duty</span>
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {SQUADS_ROSTER.map((sq) => (
+              <div key={sq.id} className="p-5 rounded-3xl bg-white border border-slate-100 shadow-soft hover:shadow-md transition-all space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <span className="font-headline font-bold text-sm text-slate-900 block">{sq.name}</span>
+                    <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-[#134431]" />
+                      <span>{sq.zone}</span>
+                    </span>
+                  </div>
+                  <span className={cn(
+                    "px-2.5 py-0.5 rounded-full text-[10px] font-bold",
+                    sq.status === "Available" ? "bg-emerald-100 text-emerald-800" : sq.status === "In Field" ? "bg-blue-100 text-blue-800" : "bg-slate-100 text-slate-600"
+                  )}>
+                    {sq.status}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs space-y-1.5 font-medium">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Squad Leader:</span>
+                    <span className="font-bold text-slate-900">{sq.leader}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Vehicle Reg:</span>
+                    <span className="font-mono text-slate-900">{sq.vehicle}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Specialization:</span>
+                    <span className="text-emerald-800 font-bold">{sq.specialization}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <a
+                    href={`tel:${sq.phone}`}
+                    className="flex-1 py-2 rounded-xl bg-[#edf7f1] hover:bg-[#dff0e6] text-[#134431] font-bold text-xs text-center flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>Call Unit</span>
+                  </a>
+                  <button
+                    onClick={() => alert(`Direct dispatch dispatched to ${sq.name}`)}
+                    className="flex-1 py-2 rounded-xl bg-[#134431] hover:bg-[#0c2e21] text-white font-bold text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Send className="w-3 h-3" />
+                    <span>Dispatch</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 5. DEDICATED TAB: DEPARTMENT ANALYTICS & QUALITY METRICS */}
+      {currentTab === "analytics" && (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="p-6 rounded-3xl bg-white border border-slate-100 shadow-soft">
+            <h2 className="font-headline font-black text-xl text-slate-900 flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-emerald-700" />
+              <span>{departmentName} Operational Analytics &amp; Quality Metrics</span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Comprehensive telemetry on resolution velocity, ward performance benchmarks, and citizen satisfaction ratings.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-5 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-1">
+              <p className="text-xs font-bold text-slate-500 uppercase">First Response Speed</p>
+              <p className="font-headline font-black text-3xl text-[#134431]">18.4 mins</p>
+              <p className="text-[11px] text-emerald-700 font-semibold">↓ 3.1 mins improvement</p>
+            </div>
+            <div className="p-5 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-1">
+              <p className="text-xs font-bold text-slate-500 uppercase">Citizen CSAT Rating</p>
+              <p className="font-headline font-black text-3xl text-emerald-700">4.8 / 5.0 ★</p>
+              <p className="text-[11px] text-slate-500 font-medium">Based on 840 verified surveys</p>
+            </div>
+            <div className="p-5 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-1">
+              <p className="text-xs font-bold text-slate-500 uppercase">Annual SLA Compliance</p>
+              <p className="font-headline font-black text-3xl text-slate-900">96.2%</p>
+              <p className="text-[11px] text-emerald-700 font-semibold">Exceeding state benchmark</p>
+            </div>
+            <div className="p-5 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-1">
+              <p className="text-xs font-bold text-slate-500 uppercase">Ward Budget Utilization</p>
+              <p className="font-headline font-black text-3xl text-indigo-700">72.4%</p>
+              <p className="text-[11px] text-slate-500 font-medium">₹ 64.2 Lakhs allocated</p>
             </div>
           </div>
 
-          {/* Dynamic Category Breakdown Bars (4 Cols) */}
-          <div className="lg:col-span-4 p-6 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-4">
+          {/* Ward-Wise Efficiency Bars */}
+          <div className="p-6 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-4">
             <h3 className="font-headline font-bold text-base text-slate-900">
-              Department Incidents by Type
+              Ward-Wise Turnaround Efficiency Comparison
             </h3>
-
-            <div className="space-y-3 pt-1">
-              {categoryCounts.slice(0, 4).map((cat, idx) => (
-                <div key={cat.name} className="space-y-1">
+            <div className="space-y-3">
+              {[
+                { ward: "Ward 63 (Khandagiri Operations)", rate: 94.2, color: "bg-[#134431]" },
+                { ward: "Ward 34 (Saheed Nagar)", rate: 89.5, color: "bg-emerald-600" },
+                { ward: "Ward 12 (Patia Tech Corridor)", rate: 92.0, color: "bg-teal-600" },
+                { ward: "Ward 45 (Old Town Heritage)", rate: 86.4, color: "bg-amber-600" },
+              ].map((w) => (
+                <div key={w.ward} className="space-y-1">
                   <div className="flex justify-between text-xs font-bold text-slate-700">
-                    <span className="truncate">{cat.name}</span>
-                    <span className="text-[#134431] shrink-0 ml-2">{cat.percentage}% ({cat.count})</span>
+                    <span>{w.ward}</span>
+                    <span className="text-[#134431]">{w.rate}% SLA Met</span>
                   </div>
-                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-all duration-500",
-                        idx === 0 ? "bg-[#134431]" : idx === 1 ? "bg-emerald-500" : idx === 2 ? "bg-amber-500" : "bg-teal-500"
-                      )}
-                      style={{ width: `${Math.max(8, cat.percentage)}%` }}
-                    ></div>
+                  <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className={cn("h-full rounded-full", w.color)} style={{ width: `${w.rate}%` }}></div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-
         </div>
       )}
 
-      {/* 4. WORKBENCH TAB: SPLIT-VIEW MASTER-DETAIL WORKSPACE */}
-      {currentTab === "workbench" && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          
-          {/* Left Column (40% width): Filterable Ticket Stream */}
-          <div className="lg:col-span-5 space-y-4">
-            
-            {/* Filter Pills & Search */}
-            <div className="p-4 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-3">
-              <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Filter by ticket #, ward, citizen..."
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-medium focus:outline-none focus:bg-white focus:border-[#134431] transition-all"
-                />
-              </div>
-
-              {/* Status Tabs */}
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 text-xs font-bold">
-                {[
-                  { id: "all", label: `All (${deptIssues.length})` },
-                  { id: "active", label: `⚡ Active (${activeTicketsCount})` },
-                  { id: "critical", label: `🔥 Critical (${criticalCount})` },
-                  { id: "overdue", label: "⏱ Overdue" },
-                  { id: "resolved", label: `✓ Fixed (${resolvedCount})` }
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setTicketFilter(tab.id as any)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-full transition-all whitespace-nowrap text-[11px]",
-                      ticketFilter === tab.id
-                        ? "bg-[#134431] text-white shadow-xs"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    )}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
+      {/* 6. DEDICATED TAB: CITIZEN CONSENSUS POLLS & DEMOCRATIC BALLOTS */}
+      {currentTab === "polls" && (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="p-6 rounded-3xl bg-white border border-slate-100 shadow-soft flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="font-headline font-black text-xl text-slate-900 flex items-center gap-2">
+                <Vote className="w-5 h-5 text-emerald-700" />
+                <span>Citizen Consensus Polls &amp; Public Ballots</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Democratic voting on civic infrastructure proposals to ensure community consensus before contractor tenders.
+              </p>
             </div>
-
-            {/* Ticket Cards List */}
-            <div className="space-y-3 max-h-[640px] overflow-y-auto no-scrollbar pr-1">
-              {filteredTickets.length === 0 ? (
-                <div className="p-8 text-center bg-white rounded-3xl border border-slate-100 space-y-2">
-                  <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                  <p className="font-headline font-bold text-sm text-slate-800">No tickets matching this filter</p>
-                  <p className="text-xs text-slate-500">All {departmentName} issues in this view are up to date.</p>
-                </div>
-              ) : (
-                filteredTickets.map((ticket) => {
-                  const isSelected = selectedIssue?.id === ticket.id;
-                  const isCritical = ticket.urgency === "Emergency" || ticket.urgency === "High";
-
-                  return (
-                    <div
-                      key={ticket.id}
-                      onClick={() => setSelectedIssueId(ticket.id)}
-                      className={cn(
-                        "p-4 rounded-3xl border transition-all cursor-pointer group space-y-2.5",
-                        isSelected
-                          ? "bg-[#edf7f1] border-[#134431] shadow-md ring-1 ring-[#134431]"
-                          : "bg-white border-slate-100 hover:border-emerald-300 shadow-soft"
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="font-headline font-black text-xs text-[#134431] bg-white px-2.5 py-0.5 rounded-full border border-[#cbe7d7]">
-                            #{ticket.id}
-                          </span>
-                          <span
-                            className={cn(
-                              "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
-                              isCritical
-                                ? "bg-rose-100 text-rose-700"
-                                : "bg-slate-100 text-slate-700"
-                            )}
-                          >
-                            {ticket.urgency || "MODERATE"}
-                          </span>
-                        </div>
-
-                        <span
-                          className={cn(
-                            "text-[10px] font-bold px-2.5 py-0.5 rounded-full",
-                            ticket.status === "Resolved" || ticket.status === "Verified"
-                              ? "bg-emerald-100 text-emerald-800"
-                              : ticket.status === "Pending Verification"
-                              ? "bg-purple-100 text-purple-800"
-                              : ticket.status === "Dispatched"
-                              ? "bg-indigo-100 text-indigo-800"
-                              : "bg-amber-100 text-amber-800"
-                          )}
-                        >
-                          {ticket.status}
-                        </span>
-                      </div>
-
-                      <h4 className="font-headline font-bold text-sm text-slate-900 leading-snug group-hover:text-[#134431] transition-colors">
-                        {ticket.title}
-                      </h4>
-
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100/80">
-                        <span className="flex items-center gap-1 truncate max-w-[200px]">
-                          <MapPin className="w-3 h-3 text-[#134431] shrink-0" />
-                          <span className="truncate">{typeof ticket.location === "object" ? ticket.location.address : ticket.location}</span>
-                        </span>
-
-                        <span className="font-semibold text-slate-700 text-[10px] bg-white/80 px-2 py-0.5 rounded-md border border-slate-200">
-                          {ticket.category}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+            <button
+              onClick={() => alert("Open Create Ballot Modal")}
+              className="px-4 py-2 rounded-2xl bg-[#134431] hover:bg-[#0c2e21] text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 self-start"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Create New Ballot</span>
+            </button>
           </div>
 
-          {/* Right Column (60% width): Live Ticket Inspector & 5-Stage Lifecycle Hub */}
-          {selectedIssue ? (
-            <div className="lg:col-span-7 p-6 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-6">
-              
-              {/* Inspector Top Bar with 5-Stage Lifecycle Status Dropdown */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-headline font-black text-lg text-slate-900">
-                      Ticket #{selectedIssue.id}
-                    </span>
-                    <span
-                      className={cn(
-                        "px-2.5 py-0.5 rounded-full text-xs font-bold uppercase",
-                        selectedIssue.status === "Resolved" || selectedIssue.status === "Verified"
-                          ? "bg-emerald-100 text-emerald-800"
-                          : selectedIssue.status === "Pending Verification"
-                          ? "bg-purple-100 text-purple-800"
-                          : selectedIssue.status === "Dispatched"
-                          ? "bg-indigo-100 text-indigo-800"
-                          : "bg-amber-100 text-amber-800"
-                      )}
-                    >
-                      {selectedIssue.status}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 font-medium">
-                    Reported by {selectedIssue.reporter?.name || "Verified Citizen"} • {selectedIssue.createdAt ? new Date(selectedIssue.createdAt).toLocaleDateString() : "Active"}
-                  </p>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {polls.map((poll) => {
+              const totalVotes = poll.yesVotes + poll.noVotes;
+              const yesPercent = Math.round((poll.yesVotes / Math.max(1, totalVotes)) * 100);
+              const noPercent = 100 - yesPercent;
 
-                {/* 5-Stage Lifecycle Status Dropdown */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
-                    className="px-4 py-2 rounded-2xl bg-[#134431] hover:bg-[#0c2e21] text-white text-xs font-bold shadow-md transition-all flex items-center gap-2"
-                  >
-                    <span>Update Lifecycle Status</span>
-                    <ChevronRight className={cn("w-3.5 h-3.5 transition-transform", statusDropdownOpen && "rotate-90")} />
-                  </button>
-
-                  {statusDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-slate-200 shadow-xl p-2 z-50 animate-fadeIn space-y-1">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 py-1">
-                        Select Operational Stage
-                      </p>
-
-                      <button
-                        onClick={() => handleStatusChange("AI Verified")}
-                        className={cn(
-                          "w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-100 transition-colors",
-                          selectedIssue.status === "AI Verified" ? "bg-amber-50 text-amber-900 font-black" : "text-slate-700"
-                        )}
-                      >
-                        <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                        <span>1. 🤖 New AI Triage (Verified)</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleStatusChange("Dispatched")}
-                        className={cn(
-                          "w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-100 transition-colors",
-                          selectedIssue.status === "Dispatched" ? "bg-indigo-50 text-indigo-900 font-black" : "text-slate-700"
-                        )}
-                      >
-                        <Users className="w-3.5 h-3.5 text-indigo-600" />
-                        <span>2. 🚛 Squad Dispatched</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleStatusChange("In Progress")}
-                        className={cn(
-                          "w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-100 transition-colors",
-                          selectedIssue.status === "In Progress" ? "bg-blue-50 text-blue-900 font-black" : "text-slate-700"
-                        )}
-                      >
-                        <Construction className="w-3.5 h-3.5 text-blue-600" />
-                        <span>3. ⚡ Field Work Active</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleStatusChange("Pending Verification")}
-                        className={cn(
-                          "w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-purple-50 transition-colors",
-                          selectedIssue.status === "Pending Verification" ? "bg-purple-50 text-purple-900 font-black" : "text-slate-700"
-                        )}
-                      >
-                        <Camera className="w-3.5 h-3.5 text-purple-600" />
-                        <span>4. 📸 Resolved (Pending Citizen Verification)</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleStatusChange("Resolved")}
-                        className={cn(
-                          "w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-emerald-50 transition-colors",
-                          selectedIssue.status === "Resolved" ? "bg-emerald-50 text-emerald-900 font-black" : "text-slate-700"
-                        )}
-                      >
-                        <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>5. ✅ Citizen Verified Resolved</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Title & Location Box */}
-              <div className="space-y-2">
-                <h2 className="font-headline font-bold text-lg text-slate-900 leading-snug">
-                  {selectedIssue.title}
-                </h2>
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs text-slate-700 font-medium">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-[#134431]" />
-                    <span>{typeof selectedIssue.location === "object" ? selectedIssue.location.address : selectedIssue.location}</span>
-                  </div>
-                  <span className="font-mono text-[11px] text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200">
-                    {typeof selectedIssue.location === "object" ? `${selectedIssue.location.lat?.toFixed(4)}° N, ${selectedIssue.location.lng?.toFixed(4)}° E` : "Geo-Verified ✓"}
-                  </span>
-                </div>
-              </div>
-
-              {/* AI Computer Vision Triage Card */}
-              <div className="p-4 rounded-2xl bg-[#edf7f1] border border-[#cbe7d7] space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-bold text-[#134431]">
-                    <Sparkles className="w-4 h-4 text-emerald-600" />
-                    <span>AI Computer Vision Triage Audit</span>
-                  </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-200 text-[#134431] font-bold text-[10px]">
-                    {selectedIssue.aiAnalysis?.confidence || 98.4}% Confidence
-                  </span>
-                </div>
-                <p className="font-headline font-bold text-sm text-slate-900">
-                  {selectedIssue.aiAnalysis?.detectedObject || selectedIssue.title}
-                </p>
-                <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                  💡 <span className="font-bold">Recommended Protocol:</span> {selectedIssue.aiAnalysis?.summary || "Dispatch standard field unit with replacement materials."}
-                </p>
-              </div>
-
-              {/* Photo Evidence & Complainant Details Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                
-                {/* Evidence Photo */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 block">
-                    Field Photo Evidence
-                  </label>
-                  <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-slate-100 border border-slate-200 group">
-                    <img
-                      src={selectedIssue.images?.reported || "https://images.unsplash.com/photo-1584467735815-f778f274e296?w=800&auto=format&fit=crop&q=80"}
-                      alt={selectedIssue.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/60 text-white font-mono text-[10px] font-bold backdrop-blur-xs">
-                      IN-APP GEO STAMP
-                    </div>
-                  </div>
-                </div>
-
-                {/* Citizen & Squad Dispatcher */}
-                <div className="space-y-4">
-                  
-                  {/* Complainant Box */}
-                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      Complainant Context
-                    </label>
+              return (
+                <div key={poll.id} className="p-6 rounded-3xl bg-white border border-slate-100 shadow-soft flex flex-col justify-between space-y-4">
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-headline font-bold text-sm text-slate-900">
-                          {selectedIssue.reporter?.name || "Verified Citizen"}
-                        </p>
-                        <p className="text-xs text-slate-500 font-mono">
-                          @{selectedIssue.reporter?.username || "citizen"}
-                        </p>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold flex items-center gap-1 border border-emerald-200">
-                        <UserCheck className="w-3 h-3" />
-                        <span>Aadhaar Verified ✓</span>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#edf7f1] text-[#134431] border border-[#cbe7d7]">
+                        {poll.ward}
+                      </span>
+                      <span className={cn(
+                        "px-2.5 py-0.5 rounded-full text-[10px] font-bold",
+                        poll.status === "Approved" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                      )}>
+                        {poll.status}
                       </span>
                     </div>
+
+                    <h3 className="font-headline font-bold text-base text-slate-900 leading-snug">
+                      {poll.title}
+                    </h3>
+                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                      {poll.description}
+                    </p>
                   </div>
 
-                  {/* Squad Dispatcher Selector */}
-                  <div className="p-3.5 rounded-2xl bg-white border border-slate-200 space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      Assign Municipal Response Squad
-                    </label>
-                    <div className="space-y-2">
-                      <select
-                        value={selectedSquad}
-                        onChange={(e) => setSelectedSquad(e.target.value)}
-                        className="w-full p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none"
-                      >
-                        {SQUADS_ROSTER.map((sq) => (
-                          <option key={sq.id} value={sq.name}>
-                            {sq.name} ({sq.status})
-                          </option>
-                        ))}
-                      </select>
-
-                      <button
-                        type="button"
-                        onClick={handleDispatchSquad}
-                        className="w-full py-2 rounded-xl bg-[#134431] hover:bg-[#0c2e21] text-white font-headline font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5"
-                      >
-                        <Users className="w-3.5 h-3.5" />
-                        <span>Assign Squad & Dispatch</span>
-                      </button>
-                    </div>
-                  </div>
-
-                </div>
-
-              </div>
-
-              {/* Internal Field Notes Timeline */}
-              <div className="space-y-3 pt-3 border-t border-slate-100">
-                <h4 className="font-headline font-bold text-sm text-slate-900">
-                  Internal Operational Remarks & Timeline ({selectedIssue.timeline?.length || 0})
-                </h4>
-
-                <div className="space-y-2 max-h-36 overflow-y-auto no-scrollbar pr-1">
-                  {selectedIssue.timeline?.map((item, idx) => (
-                    <div key={idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/60 text-xs space-y-0.5">
-                      <div className="flex items-center justify-between text-[10px] font-bold text-slate-500">
-                        <span className="text-[#134431] font-bold">{item.actor || "System"}</span>
-                        <span>{item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Recent"}</span>
+                  <div className="space-y-3 pt-3 border-t border-slate-100">
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span className="text-emerald-700 flex items-center gap-1">
+                          <ThumbsUp className="w-3.5 h-3.5" /> In Favor ({yesPercent}%)
+                        </span>
+                        <span className="text-slate-500">{poll.yesVotes.toLocaleString()} votes</span>
                       </div>
-                      <p className="text-slate-700 leading-relaxed font-medium">
-                        {item.note}
-                      </p>
+                      <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden flex">
+                        <div className="h-full bg-emerald-500" style={{ width: `${yesPercent}%` }}></div>
+                        <div className="h-full bg-rose-400" style={{ width: `${noPercent}%` }}></div>
+                      </div>
                     </div>
-                  ))}
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                      <span>Est. Budget: <strong className="text-slate-900">{poll.budgetEstimate}</strong></span>
+                      <span>{poll.daysLeft > 0 ? `Ends in ${poll.daysLeft} days` : "Voting Concluded"}</span>
+                    </div>
+                  </div>
                 </div>
-
-                {/* Add Note Input Form */}
-                <form onSubmit={handleAddNote} className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Add internal operational remark..."
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    className="flex-1 px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:outline-none focus:bg-white focus:border-[#134431]"
-                  />
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-xl bg-[#134431] hover:bg-[#0c2e21] text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1"
-                  >
-                    <Send className="w-3 h-3" />
-                    <span>Add</span>
-                  </button>
-                </form>
-              </div>
-
-            </div>
-          ) : null}
-
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {/* 5. DEDICATED TAB: ESCALATIONS & SLA BREACHES */}
+      {/* 7. DEDICATED TAB: AI DUPLICATE REVIEW QUEUE */}
+      {currentTab === "duplicates" && (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="p-6 rounded-3xl bg-white border border-slate-100 shadow-soft flex items-center justify-between">
+            <div>
+              <h2 className="font-headline font-black text-xl text-slate-900 flex items-center gap-2">
+                <Layers className="w-5 h-5 text-amber-600" />
+                <span>AI Duplicate Triage &amp; Conflict Resolution</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Computer-vision similarity matches flagging potential duplicate tickets submitted for the same incident location.
+              </p>
+            </div>
+            <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-bold text-xs border border-amber-200">
+              {duplicates.length} Pending Review
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            {duplicates.length === 0 ? (
+              <div className="p-12 text-center bg-white rounded-3xl border border-slate-100 space-y-2">
+                <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
+                <h3 className="font-headline font-bold text-base text-slate-800">Duplicate Queue Clean</h3>
+                <p className="text-xs text-slate-500">All duplicate candidate tickets have been resolved and merged.</p>
+              </div>
+            ) : (
+              duplicates.map((dup) => (
+                <div key={dup.id} className="p-6 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 font-bold text-xs flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      <span>{dup.confidence}</span>
+                    </span>
+                    <span className="text-xs text-slate-500 font-medium">{dup.location} • {dup.reportedTime}</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Primary Ticket */}
+                    <div className="p-4 rounded-2xl bg-[#edf7f1] border border-[#cbe7d7] space-y-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#134431]">Primary Ticket #{dup.primaryId}</span>
+                      <p className="font-headline font-bold text-sm text-slate-900">{dup.primaryTitle}</p>
+                      <div className="rounded-xl overflow-hidden aspect-video bg-slate-200">
+                        <img src={dup.primaryPhoto} alt="Primary" className="w-full h-full object-cover" />
+                      </div>
+                    </div>
+
+                    {/* Duplicate Candidate */}
+                    <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Candidate Ticket #{dup.duplicateId}</span>
+                      <p className="font-headline font-bold text-sm text-slate-900">{dup.duplicateTitle}</p>
+                      <div className="rounded-xl overflow-hidden aspect-video bg-slate-200">
+                        <img src={dup.duplicatePhoto} alt="Duplicate" className="w-full h-full object-cover" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 pt-2">
+                    <button
+                      onClick={() => setDuplicates(prev => prev.filter(d => d.id !== dup.id))}
+                      className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors"
+                    >
+                      Keep Separate
+                    </button>
+                    <button
+                      onClick={() => handleMergeDuplicate(dup.id)}
+                      className="px-5 py-2 rounded-xl bg-[#134431] hover:bg-[#0c2e21] text-white font-headline font-bold text-xs shadow-md transition-colors flex items-center gap-1.5"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Merge into Primary Ticket</span>
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 8. DEDICATED TAB: ESCALATIONS & SLA BREACHES */}
       {currentTab === "escalations" && (
         <div className="p-6 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-6">
           <div className="flex items-center justify-between pb-4 border-b border-slate-100">
             <div>
               <h2 className="font-headline font-black text-xl text-slate-900 flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-rose-600" />
-                <span>SLA Breaches & Priority Escalations</span>
+                <span>SLA Breaches &amp; Priority Escalations</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Tickets exceeding guaranteed resolution benchmarks requiring immediate executive intervention.
@@ -1036,14 +1333,14 @@ export default function DepartmentOfficerPage() {
         </div>
       )}
 
-      {/* 6. DEDICATED TAB: SLA CALENDAR (DYNAMIC WITH REAL DATES) */}
+      {/* 9. DEDICATED TAB: SLA CALENDAR */}
       {currentTab === "calendar" && (
         <div className="p-6 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-6">
           <div className="flex items-center justify-between pb-4 border-b border-slate-100">
             <div>
               <h2 className="font-headline font-black text-xl text-slate-900 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-emerald-700" />
-                <span>SLA Deadlines & Maintenance Schedule</span>
+                <span>SLA Deadlines &amp; Maintenance Schedule</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Color-coded calendar dynamically showing active ticket deadlines and scheduled ward drives.
@@ -1056,7 +1353,6 @@ export default function DepartmentOfficerPage() {
             </div>
           </div>
 
-          {/* Calendar Grid (TeamHub style) */}
           <div className="grid grid-cols-7 gap-2 text-center text-xs">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
               <div key={day} className="font-bold text-slate-400 uppercase py-1 text-[11px]">
@@ -1064,7 +1360,7 @@ export default function DepartmentOfficerPage() {
               </div>
             ))}
             {Array.from({ length: 31 }, (_, i) => i + 1).map((date) => {
-              const hasTicket = deptIssues[date % deptIssues.length];
+              const hasTicket = deptIssues[date % Math.max(1, deptIssues.length)];
               const isToday = date === 27;
 
               return (
@@ -1099,7 +1395,7 @@ export default function DepartmentOfficerPage() {
         </div>
       )}
 
-      {/* 7. DEDICATED TAB: OFFICIAL COMMUNITY ANNOUNCEMENTS COMPOSER (REAL BRIDGE) */}
+      {/* 10. DEDICATED TAB: OFFICIAL COMMUNITY ANNOUNCEMENTS */}
       {currentTab === "announcements" && (
         <div className="p-6 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-6 max-w-3xl mx-auto">
           <div className="pb-4 border-b border-slate-100">
@@ -1129,7 +1425,7 @@ export default function DepartmentOfficerPage() {
 
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700 block">
-                Broadcast Content & Citizen Instructions
+                Broadcast Content &amp; Citizen Instructions
               </label>
               <textarea
                 required
@@ -1161,14 +1457,14 @@ export default function DepartmentOfficerPage() {
         </div>
       )}
 
-      {/* 8. DEDICATED TAB: AUDIT REPORTS & EXPORT */}
+      {/* 11. DEDICATED TAB: AUDIT REPORTS & EXPORT */}
       {currentTab === "reports" && (
         <div className="p-6 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-6">
           <div className="flex items-center justify-between pb-4 border-b border-slate-100">
             <div>
               <h2 className="font-headline font-black text-xl text-slate-900 flex items-center gap-2">
                 <FileSpreadsheet className="w-5 h-5 text-emerald-700" />
-                <span>Executive Municipal Audit & Compliance Sheets</span>
+                <span>Executive Municipal Audit &amp; Compliance Sheets</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Download verified performance logs, SLA compliance records, and contractor expenditures for administrative reviews.
@@ -1190,7 +1486,7 @@ export default function DepartmentOfficerPage() {
             </div>
 
             <div className="p-5 rounded-3xl bg-slate-50 border border-slate-200 space-y-3">
-              <h4 className="font-headline font-bold text-sm text-slate-900">Monthly Contractor & Squad Ledger</h4>
+              <h4 className="font-headline font-bold text-sm text-slate-900">Monthly Contractor &amp; Squad Ledger</h4>
               <p className="text-xs text-slate-500 font-medium">BMC {departmentName} Division • Active Crew Logs</p>
               <button
                 onClick={() => alert(`Downloading ${departmentName}_Squad_Expenditure.csv`)}

@@ -81,8 +81,18 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
     <header className="sticky top-0 z-40 w-full border-b border-surface-container-high bg-white/95 backdrop-blur-md transition-all">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         
-        {/* Left: Brand */}
-        <div className="flex items-center gap-3 lg:gap-6">
+        {/* Left: Brand + Mobile Menu Button */}
+        <div className="flex items-center gap-2 sm:gap-3 lg:gap-6">
+          <button
+            type="button"
+            onClick={onToggleMobileMenu}
+            className="p-2 -ml-1.5 rounded-2xl text-slate-700 hover:bg-[#edf7f1] hover:text-[#134431] lg:hidden transition-colors border border-transparent hover:border-[#cbe7d7]"
+            aria-label="Open Sidebar Menu"
+            title="Open Navigation Menu"
+          >
+            <Menu className="w-5 h-5 text-[#134431]" />
+          </button>
+
           <Link href={isOfficer ? `/officer/${officerDept}` : "/"} className="flex items-center gap-2.5 group">
             <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-[#134431] text-white shadow-md shadow-emerald-950/20 group-hover:scale-105 transition-transform">
               <Sparkles className="w-5 h-5 text-emerald-300" />
