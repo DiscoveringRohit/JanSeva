@@ -70,6 +70,7 @@ interface AppContextType {
   addComment: (issueId: string, text: string) => void;
 
   notifications: NotificationItem[];
+  setNotifications: React.Dispatch<React.SetStateAction<NotificationItem[]>>;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   unreadNotifsCount: number;
@@ -1216,6 +1217,7 @@ const sendVoiceMessage = async (audioBlob: Blob) => {
         voteVerification,
         addComment,
         notifications,
+        setNotifications,
         markNotificationRead,
         markAllNotificationsRead,
         unreadNotifsCount,
