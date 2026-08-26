@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
 import { CivicIssue, NotificationItem } from "@/lib/data/mock-data";
@@ -273,6 +274,45 @@ export default function DepartmentOfficerPage() {
       setAnnouncementText("");
     }, 4000);
   };
+
+  const isOfficer = Boolean(user && (user.role === "officer" || user.role === "corporator"));
+
+  if (!isOfficer) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-6 space-y-6 animate-fadeIn">
+        <div className="w-20 h-20 rounded-3xl bg-[#edf7f1] border border-[#cbe7d7] text-[#134431] flex items-center justify-center shadow-lg">
+          <ShieldAlert className="w-10 h-10 text-[#134431]" />
+        </div>
+        <div className="max-w-md space-y-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-bold border border-rose-200">
+            <AlertTriangle className="w-3.5 h-3.5" />
+            <span>Authorized Municipal Personnel Only</span>
+          </div>
+          <h2 className="font-headline font-black text-2xl sm:text-3xl text-slate-900 tracking-tight">
+            Authority Access Restricted
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
+            The <strong>BMC {departmentName.toUpperCase()} Division Operations Command</strong> is strictly restricted to authenticated municipal officers with verified department security credentials.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+          <Link
+            href="/officer-portal"
+            className="px-6 py-3.5 rounded-2xl bg-[#134431] hover:bg-[#0c2e21] text-white font-headline font-bold text-xs shadow-md transition-all flex items-center gap-2"
+          >
+            <span>Authenticate at Authority Portal</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+          <Link
+            href="/"
+            className="px-5 py-3.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-2xs transition-all"
+          >
+            Return to Citizen Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn pb-16 font-body">
