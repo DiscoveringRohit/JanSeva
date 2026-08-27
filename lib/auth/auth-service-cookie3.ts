@@ -484,21 +484,16 @@ export const authService = {
         };
       }
 
-      const data =
-        await res.json();
+      const data = await res.json().catch(() => null);
 
       if (data?.access) {
         setAccessToken(data.access);
       }
 
-      const profileRes =
-        await fetchWithAuth(
-          `${API}/api/auth/profile/`
-        );
+      const profileRes = await fetchWithAuth(`${API}/api/auth/profile/`);
 
       if (profileRes.ok) {
-        const user =
-          await profileRes.json();
+        const user = await profileRes.json().catch(() => null);
 
         if (
           typeof window !== "undefined"
