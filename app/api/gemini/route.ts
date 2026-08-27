@@ -1,6 +1,61 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
+// Supported Google Gemini models in order of priority
+const GEMINI_MODELS = [
+  "gemini-3.6-flash",
+  "gemini-3.7-flash",
+  "gemini-3.5-flash",
+  "gemini-flash-latest",
+];
+
+async function generateWithFallback(
+  genAI: GoogleGenerativeAI,
+  promptParts: any[],
+  generationConfig: any = {}
+) {
+  let lastError: any = null;
+
+  for (const modelName of GEMINI_MODELS) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig,
+      });
+      const result = await model.generateContent(promptParts);
+      const response = await result.response;
+      return response.text();
+    } catch (err: any) {
+      console.warn(`Gemini model ${modelName} failed, trying next fallback:`, err?.message || err);
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error("All Gemini models failed to generate response");
+}
+
+function extractJson(text: string): any {
+  // Remove markdown code fences if present
+  let cleaned = text.trim();
+  if (cleaned.startsWith("```json")) {
+    cleaned = cleaned.replace(/^```json\s*/i, "").replace(/\s*```$/, "");
+  } else if (cleaned.startsWith("```")) {
+    cleaned = cleaned.replace(/^```\s*/, "").replace(/\s*```$/, "");
+  }
+  cleaned = cleaned.trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // Try regex extraction of first {...}
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      return JSON.parse(match[0]);
+    }
+    throw new Error("Unable to parse JSON from Gemini vision response");
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -26,21 +81,13 @@ export async function POST(request: Request) {
         );
       }
 
-      const model = genAI.getGenerativeModel({
-        model: "gemini-3.6-flash",
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 800,
-        },
-      });
-
       let contextDetails = "";
       if (userContext) {
         contextDetails = `
 === CURRENT USER PROFILE & CIVIC DATA ===
 - Name: ${userContext.name || "Citizen"}
 - Username: ${userContext.username || "resident"}
-- Location: ${userContext.city || "Bhubaneswar"}, PIN Code: ${userContext.pincode || "835103"}
+- Location: ${userContext.city || "Bhubaneswar"}, PIN Code: ${userContext.pincode || "751030"}
 - Civic XP: ${userContext.civicCitizenXP || 100} XP
 - Citizen Level: Level ${userContext.level || 1} (${userContext.levelTitle || "Active Citizen"})
 - Total Issues Reported: ${userContext.myReportsCount || 0}
@@ -74,9 +121,14 @@ CORE INSTRUCTIONS:
 
 User Question: ${message}`;
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const reply = response.text();
+      const reply = await generateWithFallback(
+        genAI,
+        [prompt],
+        {
+          temperature: 0.7,
+          maxOutputTokens: 800,
+        }
+      );
 
       return NextResponse.json({ reply });
     }
@@ -98,14 +150,6 @@ User Question: ${message}`;
         mimeType = parts[0].replace("data:", "");
         base64Data = parts[1];
       }
-
-      const model = genAI.getGenerativeModel({
-        model: "gemini-3.6-flash",
-        generationConfig: {
-          responseMimeType: "application/json",
-          temperature: 0.1,
-        },
-      });
 
       const visionPrompt = `You are the JanSeva Municipal AI Vision Inspector.
 Analyze this submitted photo strictly according to these 4 verification rules:
@@ -134,7 +178,7 @@ Return JSON in this exact structure:
   "category": "Roads",
   "title": "Severe Pothole on Road",
   "detectedObject": "Deep asphalt pothole crater",
-  "urgency": "Critical" | "High" | "Moderate" | "Low",
+  "urgency": "Critical",
   "estimatedSeverity": "High Priority Road Hazard",
   "suggestedSlaHours": 24,
   "confidence": 96.5,
@@ -152,10 +196,16 @@ Set "isValid": false and provide a clear, user-friendly "rejectionReason" in Eng
         },
       };
 
-      const result = await model.generateContent([visionPrompt, imagePart]);
-      const response = await result.response;
-      const text = response.text().trim();
-      const parsed = JSON.parse(text);
+      const text = await generateWithFallback(
+        genAI,
+        [visionPrompt, imagePart],
+        {
+          responseMimeType: "application/json",
+          temperature: 0.1,
+        }
+      );
+
+      const parsed = extractJson(text);
 
       // Enforce strict gate
       if (!parsed.isCivicProblem || !parsed.isRealScene || !parsed.isValid) {

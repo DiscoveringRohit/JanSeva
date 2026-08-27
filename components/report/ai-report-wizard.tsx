@@ -151,7 +151,7 @@ export function AiReportWizard() {
 
       const data: GeminiVerificationData = await response.json();
 
-      if (response.ok && data) {
+      if (data) {
         setVerificationResult(data);
 
         // If verified as a valid civic issue:
