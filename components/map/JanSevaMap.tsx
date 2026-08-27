@@ -480,7 +480,7 @@ export default function JanSevaMap({
 
   return (
     <div
-      className={`relative w-full overflow-hidden bg-slate-100 flex flex-col select-none ${isMini
+      className={`relative isolate z-0 w-full overflow-hidden bg-slate-100 flex flex-col select-none ${isMini
           ? "h-full rounded-xl border-0 shadow-none"
           : "rounded-2xl border border-slate-200 shadow-lg"
         } ${className}`}
@@ -488,7 +488,7 @@ export default function JanSevaMap({
     >
       {/* Top Filter & Threat Level Bar (Only on Full mode) */}
       {!isMini && showControls && (
-        <div className="absolute top-2.5 left-2.5 right-2.5 z-[400] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pointer-events-none max-w-[calc(100%-1.25rem)]">
+        <div className="absolute top-2.5 left-2.5 right-2.5 z-20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pointer-events-none max-w-[calc(100%-1.25rem)]">
           {/* Threat Level & Category Filters */}
           <div className="flex items-center gap-1.5 p-1 sm:p-1.5 rounded-2xl bg-white/95 backdrop-blur-md shadow-md border border-slate-200/90 pointer-events-auto max-w-full overflow-hidden">
             {/* Category / Threat Pill Toggles */}
@@ -767,7 +767,7 @@ export default function JanSevaMap({
 
       {/* Floating Bottom Left Threat Level Legend (Full mode) */}
       {!isMini && showControls && (
-        <div className="absolute bottom-4 left-4 z-[400] hidden sm:flex items-center gap-2 bg-white/95 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-200 shadow-md text-[11px] font-bold">
+        <div className="absolute bottom-4 left-4 z-20 hidden sm:flex items-center gap-2 bg-white/95 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-200 shadow-md text-[11px] font-bold">
           <span className="text-slate-400 uppercase text-[9px] tracking-wider">
             Threat Levels:
           </span>
@@ -794,7 +794,7 @@ export default function JanSevaMap({
 
       {/* Floating Action Controls (Full mode) */}
       {!isMini && showControls && (
-        <div className="absolute bottom-4 right-4 z-[400] flex flex-col gap-2">
+        <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
           <button
             type="button"
             onClick={locateUser}
