@@ -320,6 +320,17 @@ function DepartmentOfficerContent() {
     updateIssueStatus(selectedIssue.id, newStatus, note);
   };
 
+  // Take Role as Assigned Officer
+  const handleTakeResponsibility = () => {
+    if (!selectedIssue) return;
+    const officerName = user?.name || "Official Lead Officer";
+    updateIssueStatus(
+      selectedIssue.id,
+      "Assigned",
+      `Officer ${officerName} (${departmentName} Division) took primary responsibility as assigned officer.`
+    );
+  };
+
   // Dispatch Squad Handler
   const handleDispatchSquad = () => {
     if (!selectedIssue) return;
@@ -911,9 +922,18 @@ function DepartmentOfficerContent() {
 
                     <div className="p-3.5 rounded-2xl bg-white border border-slate-200 space-y-2">
                       <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        Assign Municipal Response Squad
+                        Officer Assignment & Squad Response
                       </label>
                       <div className="space-y-2">
+                        <button
+                          type="button"
+                          onClick={handleTakeResponsibility}
+                          className="w-full py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-headline font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5"
+                        >
+                          <ShieldCheck className="w-4 h-4 text-emerald-300" />
+                          <span>Take Responsibility as Lead Officer</span>
+                        </button>
+
                         <select
                           value={selectedSquad}
                           onChange={(e) => setSelectedSquad(e.target.value)}
