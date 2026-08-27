@@ -33,26 +33,38 @@ export default function IssueDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const { voteVerification, user, deleteIssue } = useApp();
+  const { voteVerification, user, deleteIssue, issues } = useApp();
 
   const [issue, setIssue] = useState<CivicIssue | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   React.useEffect(() => {
+    // 1. Check live issues stream from AppContext first
+    if (issues && issues.length > 0) {
+      const found = issues.find((i) => i.id === id);
+      if (found) {
+        setIssue(found);
+        setIsLoading(false);
+      }
+    }
+
+    // 2. Fetch from backend/API as well
     const fetchIssue = () => {
       getIssueById(id).then((data) => {
-        if (data) setIssue(data);
-        setIsLoading(false);
+        if (data) {
+          setIssue(data);
+          setIsLoading(false);
+        }
       });
     };
 
     fetchIssue();
 
     // Poll for real-time cross-tab sync without WebSockets
-    const pollInterval = setInterval(fetchIssue, 5000);
+    const pollInterval = setInterval(fetchIssue, 3000);
 
     return () => clearInterval(pollInterval);
-  }, [id]);
+  }, [id, issues]);
 
   const [commentText, setCommentText] = useState("");
   const [copied, setCopied] = useState(false);
