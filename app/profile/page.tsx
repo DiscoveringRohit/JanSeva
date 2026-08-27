@@ -1,9 +1,19 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
+
+const JanSevaMap = dynamic(() => import("@/components/map/JanSevaMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-500 text-xs font-bold animate-pulse">
+      Loading Live Map...
+    </div>
+  ),
+});
 import {
   ShieldCheck,
   Award,
@@ -48,7 +58,22 @@ export default function ProfilePage() {
   const [postFilter, setPostFilter] = useState<"all" | "in_progress" | "resolved" | "critical">("all");
   const [chatInput, setChatInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [isSubmittingChat, setIsSubmittingChat] = useState(false);
+  const [isAiResponding, setIsAiResponding] = useState(false);
+
+  const handleSendChat = async (e?: React.FormEvent, customText?: string) => {
+    if (e) e.preventDefault();
+    const textToSend = (customText || chatInput).trim();
+    if (!textToSend || isAiResponding) return;
+
+    setChatInput("");
+    setIsAiResponding(true);
+    await sendChatMessage(textToSend);
+    setIsAiResponding(false);
+  };
+
+  useEffect(() => {
+    chatScrollRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages, isAiResponding]);
 
   const postsScrollRef = useRef<HTMLDivElement>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
@@ -108,8 +133,8 @@ export default function ProfilePage() {
       reward: "+150 XP"
     },
     {
-      id: "aadhaar-verified",
-      name: "Aadhaar Verified Resident",
+      id: "verified-resident",
+      name: "Verified Resident",
       icon: "🛡️",
       description: "Identity verified with municipal ward resident registry.",
       criteria: "Complete residential OTP/identity verification",
@@ -186,22 +211,6 @@ export default function ProfilePage() {
     }
   ];
 
-  const handleSendChat = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!chatInput.trim() || isSubmittingChat) return;
-
-    const messageText = chatInput.trim();
-    setChatInput("");
-    setIsSubmittingChat(true);
-
-    sendChatMessage(messageText);
-
-    setTimeout(() => {
-      setIsSubmittingChat(false);
-      chatScrollRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 500);
-  };
-
   const scrollPosts = (direction: "left" | "right") => {
     if (postsScrollRef.current) {
       const scrollAmount = direction === "left" ? -300 : 300;
@@ -211,10 +220,10 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-fadeIn pb-16">
-      
+
       {/* 1. TOP SUB-NAV PILL BAR (FitPlan style from Image 1) */}
       <div className="rounded-3xl bg-white border border-slate-100 p-3 sm:p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-        
+
         {/* Left Title / Branding */}
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-xl bg-[#134431] flex items-center justify-center text-white font-bold text-xs">
@@ -231,7 +240,7 @@ export default function ProfilePage() {
         {/* Center Pill Navigation Bar */}
         <div className="flex items-center gap-1 sm:gap-2 px-3 py-1.5 rounded-full bg-[#f8faf9] border border-slate-200/70 overflow-x-auto no-scrollbar max-w-full text-xs font-bold text-slate-700">
           <button
-            onClick={() => {}}
+            onClick={() => { }}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#134431] text-white shadow-xs"
           >
             <Compass className="w-3.5 h-3.5" />
@@ -314,13 +323,13 @@ export default function ProfilePage() {
 
       {/* 2. MAIN 2-COLUMN DASHBOARD GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
+
         {/* LEFT COLUMN (Cols 1-7: Location Landscape & Horizontal Posts) */}
         <div className="lg:col-span-7 space-y-6">
-          
+
           {/* SECTION 2A: SCENIC LANDSCAPE BANNER WITH FLOATING LOCATION MAP (Image 2) */}
-          <div className="relative rounded-3xl overflow-hidden shadow-md aspect-[16/10] sm:h-80 w-full group bg-slate-900">
-            
+          <div className="relative rounded-3xl overflow-hidden shadow-md min-h-[350px] sm:min-h-0 sm:h-80 w-full group bg-slate-900">
+
             {/* Background High-Res Scenic Scenery of the User's Area */}
             <img
               src="https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80"
@@ -347,11 +356,11 @@ export default function ProfilePage() {
             {/* Floating Location Name & Collapsible Map Card (Exact "Traveling to Switzerland" Equivalent) */}
             <div className="absolute top-4 left-4 z-20 max-w-[260px] sm:max-w-[290px]">
               <div className="rounded-2xl bg-white/95 backdrop-blur-md p-3.5 shadow-xl border border-white/80 space-y-2.5">
-                
+
                 {/* Location Title & Time */}
                 <div className="space-y-0.5">
                   <h3 className="font-headline font-black text-sm text-slate-900 leading-tight">
-                    {user.pincode === "751030" ? "Ward 63 • Khandagiri" : (user.ward ? `${user.ward}` : "Ward 63 • Bhubaneswar")}
+                    PIN {user.pincode || "751030"} • {user.pincode === "751030" ? "Khandagiri" : (user.city || "Bhubaneswar")}
                   </h3>
                   <p className="text-[10px] text-slate-500 font-medium flex items-center gap-1">
                     <Calendar className="w-3 h-3 text-slate-400" />
@@ -359,36 +368,30 @@ export default function ProfilePage() {
                   </p>
                 </div>
 
-                {/* Styled Interactive Mini Map Thumbnail with Expand Icon */}
-                <div className="relative rounded-xl overflow-hidden h-24 sm:h-28 bg-[#d8eae1] border border-slate-200/80 shadow-2xs group/map">
-                  
-                  {/* Styled Map Road Grid Graphic */}
-                  <svg className="w-full h-full opacity-60" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                      <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#a2c8b7" strokeWidth="1" />
-                      </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="#edf7f2" />
-                    <rect width="100%" height="100%" fill="url(#grid)" />
-                    <path d="M 0 50 Q 80 20, 160 80 T 300 40" fill="none" stroke="#ffffff" strokeWidth="6" />
-                    <path d="M 40 0 L 180 120" fill="none" stroke="#ffffff" strokeWidth="5" />
-                    <path d="M 120 0 L 90 120" fill="none" stroke="#f6c28b" strokeWidth="4" />
-                  </svg>
+                {/* Interactive Mini Map Thumbnail with Expand Icon */}
+                <div className="relative rounded-xl overflow-hidden h-28 sm:h-32 bg-slate-100 border border-slate-200/80 shadow-xs group/map">
+                  <JanSevaMap
+                    height="100%"
+                    zoom={13}
+                    showUserLocation={true}
+                    interactive={false}
+                    variant="mini"
+                    className="h-full rounded-none border-0 shadow-none"
+                  />
 
-                  {/* Pulsing Pin Marker */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none">
-                    <div className="w-7 h-7 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-lg ring-4 ring-rose-200 animate-bounce">
-                      <MapPin className="w-4 h-4 fill-current" />
-                    </div>
-                  </div>
+                  {/* Clickable Overlay to Maximize */}
+                  <div
+                    onClick={() => setMapExpanded(true)}
+                    className="absolute inset-0 bg-transparent hover:bg-black/10 transition-colors cursor-pointer z-10"
+                    title="Click to expand live map"
+                  />
 
                   {/* Expand / Maximize Button */}
                   <button
                     type="button"
                     onClick={() => setMapExpanded(true)}
                     title="Maximize Map"
-                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white flex items-center justify-center shadow-md transition-transform hover:scale-110 cursor-pointer z-30"
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white flex items-center justify-center shadow-md transition-transform hover:scale-110 cursor-pointer z-20"
                   >
                     <Maximize2 className="w-3.5 h-3.5" />
                   </button>
@@ -411,7 +414,7 @@ export default function ProfilePage() {
 
           {/* SECTION 2B: HORIZONTAL SWIPEABLE REPORTS CAROUSEL (Image 4 - "Upcoming Schedule" Style) */}
           <div className="rounded-3xl bg-white border border-slate-100 p-5 sm:p-6 shadow-sm space-y-4">
-            
+
             {/* Header & Filter Controls */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
@@ -532,10 +535,10 @@ export default function ProfilePage() {
 
         {/* RIGHT COLUMN (Cols 8-12: Chatbot + Stats + Badge Explorer - Image 3) */}
         <div className="lg:col-span-5 space-y-6">
-          
+
           {/* SECTION 3A: GREETING & INTERACTIVE CHATBOT CARD (Image 3) */}
           <div id="ai-chatbot-section" className="rounded-3xl bg-white border border-slate-100 p-5 sm:p-6 shadow-sm space-y-4">
-            
+
             {/* Header Greeting */}
             <div>
               <h2 className="font-headline font-black text-2xl text-slate-900 leading-tight">
@@ -550,16 +553,24 @@ export default function ProfilePage() {
             {/* Quick Action Chips */}
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
               {[
-                { label: "📍 Ward SLA", prompt: "What is the average SLA resolution time in my ward?" },
-                { label: "⚡ My Tickets", prompt: "Show the latest status of my reported issues." },
-                { label: "🏆 XP & Badges", prompt: "How many XP do I need to reach the next Civic level?" },
+                {
+                  label: "📍 Ward SLA",
+                  prompt: "What is the average SLA resolution time for my ward?",
+                },
+                {
+                  label: "⚡ My Tickets",
+                  prompt: "Show the latest status of my reported issues.",
+                },
+                {
+                  label: "🏆 XP & Badges",
+                  prompt: "What is my current Civic XP score and what badges do I have?",
+                },
               ].map((chip, idx) => (
                 <button
                   key={idx}
-                  onClick={() => {
-                    setChatInput(chip.prompt);
-                  }}
-                  className="px-3 py-1 rounded-full bg-[#edf7f1] hover:bg-emerald-100 text-[#134431] text-[11px] font-bold transition-colors whitespace-nowrap"
+                  onClick={() => handleSendChat(undefined, chip.prompt)}
+                  disabled={isAiResponding}
+                  className="px-3 py-1 rounded-full bg-[#edf7f1] hover:bg-emerald-100 text-[#134431] text-[11px] font-bold transition-colors whitespace-nowrap disabled:opacity-50"
                 >
                   {chip.label}
                 </button>
@@ -567,25 +578,16 @@ export default function ProfilePage() {
             </div>
 
             {/* Interactive Chat Messages Stream */}
-            <div className="rounded-2xl bg-[#f8faf9] border border-slate-100 p-3 h-48 sm:h-56 overflow-y-auto space-y-2.5 text-xs">
-              
-              {/* Bot welcome message */}
-              <div className="flex items-start gap-2 max-w-[90%]">
-                <div className="w-6 h-6 rounded-full bg-[#134431] text-white flex items-center justify-center text-xs shrink-0 mt-0.5">
-                  <Bot className="w-3.5 h-3.5" />
-                </div>
-                <div className="p-2.5 rounded-2xl bg-white border border-slate-100 text-slate-700 shadow-2xs leading-relaxed">
-                  Hello {user.name.split(' ')[0]}! I'm JanSeva AI. Ask me anything about ward updates, ticket progression, or how to level up your Civic Citizen XP.
-                </div>
-              </div>
-
-              {/* Chat message history */}
+            <div className="rounded-2xl bg-[#f8faf9] border border-slate-100 p-3 h-52 sm:h-60 overflow-y-auto space-y-2.5 text-xs">
+              {/* Dynamic chat message history */}
               {chatMessages.map((msg, index) => (
                 <div
                   key={index}
                   className={cn(
                     "flex items-start gap-2 max-w-[90%]",
-                    msg.sender === "user" ? "ml-auto flex-row-reverse" : "mr-auto"
+                    msg.sender === "user"
+                      ? "ml-auto flex-row-reverse"
+                      : "mr-auto"
                   )}
                 >
                   {msg.sender === "user" ? (
@@ -600,7 +602,7 @@ export default function ProfilePage() {
 
                   <div
                     className={cn(
-                      "p-2.5 rounded-2xl text-xs leading-relaxed shadow-2xs",
+                      "p-2.5 rounded-2xl text-xs leading-relaxed shadow-2xs whitespace-pre-line",
                       msg.sender === "user"
                         ? "bg-[#134431] text-white rounded-br-none"
                         : "bg-white border border-slate-100 text-slate-700 rounded-bl-none"
@@ -611,32 +613,52 @@ export default function ProfilePage() {
                 </div>
               ))}
 
+              {/* Gemini Thinking / Typing Indicator */}
+              {isAiResponding && (
+                <div className="flex items-start gap-2 mr-auto max-w-[90%] animate-fadeIn">
+                  <div className="w-6 h-6 rounded-full bg-[#134431] text-white flex items-center justify-center text-xs shrink-0 mt-0.5">
+                    <Bot className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="p-2.5 rounded-2xl bg-white border border-slate-100 text-slate-500 rounded-bl-none flex items-center gap-1.5 text-xs font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse delay-75" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse delay-150" />
+                    <span className="ml-1 text-[11px] text-slate-400 font-normal">
+                      JanSeva AI thinking...
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div ref={chatScrollRef} />
             </div>
 
             {/* Chat Input Box */}
-            <form onSubmit={handleSendChat} className="relative flex items-center">
+            <form
+              onSubmit={(e) => handleSendChat(e)}
+              className="relative flex items-center"
+            >
               <input
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Ask JanSeva AI..."
-                className="w-full pl-4 pr-12 py-2.5 text-xs rounded-full bg-[#f8faf9] border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#134431] text-slate-800"
+                placeholder="Ask JanSeva AI about your tickets, SLA, or XP..."
+                disabled={isAiResponding}
+                className="w-full pl-4 pr-12 py-2.5 text-xs rounded-full bg-[#f8faf9] border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#134431] text-slate-800 disabled:opacity-60"
               />
               <button
                 type="submit"
-                disabled={!chatInput.trim()}
+                disabled={!chatInput.trim() || isAiResponding}
                 className="absolute right-1.5 w-8 h-8 rounded-full bg-[#f06424] hover:bg-[#d95214] disabled:opacity-40 text-white flex items-center justify-center shadow-sm transition-all"
               >
                 <Send className="w-3.5 h-3.5" />
               </button>
             </form>
-
           </div>
 
           {/* SECTION 3B: STATS & BADGE EXPLORER (Image 3) */}
           <div className="rounded-3xl bg-white border border-slate-100 p-5 sm:p-6 shadow-sm space-y-5">
-            
+
             {/* 4-Stat Grid */}
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3.5 rounded-2xl bg-[#f8faf9] border border-slate-100 text-center">
@@ -700,8 +722,8 @@ export default function ProfilePage() {
                     🏆
                   </div>
                   <div>
-                    <h5 className="font-bold text-xs text-slate-900">Ward Pioneer</h5>
-                    <p className="text-[10px] text-slate-500">Verified community reporter in Ward 63</p>
+                    <h5 className="font-bold text-xs text-slate-900">Area Pioneer</h5>
+                    <p className="text-[10px] text-slate-500">Verified community reporter • PIN {user.pincode || "751030"}</p>
                   </div>
                 </div>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
@@ -720,14 +742,14 @@ export default function ProfilePage() {
       {mapExpanded && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-4xl w-full overflow-hidden shadow-2xl border border-slate-100 animate-scaleUp">
-            
+
             {/* Modal Header */}
             <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-[#f8faf9]">
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-[#134431]" />
                 <div>
                   <h3 className="font-headline font-black text-base text-slate-900">
-                    {user.ward || "Ward 63"} • {user.city || "Bhubaneswar"} Live Municipal Map
+                    PIN {user.pincode || "751030"} • {user.city || "Bhubaneswar"} Live Municipal Map
                   </h3>
                   <p className="text-xs text-slate-500">
                     Real-time incident pins, maintenance routes, and municipal boundaries.
@@ -744,47 +766,14 @@ export default function ProfilePage() {
             </div>
 
             {/* Interactive Map View Frame */}
-            <div className="relative h-[450px] w-full bg-[#edf7f2] flex items-center justify-center overflow-hidden">
-              <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <pattern id="biggrid" width="40" height="40" patternUnits="userSpaceOnUse">
-                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#bddbc9" strokeWidth="1" />
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="#edf7f2" />
-                <rect width="100%" height="100%" fill="url(#biggrid)" />
-                <path d="M 0 150 Q 250 80, 500 220 T 900 120" fill="none" stroke="#ffffff" strokeWidth="14" />
-                <path d="M 120 0 L 500 450" fill="none" stroke="#ffffff" strokeWidth="10" />
-                <path d="M 350 0 L 250 450" fill="none" stroke="#f6c28b" strokeWidth="8" />
-              </svg>
-
-              {/* Multiple Live Pins */}
-              <div className="absolute top-[40%] left-[30%] flex flex-col items-center">
-                <div className="px-2 py-0.5 rounded-md bg-white shadow-md text-[10px] font-bold text-slate-800 mb-1 border border-slate-100">
-                  Ward 63 Center
-                </div>
-                <div className="w-8 h-8 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-lg ring-4 ring-rose-200 animate-bounce">
-                  <MapPin className="w-4 h-4 fill-current" />
-                </div>
-              </div>
-
-              <div className="absolute top-[60%] left-[65%] flex flex-col items-center">
-                <div className="px-2 py-0.5 rounded-md bg-white shadow-md text-[10px] font-bold text-slate-800 mb-1 border border-slate-100">
-                  Water Repair #JS-102
-                </div>
-                <div className="w-7 h-7 rounded-full bg-sky-500 text-white flex items-center justify-center shadow-md ring-2 ring-white">
-                  💧
-                </div>
-              </div>
-
-              <div className="absolute top-[25%] left-[55%] flex flex-col items-center">
-                <div className="px-2 py-0.5 rounded-md bg-white shadow-md text-[10px] font-bold text-slate-800 mb-1 border border-slate-100">
-                  Smart Grid #JS-103
-                </div>
-                <div className="w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-md ring-2 ring-white">
-                  ⚡
-                </div>
-              </div>
+            <div className="relative h-[55vh] sm:h-[480px] w-full bg-slate-100 flex items-center justify-center overflow-hidden">
+              <JanSevaMap
+                height="100%"
+                zoom={14}
+                showUserLocation={true}
+                interactive={true}
+                className="h-full rounded-none border-0 shadow-none"
+              />
             </div>
 
             {/* Modal Footer */}
@@ -808,7 +797,7 @@ export default function ProfilePage() {
       {showBadgeModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl border border-slate-100 animate-scaleUp max-h-[90vh] flex flex-col">
-            
+
             {/* Header */}
             <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-amber-50/70 via-white to-emerald-50/70">
               <div className="flex items-center gap-2.5">

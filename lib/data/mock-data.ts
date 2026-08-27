@@ -155,15 +155,15 @@ export interface UserProfile {
 
 
 export const WARD_42_DATA: WardInfo = {
-  name: "Ward 63",
+  name: "Khandagiri (PIN 751030)",
   number: 42,
   city: "Bhubaneswar",
   corporator: {
     name: "Smt. Rajeshwari N.",
     party: "Ward Citizen Council",
-    office: "Ward 63 Municipal Office, 80ft Road, Ward 63",
+    office: "Municipal Office, 80ft Road, Khandagiri",
     phone: "+91 80 2297 5500",
-    email: "corporator.ward63@bmc.gov.in",
+    email: "corporator.khandagiri@bmc.gov.in",
     avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
   },
   healthScore: 84,
@@ -221,8 +221,8 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     status: "In Progress",
     urgency: "Critical",
     location: {
-      address: "4th Main Road, Behind City Market, Ward 63",
-      ward: "Ward 63",
+      address: "4th Main Road, Behind City Market, Khandagiri",
+      ward: "Khandagiri (PIN 751030)",
       wardNumber: 42, pincode: "751030",
       lat: 12.9611,
       lng: 77.5975,
@@ -246,7 +246,7 @@ export const INITIAL_ISSUES: CivicIssue[] = [
       suggestedSlaHours: 12,
       summary: "AI detected 15+ meters of high-risk sewage flooding. Automated alert dispatched to sanitary engineering rapid response unit.",
     },
-    assignedDepartment: "BMC Water Supply Ward 63 Division",
+    assignedDepartment: "BMC Water Supply Khandagiri Division",
     assignedOfficer: {
       name: "Er. Ramesh Kulkarni",
       role: "Senior Sanitary Inspector",
@@ -258,18 +258,18 @@ export const INITIAL_ISSUES: CivicIssue[] = [
         stage: "Reported",
         timestamp: "2026-08-15T09:15:00Z",
         note: "Issue submitted by citizen Asmit Gupta with verified geo-tagged photograph.",
-        actor: "Citizen Reporter",
+        actor: "Asmit Gupta",
       },
       {
         stage: "AI Verified",
         timestamp: "2026-08-15T09:15:04Z",
-        note: "AI Computer Vision classified as Critical Sewage Rupture. Priority escalated to Level 1 SLA.",
-        actor: "JanSeva AI Engine",
+        note: "Spatial AI & Computer Vision confirmed ruptured underground drain with zero duplicate matches.",
+        actor: "JanSeva AI Triage",
       },
       {
         stage: "Assigned",
-        timestamp: "2026-08-15T09:40:00Z",
-        note: "Ticket assigned to BMC Ward 63 Senior Inspector Ramesh Kulkarni.",
+        timestamp: "2026-08-15T09:30:00Z",
+        note: "Ticket assigned to BMC Khandagiri Senior Inspector Ramesh Kulkarni.",
         actor: "Municipal Dispatch",
       },
       {
@@ -298,8 +298,8 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     status: "Assigned",
     urgency: "Critical",
     location: {
-      address: "80 Feet Road, Near Metro Pillar 142, Ward 63",
-      ward: "Ward 63",
+      address: "80 Feet Road, Near Metro Pillar 142, Khandagiri",
+      ward: "Khandagiri (PIN 751030)",
       wardNumber: 42, pincode: "751030",
       lat: 12.9634,
       lng: 77.5998,
@@ -339,7 +339,7 @@ export const INITIAL_ISSUES: CivicIssue[] = [
       {
         stage: "AI Verified",
         timestamp: "2026-08-15T08:30:03Z",
-        note: "Geo-fenced against Ward 63 road asset register. Duplicate check passed.",
+        note: "Geo-fenced against Khandagiri road asset register. Duplicate check passed.",
         actor: "JanSeva AI Engine",
       },
       {
@@ -367,8 +367,8 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     status: "Resolved",
     urgency: "High",
     location: {
-      address: "8th Cross, Sector 3, Ward 63",
-      ward: "Ward 63",
+      address: "8th Cross, Sector 3, Khandagiri",
+      ward: "Khandagiri (PIN 751030)",
       wardNumber: 42, pincode: "751030",
       lat: 12.9589,
       lng: 77.5942,
@@ -444,11 +444,12 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     status: "AI Verified",
     urgency: "High",
     location: {
-      address: "Main Gate, Ward 63 Community Park, 2nd Stage",
-      ward: "Ward 63",
-      wardNumber: 42, pincode: "751030",
-      lat: 12.9655,
-      lng: 77.5921,
+      address: "Main Gate, Infocity Tech Park Road, Patia",
+      ward: "Ward 12",
+      wardNumber: 12,
+      pincode: "751024",
+      lat: 20.3541,
+      lng: 85.8189,
     },
     reporter: {
       name: "Dr. Ananya Roy",
@@ -501,11 +502,12 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     status: "In Progress",
     urgency: "Critical",
     location: {
-      address: "Opposite BMC Substation, 1st Cross, Ward 63",
-      ward: "Ward 63",
-      wardNumber: 42, pincode: "751030",
-      lat: 12.9602,
-      lng: 77.5961,
+      address: "Opposite KIIT Substation, KIIT Square, Patia",
+      ward: "Ward 12",
+      wardNumber: 12,
+      pincode: "751024",
+      lat: 20.3582,
+      lng: 85.8195,
     },
     reporter: {
       name: "Mohit Deshmukh",
@@ -547,12 +549,6 @@ export const INITIAL_ISSUES: CivicIssue[] = [
       },
       {
         stage: "Assigned",
-        timestamp: "2026-08-15T10:15:00Z",
-        note: "Engineer Manjunath dispatched with pipeline welding crew.",
-        actor: "Control Room",
-      },
-      {
-        stage: "In Progress",
         timestamp: "2026-08-15T10:45:00Z",
         note: "Main line isolation valve closed. Excavation and sleeve fitting ongoing.",
         actor: "Er. Manjunath Swamy",
@@ -563,24 +559,25 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     commentsCount: 42,
     verificationVotes: {
       yes: 18,
-      no: 1,
+      no: 0,
     },
     createdAt: "2026-08-15T10:00:00Z",
     updatedAt: "2026-08-15T10:45:00Z",
   },
   {
     id: "JS-106",
-    title: "Traffic Signal Failure Causing Gridlock at Double Road Junction",
+    title: "Traffic Signal Failure Causing Gridlock at Station Square",
     description: "Both north and south signals blinking orange simultaneously. High vehicle density creating 1.5km backlog during morning peak office hours.",
     category: "Traffic",
     status: "Resolved",
     urgency: "Critical",
     location: {
-      address: "Double Road & Lalbagh Road Junction, Ward 63",
-      ward: "Ward 63",
-      wardNumber: 42, pincode: "751030",
-      lat: 12.9554,
-      lng: 77.5933,
+      address: "Master Canteen & Station Road Junction, Old Town",
+      ward: "Old Town (PIN 751001)",
+      wardNumber: 31,
+      pincode: "751001",
+      lat: 20.2644,
+      lng: 85.8433,
     },
     reporter: {
       name: "Deepak Sharma",
@@ -646,11 +643,12 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     status: "In Progress",
     urgency: "Moderate",
     location: {
-      address: "Near St. Joseph High School, 3rd Cross, Ward 63",
-      ward: "Ward 63",
-      wardNumber: 42, pincode: "751030",
-      lat: 12.9641,
-      lng: 77.5982,
+      address: "Near Maharishi College Road, Saheed Nagar",
+      ward: "Saheed Nagar (PIN 751010)",
+      wardNumber: 22,
+      pincode: "751010",
+      lat: 20.2891,
+      lng: 85.8455,
     },
     reporter: {
       name: "Sneha Reddy",
@@ -715,9 +713,10 @@ export const INITIAL_ISSUES: CivicIssue[] = [
     status: "Assigned",
     urgency: "Moderate",
     location: {
-      address: "Rose Garden Park, 6th Cross, Ward 63",
-      ward: "Ward 63",
-      wardNumber: 42, pincode: "751030",
+      address: "Rose Garden Park, 6th Cross, Khandagiri",
+      ward: "Khandagiri (PIN 751030)",
+      wardNumber: 42,
+      pincode: "751030",
       lat: 12.9572,
       lng: 77.5958,
     },
@@ -740,6 +739,12 @@ export const INITIAL_ISSUES: CivicIssue[] = [
       summary: "Equipment replacement requisition auto-filed with parks maintenance budget.",
     },
     assignedDepartment: "BMC Parks & Gardens",
+    assignedOfficer: {
+      name: "Lakshmi Bai",
+      role: "Horticulture Officer",
+      avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80",
+      phone: "+91 94808 34567",
+    },
     timeline: [
       {
         stage: "Reported",
@@ -748,30 +753,36 @@ export const INITIAL_ISSUES: CivicIssue[] = [
         actor: "Asmit Gupta",
       },
       {
+        stage: "AI Verified",
+        timestamp: "2026-08-14T16:00:04Z",
+        note: "AI matched equipment against municipal park asset register.",
+        actor: "JanSeva AI Engine",
+      },
+      {
         stage: "Assigned",
-        timestamp: "2026-08-15T09:30:00Z",
-        note: "Requisition sent to playground equipment vendor.",
-        actor: "Parks Division",
+        timestamp: "2026-08-14T17:00:00Z",
+        note: "Work order created for playground repair crew #2.",
+        actor: "Ward Operations",
       },
     ],
-    upvotes: 89,
-    isUpvoted: true,
-    commentsCount: 14,
+    upvotes: 38,
+    isUpvoted: false,
+    commentsCount: 6,
     verificationVotes: {
       yes: 0,
       no: 0,
     },
     createdAt: "2026-08-14T16:00:00Z",
-    updatedAt: "2026-08-15T09:30:00Z",
+    updatedAt: "2026-08-14T17:00:00Z",
   }
 ];
 
 export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: "notif-1",
-    title: "Officer Dispatched to Your Report",
-    message: "Senior Inspector Ramesh Kulkarni has been assigned to your report #JS-101 (Overflowing Drainage).",
-    type: "officer",
+    title: "SLA Deadline Warning ⚠️",
+    message: "4th Main Drainage Repair has 3h remaining before auto-escalation to Ward Corporator.",
+    type: "status",
     timestamp: "2026-08-15T11:20:00Z",
     read: false,
     issueId: "JS-101",
@@ -780,7 +791,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: "notif-2",
     title: "Community Upvote Milestone! 🔥",
-    message: "Your report on 4th Main Drainage reached 140+ neighbor upvotes and has been boosted to Ward 63 Priority #1.",
+    message: "Your report on 4th Main Drainage reached 140+ neighbor upvotes and has been boosted to Khandagiri Priority #1.",
     type: "upvote",
     timestamp: "2026-08-15T10:45:00Z",
     read: false,
@@ -799,8 +810,8 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   },
   {
     id: "notif-4",
-    title: "New Civic Badge Unlocked: Ward Hero 🏆",
-    message: "You've earned +250 Civic Citizen XP for active contributions to Ward 63 cleanliness metrics.",
+    title: "New Civic Badge Unlocked: Area Hero 🏆",
+    message: "You've earned +250 Civic Citizen XP for active contributions to Khandagiri cleanliness metrics.",
     type: "badge",
     timestamp: "2026-08-14T18:00:00Z",
     read: true,
@@ -808,8 +819,8 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   },
   {
     id: "notif-5",
-    title: "Ward Town Hall Notice",
-    message: "Smt. Rajeshwari N. announced Monsoon Drainage Review on Sunday at 10 AM.",
+    title: "Community Notice",
+    message: "Monsoon Drainage Review scheduled for Sunday at 10 AM in Khandagiri.",
     type: "ward",
     timestamp: "2026-08-14T12:00:00Z",
     read: true,
@@ -818,9 +829,9 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
 ];
 
 export const TOP_LEADERBOARD = [
-  { rank: 1, name: "Asmit Gupta", ward: "Ward 63", karma: 1450, badge: "Civic Champion", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" },
-  { rank: 2, name: "Dr. Ananya Roy", ward: "Ward 63", karma: 1120, badge: "Green Guardian", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80" },
-  { rank: 3, name: "Pooja Hegde", ward: "Ward 63", karma: 890, badge: "Urban Scout", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" },
-  { rank: 4, name: "Deepak Sharma", ward: "Ward 41", karma: 780, badge: "Transit Ally", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80" },
-  { rank: 5, name: "Kiran Kumar", ward: "Ward 63", karma: 620, badge: "Safety Pioneer", avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&auto=format&fit=crop&q=80" },
+  { rank: 1, name: "Asmit Gupta", ward: "Khandagiri", karma: 1450, badge: "Civic Champion", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" },
+  { rank: 2, name: "Dr. Ananya Roy", ward: "Khandagiri", karma: 1120, badge: "Green Guardian", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80" },
+  { rank: 3, name: "Pooja Hegde", ward: "Khandagiri", karma: 890, badge: "Urban Scout", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" },
+  { rank: 4, name: "Deepak Sharma", ward: "Patia", karma: 780, badge: "Transit Ally", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80" },
+  { rank: 5, name: "Kiran Kumar", ward: "Khandagiri", karma: 620, badge: "Safety Pioneer", avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&auto=format&fit=crop&q=80" },
 ];

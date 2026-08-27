@@ -118,9 +118,9 @@ export default function IssueDetailPage() {
         likes: 1,
       };
       setComments([...comments, newC]);
-      
+
       await addCommentApi(issue.id, commentText.trim());
-      
+
       setCommentText("");
     }
   };
@@ -158,7 +158,7 @@ export default function IssueDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-fadeIn pb-12">
-      
+
       {/* Back Button & Top Navigation */}
       <div className="flex items-center justify-between">
         <button
@@ -179,7 +179,7 @@ export default function IssueDetailPage() {
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
             <span>{copied ? "Link Copied!" : "Share Issue"}</span>
           </button>
-          
+
           {isOwner && (
             <div className="relative">
               <button
@@ -227,7 +227,7 @@ export default function IssueDetailPage() {
 
       {/* Main Header Card */}
       <div className="rounded-3xl bg-white border border-surface-container-high p-6 sm:p-8 shadow-soft space-y-6">
-        
+
         {/* Title, Badges, Category */}
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -282,18 +282,18 @@ export default function IssueDetailPage() {
                       isPast
                         ? "bg-emerald-500"
                         : isCurrent
-                        ? "bg-primary-600 animate-pulse"
-                        : "bg-surface-dim"
+                          ? "bg-primary-600 animate-pulse"
+                          : "bg-surface-dim"
                     )}
                   />
                   <p
                     className={cn(
-                      "text-[10px] font-bold truncate",
+                      "text-[9px] sm:text-[10px] font-bold truncate",
                       isCurrent
                         ? "text-primary-700 font-extrabold"
                         : isPast
-                        ? "text-emerald-800 font-semibold"
-                        : "text-on-surface-variant/60"
+                          ? "text-emerald-800 font-semibold"
+                          : "text-on-surface-variant/60"
                     )}
                   >
                     {stageName}
@@ -451,99 +451,97 @@ export default function IssueDetailPage() {
 
       {/* CITIZEN SATISFACTION & VERIFICATION AUDIT BOX */}
       {(issue.status === "Pending Citizen Verification" || issue.status === "Verified Resolved") && (
-      <div className="rounded-3xl bg-white border border-surface-container-high p-6 sm:p-8 shadow-soft space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-              <ShieldCheck className="w-5 h-5" />
+        <div className="rounded-3xl bg-white border border-surface-container-high p-6 sm:p-8 shadow-soft space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-headline font-bold text-base text-on-surface">
+                  Citizen Resolution Audit & Verification
+                </h3>
+                <p className="text-xs text-on-surface-variant">
+                  Did the municipal squad fix this problem completely? Vote to certify.
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-headline font-bold text-base text-on-surface">
-                Citizen Resolution Audit & Verification
-              </h3>
-              <p className="text-xs text-on-surface-variant">
-                Did the municipal squad fix this problem completely? Vote to certify.
-              </p>
-            </div>
-          </div>
 
-          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-            +15 Civic Citizen XP
-          </span>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-surface-container-low border border-surface-dim space-y-3">
-          <div className="flex items-center justify-between text-xs font-bold">
-            <span className="text-emerald-700">
-              ✓ Yes, Problem Resolved ({issue.verificationVotes.yes} votes)
-            </span>
-            <span className="text-rose-700">
-              ✕ No, Still Pending ({issue.verificationVotes.no} votes)
+            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+              +15 Civic Citizen XP
             </span>
           </div>
 
-          {/* Progress split bar */}
-          <div className="w-full h-3 rounded-full bg-surface-dim overflow-hidden flex">
-            <div
-              className="bg-emerald-500 h-full transition-all duration-500"
-              style={{
-                width: `${
-                  issue.verificationVotes.yes + issue.verificationVotes.no > 0
-                    ? Math.round(
+          <div className="p-4 rounded-2xl bg-surface-container-low border border-surface-dim space-y-3">
+            <div className="flex items-center justify-between text-xs font-bold">
+              <span className="text-emerald-700">
+                ✓ Yes, Problem Resolved ({issue.verificationVotes.yes} votes)
+              </span>
+              <span className="text-rose-700">
+                ✕ No, Still Pending ({issue.verificationVotes.no} votes)
+              </span>
+            </div>
+
+            {/* Progress split bar */}
+            <div className="w-full h-3 rounded-full bg-surface-dim overflow-hidden flex">
+              <div
+                className="bg-emerald-500 h-full transition-all duration-500"
+                style={{
+                  width: `${issue.verificationVotes.yes + issue.verificationVotes.no > 0
+                      ? Math.round(
                         (issue.verificationVotes.yes /
                           (issue.verificationVotes.yes + issue.verificationVotes.no)) *
-                          100
+                        100
                       )
-                    : 50
-                }%`,
-              }}
-            />
-            <div
-              className="bg-rose-500 h-full transition-all duration-500"
-              style={{
-                width: `${
-                  issue.verificationVotes.yes + issue.verificationVotes.no > 0
-                    ? Math.round(
+                      : 50
+                    }%`,
+                }}
+              />
+              <div
+                className="bg-rose-500 h-full transition-all duration-500"
+                style={{
+                  width: `${issue.verificationVotes.yes + issue.verificationVotes.no > 0
+                      ? Math.round(
                         (issue.verificationVotes.no /
                           (issue.verificationVotes.yes + issue.verificationVotes.no)) *
-                          100
+                        100
                       )
-                    : 50
-                }%`,
-              }}
-            />
-          </div>
+                      : 50
+                    }%`,
+                }}
+              />
+            </div>
 
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => router.push(`/verify/${issue.id}`)}
-              className={cn(
-                "flex-1 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5",
-                issue.verificationVotes.userVoted === "yes"
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
-                  : "bg-white text-emerald-700 border border-emerald-300 hover:bg-emerald-50"
-              )}
-            >
-              <Check className="w-4 h-4" />
-              <span>Verify Resolved</span>
-            </button>
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => router.push(`/verify/${issue.id}`)}
+                className={cn(
+                  "flex-1 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5",
+                  issue.verificationVotes.userVoted === "yes"
+                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
+                    : "bg-white text-emerald-700 border border-emerald-300 hover:bg-emerald-50"
+                )}
+              >
+                <Check className="w-4 h-4" />
+                <span>Verify Resolved</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => voteVerification(issue.id, "no")}
-              className={cn(
-                "flex-1 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5",
-                issue.verificationVotes.userVoted === "no"
-                  ? "bg-rose-600 text-white shadow-md shadow-rose-600/30"
-                  : "bg-white text-rose-700 border border-rose-300 hover:bg-rose-50"
-              )}
-            >
-              <span>✕ Report Incomplete</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => voteVerification(issue.id, "no")}
+                className={cn(
+                  "flex-1 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5",
+                  issue.verificationVotes.userVoted === "no"
+                    ? "bg-rose-600 text-white shadow-md shadow-rose-600/30"
+                    : "bg-white text-rose-700 border border-rose-300 hover:bg-rose-50"
+                )}
+              >
+                <span>✕ Report Incomplete</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
       )}
 
       {/* OFFICIAL TIMELINE & ACTION LOG */}

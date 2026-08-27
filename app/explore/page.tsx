@@ -59,7 +59,7 @@ export default function ExplorePage() {
   const spotlightHotspots = [
     {
       id: "JS-101",
-      title: "Khandagiri Road, Ward 63",
+      title: "Khandagiri Road (PIN 751030)",
       tagline: "Road & Surface Infrastructure",
       rating: "4.8",
       upvotes: "142 Upvotes",
@@ -114,7 +114,7 @@ export default function ExplorePage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-10 animate-fadeIn pb-16">
-      
+
       {/* Top Floating Category Navigation Bar (Exact WanderAsia Style) */}
       <div className="flex justify-center">
         <div className="inline-flex items-center gap-1 sm:gap-6 px-4 sm:px-8 py-2.5 rounded-full bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-soft overflow-x-auto no-scrollbar max-w-full text-xs font-bold text-slate-700">
@@ -181,7 +181,7 @@ export default function ExplorePage() {
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
         <div className="relative z-10 max-w-4xl mx-auto text-center space-y-6">
-          
+
           {/* Tagline Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-emerald-200">
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />
@@ -203,7 +203,7 @@ export default function ExplorePage() {
             onSubmit={handleSearchSubmit}
             className="mt-8 p-3 rounded-3xl bg-white text-slate-800 shadow-2xl flex flex-col md:flex-row items-stretch md:items-center gap-3 border border-white/80"
           >
-            
+
             {/* Field 1: Ward Location */}
             <div className="flex-1 px-4 py-2 rounded-2xl hover:bg-slate-50 transition-colors text-left flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-emerald-50 text-[#134431] flex items-center justify-center shrink-0">
@@ -217,7 +217,7 @@ export default function ExplorePage() {
                   type="text"
                   value={searchWard}
                   onChange={(e) => setSearchWard(e.target.value)}
-                  placeholder="Ward 63, Khandagiri, Patia..."
+                  placeholder="PIN 751030, Khandagiri, Patia..."
                   className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none placeholder:text-slate-400 placeholder:font-normal"
                 />
               </div>
@@ -286,7 +286,7 @@ export default function ExplorePage() {
           <div className="pt-4 flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-xs font-medium text-emerald-200/80">
             <div className="flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>100% Aadhaar Verified</span>
+              <span>100% Verified Residents</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-amber-300" />
@@ -307,7 +307,7 @@ export default function ExplorePage() {
 
       {/* SECTION 2: POPULAR WARD HOTSPOTS (4-CARD GRID) */}
       <div id="trending-section" className="space-y-6">
-        
+
         {/* Section Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -387,7 +387,7 @@ export default function ExplorePage() {
       {/* SECTION 3: COMMUNITY STORY BANNER (Exact Match to WanderAsia Story Banner) */}
       <div id="stories-section" className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-emerald-900 via-[#134431] to-teal-950 text-white p-8 sm:p-12 shadow-xl">
         <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#34d399_1px,transparent_1px)] [background-size:16px_16px]"></div>
-        
+
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-xl">
             <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold tracking-wider uppercase border border-emerald-400/20">
@@ -397,13 +397,13 @@ export default function ExplorePage() {
               Not sure where to report? Get inspired by real citizen triumphs.
             </h3>
             <p className="text-xs sm:text-sm text-emerald-100/80 leading-relaxed">
-              Read how Ward 63 transformed water logging into clean green zones within 48 hours using JanSeva AI.
+              Read how Khandagiri transformed water logging into clean green zones within 48 hours using JanSeva AI.
             </p>
           </div>
 
           <button
             onClick={() => setSelectedStory({
-              title: "How Ward 63 Fixed 12 Water Logged Corners in 48 Hours",
+              title: "How Khandagiri Fixed 12 Water Logged Corners in 48 Hours",
               readTime: "3 min read",
               image: "https://images.unsplash.com/photo-1584467735815-f778f274e296?w=1000&auto=format&fit=crop&q=80",
               content: "Through collaborative reporting on JanSeva, 84 residents of Khandagiri upvoted critical drainage tickets. The BMC Water Works division dispatched suction vehicles and unclogged main junction lines, verified via before-and-after photo audit."
@@ -427,7 +427,7 @@ export default function ExplorePage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          
+
           {/* Card 1: Pastel Mint */}
           <div className="rounded-3xl p-6 bg-[#f0f9f5] border border-[#d8eee3] space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-[#134431] text-white flex items-center justify-center font-bold shadow-md">
@@ -437,7 +437,7 @@ export default function ExplorePage() {
               Verified Residents Only
             </h3>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Every report and upvote is bound to real municipal wards via Aadhaar & OTP validation. Zero fake bots.
+              Every report and upvote is bound to real municipal wards via secure OTP & resident validation. Zero fake bots.
             </p>
           </div>
 
@@ -486,7 +486,7 @@ export default function ExplorePage() {
       {/* SECTION 5: DARK FOREST GREEN STATS & CALL-TO-ACTION FOOTER */}
       <div className="rounded-3xl bg-[#134431] text-white p-8 sm:p-12 shadow-2xl relative overflow-hidden">
         <div className="relative z-10 space-y-8">
-          
+
           {/* 4 Stats Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 text-center border-b border-white/10 pb-8">
             <div className="space-y-1">
@@ -533,7 +533,7 @@ export default function ExplorePage() {
       {/* STORY MODAL DIALOG */}
       {selectedStory && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-100 animate-scaleUp">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 animate-scaleUp">
             <div className="relative h-56">
               <img src={selectedStory.image} alt={selectedStory.title} className="w-full h-full object-cover" />
               <button

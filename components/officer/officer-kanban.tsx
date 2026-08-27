@@ -25,7 +25,7 @@ import { cn, formatDate } from "@/lib/utils";
 
 export function OfficerKanban({ departmentFilter }: { departmentFilter?: string }) {
   const { issues: allIssues, updateIssueStatus, user } = useApp();
-  
+
   const issues = departmentFilter
     ? allIssues.filter(i => i.category.toLowerCase() === departmentFilter.toLowerCase())
     : allIssues;
@@ -49,8 +49,8 @@ export function OfficerKanban({ departmentFilter }: { departmentFilter?: string 
       defaultNextStatus === "In Progress"
         ? "Assigned rapid response field squad. Excavation & repair equipment active on site."
         : defaultNextStatus === "Pending Citizen Verification"
-        ? "Work completed by municipal squad. Requesting citizen verification."
-        : "Dispatched to department specialist."
+          ? "Work completed by municipal squad. Requesting citizen verification."
+          : "Dispatched to department specialist."
     );
     setShowModal(true);
   };
@@ -66,7 +66,7 @@ export function OfficerKanban({ departmentFilter }: { departmentFilter?: string 
 
   return (
     <div className="space-y-6">
-      
+
       {/* Officer KPI Header */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-3xl bg-white border border-surface-container-high p-5 shadow-soft">
@@ -126,7 +126,7 @@ export function OfficerKanban({ departmentFilter }: { departmentFilter?: string 
       </div>
 
       {/* Kanban Board Columns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-5">
         {columns.map((col) => {
           const colIssues = issues.filter((i) => i.status === col.status);
 
@@ -182,8 +182,8 @@ export function OfficerKanban({ departmentFilter }: { departmentFilter?: string 
                       <div className="p-2 rounded-xl bg-surface-container-low text-[10px] text-on-surface-variant font-medium flex items-center justify-between">
                         <span>{issue.assignedDepartment || "Unassigned"}</span>
                         <div className="flex items-center">
-                            <Clock className="w-3 h-3 mr-1 opacity-70" />
-                            <span className="font-bold text-primary-800">~{issue.aiAnalysis?.suggestedSlaHours || 48}h SLA</span>
+                          <Clock className="w-3 h-3 mr-1 opacity-70" />
+                          <span className="font-bold text-primary-800">~{issue.aiAnalysis?.suggestedSlaHours || 48}h SLA</span>
                         </div>
                       </div>
 
@@ -247,7 +247,7 @@ export function OfficerKanban({ departmentFilter }: { departmentFilter?: string 
       {showModal && selectedTicket && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fadeIn">
           <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl border border-surface-container-high space-y-5 animate-slideUp">
-            
+
             <div className="flex items-center justify-between pb-3 border-b border-surface-dim">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-primary-700">

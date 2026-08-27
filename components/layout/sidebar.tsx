@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
@@ -42,12 +42,12 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, setUser, unreadNotifsCount } = useApp();
+  const { user, setUser, unreadNotifsCount, t } = useApp();
   const isProfilePage = pathname === "/profile";
-  
+
   const isOfficer = Boolean(
-    user?.role === "officer" || 
-    user?.role === "corporator" || 
+    user?.role === "officer" ||
+    user?.role === "corporator" ||
     pathname.startsWith("/officer")
   );
 
@@ -81,34 +81,34 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
 
   // Citizen navigation items
   const citizenNavItems: NavItem[] = [
-    { label: "Feed", href: "/feed", icon: LayoutGrid },
-    { label: "Explore", href: "/explore", icon: Compass },
-    { label: "Live Map", href: "/map", icon: Map },
-    { label: "My Ward 360°", href: "/ward", icon: Building2 },
-    { label: "AI Assistant", href: "/assistant", icon: Bot, highlight: true },
+    { label: t("home"), href: "/feed", icon: LayoutGrid },
+    { label: t("explore"), href: "/explore", icon: Compass },
+    { label: t("map"), href: "/map", icon: Map },
+    { label: t("ward"), href: "/ward", icon: Building2 },
+    { label: t("assistant"), href: "/assistant", icon: Bot, highlight: true },
     {
-      label: "Notifications",
+      label: t("notifications"),
       href: "/notifications",
       icon: Bell,
       badge: unreadNotifsCount > 0 ? `${unreadNotifsCount}` : undefined,
     },
-    { label: "My Profile", href: "/profile", icon: User },
+    { label: t("profile"), href: "/profile", icon: User },
   ];
 
   // Authority / Officer operational items
   const officerNavItems: NavItem[] = [
     { label: "Command Workbench", href: `/officer/${officerDept}`, tab: "workbench", icon: LayoutGrid },
-    { 
-      label: "Escalations & Breaches", 
-      href: `/officer/${officerDept}?tab=escalations`, 
+    {
+      label: "Escalations & Breaches",
+      href: `/officer/${officerDept}?tab=escalations`,
       tab: "escalations",
       icon: AlertTriangle,
       badge: "2 Overdue",
       badgeColor: "bg-rose-100 text-rose-800"
     },
-    { 
-      label: "AI Duplicate Review", 
-      href: `/officer/${officerDept}?tab=duplicates`, 
+    {
+      label: "AI Duplicate Review",
+      href: `/officer/${officerDept}?tab=duplicates`,
       tab: "duplicates",
       icon: Layers,
       badge: "3 Matches",
@@ -124,13 +124,25 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
 
   const activeNavList = isOfficer ? officerNavItems : citizenNavItems;
 
+  // Prevent body scrolling when mobile drawer is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
+
   return (
     <>
       {/* Mobile Backdrop */}
       {mobileOpen && (
         <div
           onClick={onCloseMobile}
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm lg:hidden animate-fadeIn"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm lg:hidden animate-fadeIn"
         />
       )}
 
@@ -143,7 +155,6 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
         )}
       >
         <div className="space-y-6">
-          
           {/* Mobile Header in Drawer */}
           <div className="flex items-center justify-between lg:hidden pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
@@ -164,7 +175,6 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
 
           {/* 1. TOP PROFILE / CONSOLE CONTEXT SECTION */}
           <div className={cn("space-y-4 pt-1", isProfilePage && "lg:space-y-2 lg:pt-0")}>
-            
             {/* Centered Avatar */}
             <div className="flex flex-col items-center text-center">
               <div className="relative group block">
@@ -204,8 +214,8 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
                   {user?.name || (isOfficer ? "Field Operations Officer" : "Civic Resident")}
                 </h3>
                 <p className="text-xs text-emerald-800 font-bold mt-0.5 uppercase tracking-wider text-[10px]">
-                  {isOfficer 
-                    ? `BMC ${officerDept.toUpperCase()} DIVISION` 
+                  {isOfficer
+                    ? `BMC ${officerDept.toUpperCase()} DIVISION`
                     : `@${user?.username || (user?.name ? user.name.toLowerCase().replace(/\s+/g, "_") : "citizen")}`}
                 </p>
               </div>
@@ -278,12 +288,11 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
                     {user?.name || "Civic Citizen"}
                   </p>
                   <p className="text-[11px] text-slate-500 leading-snug">
-                    {user?.levelTitle || "Active Citizen"} | Ward {user?.wardNumber || 63} • {user?.city || "Bhubaneswar"}
+                    {user?.levelTitle || "Active Citizen"} | PIN {user?.pincode || "751030"} • {user?.city || "Bhubaneswar"}
                   </p>
                 </>
               )}
             </div>
-
           </div>
 
           {/* 2. VERTICAL NAVIGATION MENU */}
@@ -291,7 +300,7 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
             {activeNavList.map((item) => {
               const Icon = item.icon;
               // Check active URL reactively
-              const isActive = isOfficer 
+              const isActive = isOfficer
                 ? (item.tab ? item.tab === activeOfficerTab : activeOfficerTab === "workbench")
                 : (pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href)));
 
@@ -336,7 +345,6 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
               );
             })}
           </nav>
-
         </div>
 
         {/* 3. BOTTOM LOGOUT BUTTON */}
@@ -353,7 +361,7 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
             >
               <LogOut className="w-4 h-4 text-slate-400 group-hover:text-rose-600 transition-colors" />
               <span className={cn(isProfilePage && "lg:hidden")}>
-                {isOfficer ? "Sign Out Console" : "Logout"}
+                {isOfficer ? "Sign Out Console" : t("logout")}
               </span>
             </button>
           ) : (
@@ -369,9 +377,7 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
             </Link>
           )}
         </div>
-
       </aside>
     </>
   );
 }
-

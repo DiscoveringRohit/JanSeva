@@ -22,11 +22,11 @@ import { cn } from "@/lib/utils";
 export function MobileNav() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { user } = useApp();
+  const { user, t } = useApp();
 
   const isOfficer = Boolean(
-    user?.role === "officer" || 
-    user?.role === "corporator" || 
+    user?.role === "officer" ||
+    user?.role === "corporator" ||
     pathname.startsWith("/officer")
   );
 
@@ -36,11 +36,11 @@ export function MobileNav() {
 
   // Citizen Navigation
   const citizenNavItems = [
-    { label: "Feed", href: "/feed", icon: LayoutGrid },
-    { label: "Explore", href: "/explore", icon: Compass },
-    { label: "AI Report", href: "/report", icon: Bot, isCenter: true },
-    { label: "Map", href: "/map", icon: Map },
-    { label: "Profile", href: "/profile", icon: User },
+    { label: t("home"), href: "/feed", icon: LayoutGrid },
+    { label: t("explore"), href: "/explore", icon: Compass },
+    { label: t("report"), href: "/report", icon: Bot, isCenter: true },
+    { label: t("map"), href: "/map", icon: Map },
+    { label: t("profile"), href: "/profile", icon: User },
   ];
 
   // Authority Operations Navigation
@@ -55,7 +55,7 @@ export function MobileNav() {
   const activeItems = isOfficer ? officerNavItems : citizenNavItems;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-2 py-2 flex items-center justify-around lg:hidden shadow-xl">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-around lg:hidden shadow-xl select-none">
       {activeItems.map((item: any) => {
         const Icon = item.icon;
         const isActive = isOfficer

@@ -38,7 +38,7 @@ export default function LandingPage() {
           
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-emerald-300">
             <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-spin" style={{ animationDuration: "8s" }} />
-            <span>JanSeva 2.0 • AI-Powered Civic Social Architecture</span>
+            <span>JanSeva • AI-Powered Civic Social Architecture</span>
           </div>
 
           <h1 className="font-headline font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.1] text-white">

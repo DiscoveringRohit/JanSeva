@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { OfficerKanban } from "@/components/officer/officer-kanban";
+import { CivicMapView } from "@/components/map/JanSevaMap";
 import { useApp } from "@/lib/context/app-context";
 import { CivicIssue, NotificationItem } from "@/lib/data/mock-data";
 import {
@@ -270,9 +272,9 @@ function DepartmentOfficerContent() {
   const activeTicketsCount = deptIssues.filter((i) => i.status !== "Resolved" && i.status !== "Verified Resolved").length;
   const resolvedCount = deptIssues.filter((i) => i.status === "Resolved" || i.status === "Verified Resolved").length;
   const criticalCount = deptIssues.filter((i) => i.urgency === "Critical" || i.urgency === "High").length;
-  
+
   // Real dynamic SLA compliance calculation
-  const slaComplianceRate = deptIssues.length > 0 
+  const slaComplianceRate = deptIssues.length > 0
     ? Math.min(100, Math.round(((resolvedCount + 0.8 * (activeTicketsCount)) / Math.max(1, deptIssues.length)) * 100))
     : 94;
 
@@ -307,7 +309,7 @@ function DepartmentOfficerContent() {
   const handleStatusChange = (newStatus: CivicIssue["status"]) => {
     if (!selectedIssue) return;
     setStatusDropdownOpen(false);
-    
+
     let note = `Officer ${user?.name || "Municipal Authority"} updated status to ${newStatus}.`;
     if (newStatus === "Pending Citizen Verification") {
       note = `Field repairs completed by assigned crew. Awaiting citizen in-app photo verification.`;
@@ -401,7 +403,7 @@ function DepartmentOfficerContent() {
 
   return (
     <div className="space-y-6 animate-fadeIn pb-16 font-body">
-      
+
       {/* 1. TOP OPERATIONAL BREADCRUMB & CONSOLE HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-3xl bg-white border border-slate-100 shadow-soft">
         <div className="space-y-1">
@@ -410,7 +412,7 @@ function DepartmentOfficerContent() {
             <span>/</span>
             <span className="font-bold text-[#134431]">BMC {departmentName.toUpperCase()} Division</span>
             <span>/</span>
-            <span className="text-emerald-700 font-bold">Ward 63 Operations Desk</span>
+            <span className="text-emerald-700 font-bold">PIN 751030 • Khandagiri</span>
           </div>
           <h1 className="font-headline font-black text-2xl sm:text-3xl text-slate-900 tracking-tight flex items-center gap-3">
             <span>{departmentName} Operations Command</span>
@@ -439,7 +441,7 @@ function DepartmentOfficerContent() {
 
       {/* 2. DYNAMIC TEAMHUB RADIAL DONUT GAUGES (LIVE TELEMETRY) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
+
         {/* Metric 1: SLA Compliance Donut */}
         <div className="p-5 rounded-3xl bg-white border border-slate-100 shadow-soft flex items-center justify-between hover:shadow-md transition-all">
           <div className="space-y-1">
@@ -522,7 +524,7 @@ function DepartmentOfficerContent() {
         <>
           {/* Performance Velocity & Category Breakdown */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
+
             {/* Performance Trend Graph */}
             <div className="lg:col-span-8 p-6 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-4">
               <div className="flex items-center justify-between">
@@ -613,7 +615,7 @@ function DepartmentOfficerContent() {
 
           {/* Master-Detail Split Workspace */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            
+
             {/* Left Stream */}
             <div className="lg:col-span-5 space-y-4">
               <div className="p-4 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-3">
@@ -730,7 +732,7 @@ function DepartmentOfficerContent() {
             {/* Right Inspector */}
             {selectedIssue ? (
               <div className="lg:col-span-7 p-6 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-6">
-                
+
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
