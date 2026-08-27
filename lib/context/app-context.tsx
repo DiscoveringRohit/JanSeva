@@ -703,48 +703,42 @@ export function AppProvider({
         ? localStorage.getItem("janseva_token")
         : null;
 
-    if (token) {
-      fetch(`${API_URL}/api/issues/`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: createdIssue.title,
-          description: createdIssue.description,
-          category: createdIssue.category,
-          status: createdIssue.status,
-          urgency: createdIssue.urgency,
-          location: createdIssue.location,
-          images: createdIssue.images,
-          aiAnalysis: createdIssue.aiAnalysis,
-          assignedDepartment: createdIssue.assignedDepartment,
-        }),
-      })
-        .then(async (res) => {
-          if (res.ok) {
-            const dbIssue = await res.json();
+    fetchWithAuth(`${API_URL}/api/issues/`, {
+      method: "POST",
+      body: JSON.stringify({
+        title: createdIssue.title,
+        description: createdIssue.description,
+        category: createdIssue.category,
+        status: createdIssue.status,
+        urgency: createdIssue.urgency,
+        location: createdIssue.location,
+        images: createdIssue.images,
+        aiAnalysis: createdIssue.aiAnalysis,
+        assignedDepartment: createdIssue.assignedDepartment,
+      }),
+    })
+      .then(async (res) => {
+        if (res.ok) {
+          const dbIssue = await res.json();
 
-            // Replace optimistic model with real DB object
-            setIssues((prev: CivicIssue[]) =>
-              prev.map((item: CivicIssue) =>
-                item.id === id ? dbIssue : item
-              )
+          // Replace optimistic model with real DB object without duplicates
+          setIssues((prev: CivicIssue[]) => {
+            const filtered = prev.filter(
+              (item: CivicIssue) => item.id !== id && item.id !== dbIssue.id
             );
+            return [dbIssue, ...filtered];
+          });
 
-            fetchUserProfile();
-            fetchNotifications();
-            fetchIssues();
-          }
-        })
-        .catch((e) =>
-          console.error(
-            "Failed to save issue to backend",
-            e
-          )
-        );
-    }
+          fetchUserProfile();
+          fetchNotifications();
+        }
+      })
+      .catch((e) =>
+        console.error(
+          "Failed to save issue to backend",
+          e
+        )
+      );
 
     return createdIssue;
   };
@@ -753,18 +747,14 @@ export function AppProvider({
     setIssues((prev) => prev.filter((i) => i.id !== issueId));
 
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-    const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
 
-    if (token) {
-      try {
-        await fetch(`${API_URL}/api/issues/${issueId}/`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        fetchIssues();
-      } catch (e) {
-        console.error("Failed to delete issue on backend", e);
-      }
+    try {
+      await fetchWithAuth(`${API_URL}/api/issues/${issueId}/`, {
+        method: "DELETE",
+      });
+      fetchIssues();
+    } catch (e) {
+      console.error("Failed to delete issue on backend", e);
     }
   };
 
@@ -836,35 +826,24 @@ export function AppProvider({
       process.env.NEXT_PUBLIC_API_URL ||
       "http://127.0.0.1:8000";
 
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem("janseva_token")
-        : null;
+    try {
+      await fetchWithAuth(
+        `${API_URL}/api/issues/${issueId}/status/`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            status,
+            note,
+          }),
+        }
+      );
 
-    if (token) {
-      try {
-        await fetch(
-          `${API_URL}/api/issues/${issueId}/status/`,
-          {
-            method: "PATCH",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              status,
-              note,
-            }),
-          }
-        );
-
-        fetchIssues();
-      } catch (e) {
-        console.error(
-          "Failed to update status on backend",
-          e
-        );
-      }
+      fetchIssues();
+    } catch (e) {
+      console.error(
+        "Failed to update status on backend",
+        e
+      );
     }
   };
 
