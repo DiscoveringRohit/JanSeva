@@ -353,9 +353,14 @@ export default function JanSevaMap({
   onLocationSelect,
   className = "",
 }: JanSevaMapProps) {
+  const [mounted, setMounted] = useState(false);
   const isMini = variant === "mini";
   const appContext = useApp();
   const rawIssues = propIssues || appContext?.issues || [];
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [mapCenter, setMapCenter] = useState<[number, number]>(initialCenter);
   const [userLocation, setUserLocation] = useState<{
@@ -477,6 +482,22 @@ export default function JanSevaMap({
       onLocationSelect(lat, lng);
     }
   };
+
+  if (!mounted) {
+    return (
+      <div
+        className={`relative isolate z-0 w-full overflow-hidden bg-slate-100 flex flex-col items-center justify-center select-none ${
+          isMini ? "h-full rounded-xl border-0 shadow-none" : "rounded-2xl border border-slate-200 shadow-lg"
+        } ${className}`}
+        style={{ height: isMini ? "100%" : height }}
+      >
+        <div className="flex flex-col items-center justify-center text-slate-500 font-bold text-xs animate-pulse space-y-2">
+          <MapPin className="w-7 h-7 text-[#134431] animate-bounce" />
+          <span>Loading Live Map...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
