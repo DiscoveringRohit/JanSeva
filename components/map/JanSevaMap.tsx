@@ -302,7 +302,7 @@ function MapClickHandler({
   onSelect: (lat: number, lng: number) => void;
 }) {
   useMapEvents({
-    click(e) {
+    click(e: L.LeafletMouseEvent) {
       onSelect(e.latlng.lat, e.latlng.lng);
     },
   });
