@@ -308,12 +308,12 @@ export default function ProfilePage() {
             {user.avatar ? (
               <img
                 src={user.avatar}
-                alt={user.name}
+                alt={user.name || user.username || "User"}
                 className="w-8 h-8 rounded-full object-cover ring-2 ring-emerald-500/40"
               />
             ) : (
               <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs ring-2 ring-emerald-500/40">
-                {user.name.charAt(0)}
+                {(user.name || user.username || "C").charAt(0).toUpperCase()}
               </div>
             )}
           </Link>
@@ -543,7 +543,7 @@ export default function ProfilePage() {
             <div>
               <h2 className="font-headline font-black text-2xl text-slate-900 leading-tight">
                 Have a Good day, <br />
-                <span className="text-[#134431]">{user.name.split(' ')[0]} 👋</span>
+                <span className="text-[#134431]">{(user.name || user.username || "Citizen").split(' ')[0]} 👋</span>
               </h2>
               <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                 Fuel your neighborhood impact with transparent ward updates and SLA tracking.
@@ -592,7 +592,7 @@ export default function ProfilePage() {
                 >
                   {msg.sender === "user" ? (
                     <div className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
-                      {user.name.charAt(0)}
+                      {(user.name || user.username || "C").charAt(0).toUpperCase()}
                     </div>
                   ) : (
                     <div className="w-6 h-6 rounded-full bg-[#134431] text-white flex items-center justify-center text-xs shrink-0 mt-0.5">

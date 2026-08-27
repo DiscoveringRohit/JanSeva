@@ -193,10 +193,13 @@ export function AppProvider({
       console.warn("Failed to load user chat history:", e);
     }
 
+    const userName = user?.name || user?.username || "Citizen";
+    const firstName = userName.split(" ")[0] || "Citizen";
+
     const defaultMsg: ChatMessage = {
       id: `msg-welcome-${Date.now()}`,
       sender: "assistant",
-      text: `Hello ${user.name.split(" ")[0]}! I'm JanSeva AI. Ask me anything about your reported tickets, municipal SLA targets, or how to level up your Civic Citizen XP.`,
+      text: `Hello ${firstName}! I'm JanSeva AI. Ask me anything about your reported tickets, municipal SLA targets, or how to level up your Civic Citizen XP.`,
       timestamp: new Date().toISOString(),
       quickActions: [
         { label: "⚡ My Active Tickets", action: "my_tickets" },
@@ -205,7 +208,7 @@ export function AppProvider({
       ],
     };
     setChatMessages([defaultMsg]);
-  }, [user?.id, user?.username]);
+  }, [user?.id, user?.username, user?.name]);
 
   // Sync state to MockContextBridge so that non-React API files can access it during mock fallbacks
   useEffect(() => {

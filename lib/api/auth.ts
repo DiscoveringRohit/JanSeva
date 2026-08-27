@@ -121,6 +121,20 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 1
   }
 }
 
+async function parseJsonResponse(res: Response): Promise<any> {
+  try {
+    const contentType = res.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      return await res.json();
+    }
+    const text = await res.text();
+    console.warn("Received non-JSON response from server:", res.status, text.substring(0, 200));
+    return { error: `Server error (${res.status}). Please check backend API server.` };
+  } catch (e: any) {
+    return { error: e.message || "Failed to parse response from server" };
+  }
+}
+
 export const authApi = {
   sendOtp: async (target: string, channel: 'email' | 'sms' = 'sms'): Promise<AuthResponse> => {
     try {
@@ -129,7 +143,7 @@ export const authApi = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target, channel }),
       }, 12000);
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (!res.ok) return { success: false, message: data.error || data.detail || data.message || "Failed to send OTP" };
       return { success: true, message: data.message || `OTP sent via ${channel}` };
     } catch (err: any) {
@@ -147,7 +161,7 @@ export const authApi = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target, otp_code }),
       }, 10000);
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (!res.ok) return { success: false, message: data.error || data.detail || data.message || "Invalid or expired OTP" };
       return { success: true, message: data.message || "OTP verified successfully" };
     } catch (err: any) {
@@ -177,7 +191,7 @@ export const authApi = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       }, 15000);
-      const resData = await res.json();
+      const resData = await parseJsonResponse(res);
       if (!res.ok) {
         const errorMsg = resData.error || resData.detail || (resData.non_field_errors ? resData.non_field_errors[0] : "Registration failed");
         return { success: false, message: errorMsg, errors: resData };
@@ -212,7 +226,7 @@ export const authApi = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       }, 10000);
-      const resData = await res.json();
+      const resData = await parseJsonResponse(res);
       if (!res.ok) {
         return { success: false, message: resData.error || resData.detail || resData.message || "Invalid credentials" };
       }
@@ -243,17 +257,17 @@ export const authApi = {
 
   officerRegister: async (data: any): Promise<AuthResponse> => {
     try {
-      const validCodes: Record<string, string> = {
-        "Electricity": "ELEC2026",
-        "Water": "WATR2026",
-        "Roads": "ROAD2026",
-        "Sanitation": "SANI2026",
-        "Municipal": "MUNI2026",
+      const validCodes: Record<string, string[]> = {
+        "Electricity": ["ELEC2026", "BMC-2026", "BMC2026"],
+        "Water": ["WATR2026", "BMC-2026", "BMC2026"],
+        "Roads": ["ROAD2026", "BMC-2026", "BMC2026"],
+        "Sanitation": ["SANI2026", "BMC-2026", "BMC2026"],
+        "Municipal": ["MUNI2026", "BMC-2026", "BMC2026"],
       };
       
-      const expectedCode = validCodes[data.department];
-      if (data.accessCode && expectedCode && data.accessCode !== expectedCode) {
-        return { success: false, message: "Invalid department access code" };
+      const allowedCodes = validCodes[data.department] || ["BMC-2026", "BMC2026"];
+      if (data.accessCode && !allowedCodes.includes(data.accessCode.toUpperCase())) {
+        return { success: false, message: "Invalid department access code. Use BMC-2026 or department code (e.g. WATR2026)." };
       }
 
       return await authApi.register({
