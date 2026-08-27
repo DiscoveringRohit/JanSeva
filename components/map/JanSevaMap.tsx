@@ -488,11 +488,11 @@ export default function JanSevaMap({
     >
       {/* Top Filter & Threat Level Bar (Only on Full mode) */}
       {!isMini && showControls && (
-        <div className="absolute top-3 left-3 right-3 z-[400] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pointer-events-none">
+        <div className="absolute top-2.5 left-2.5 right-2.5 z-[400] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pointer-events-none max-w-[calc(100%-1.25rem)]">
           {/* Threat Level & Category Filters */}
-          <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-white/95 backdrop-blur-md shadow-md border border-slate-200 pointer-events-auto max-w-full">
+          <div className="flex items-center gap-1.5 p-1 sm:p-1.5 rounded-2xl bg-white/95 backdrop-blur-md shadow-md border border-slate-200/90 pointer-events-auto max-w-full overflow-hidden">
             {/* Category / Threat Pill Toggles */}
-            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 px-0.5 flex-1 min-w-0">
               {[
                 { id: "All", label: "All Incidents" },
                 { id: "Critical", label: `🔴 Critical (${criticalCount})` },
@@ -503,45 +503,48 @@ export default function JanSevaMap({
                   key={t.id}
                   type="button"
                   onClick={() => setActiveThreatFilter(t.id)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all shrink-0 ${activeThreatFilter.toLowerCase() === t.id.toLowerCase()
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all shrink-0 whitespace-nowrap ${
+                    activeThreatFilter.toLowerCase() === t.id.toLowerCase()
                       ? "bg-[#134431] text-white shadow-xs"
                       : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                    }`}
+                  }`}
                 >
                   {t.label}
                 </button>
               ))}
             </div>
 
-            <div className="h-4 w-[1px] bg-slate-200 hidden md:block" />
+            <div className="h-4 w-[1px] bg-slate-200 shrink-0 hidden sm:block" />
 
             {/* Quick Category filter select */}
-            <select
-              value={activeCategory}
-              onChange={(e) => setActiveCategory(e.target.value)}
-              className="text-[11px] font-bold px-2 py-1 rounded-lg bg-slate-100 border-0 text-slate-700 focus:ring-1 focus:ring-[#134431] cursor-pointer"
-            >
-              <option value="All">All Categories</option>
-              <option value="Sanitation">Sanitation</option>
-              <option value="Roads">Roads</option>
-              <option value="Water">Water</option>
-              <option value="Electricity">Electricity</option>
-              <option value="Waste">Waste</option>
-              <option value="Traffic">Traffic</option>
-              <option value="Parks">Parks</option>
-            </select>
+            <div className="shrink-0">
+              <select
+                value={activeCategory}
+                onChange={(e) => setActiveCategory(e.target.value)}
+                className="text-[11px] font-bold px-2 py-1 rounded-xl bg-slate-100 border-0 text-slate-700 focus:ring-1 focus:ring-[#134431] cursor-pointer max-w-[120px] sm:max-w-none truncate"
+              >
+                <option value="All">All Categories</option>
+                <option value="Sanitation">Sanitation</option>
+                <option value="Roads">Roads</option>
+                <option value="Water">Water</option>
+                <option value="Electricity">Electricity</option>
+                <option value="Waste">Waste</option>
+                <option value="Traffic">Traffic</option>
+                <option value="Parks">Parks</option>
+              </select>
+            </div>
           </div>
 
           {/* Right Status Badges */}
-          <div className="flex items-center gap-2 pointer-events-auto">
+          <div className="flex items-center gap-1.5 pointer-events-auto shrink-0 self-end sm:self-auto">
             {locationStatus && (
-              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 backdrop-blur-md text-[11px] font-medium text-slate-700 shadow-sm border border-slate-200">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/90 backdrop-blur-md text-[10px] font-medium text-slate-700 shadow-sm border border-slate-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span>{locationStatus}</span>
               </div>
             )}
 
-            <div className="px-3 py-1.5 rounded-xl bg-white/95 backdrop-blur-md shadow-md border border-slate-200 text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+            <div className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-white/95 backdrop-blur-md shadow-md border border-slate-200 text-[10px] sm:text-[11px] font-bold text-slate-800 flex items-center gap-1.5 whitespace-nowrap">
               <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
               <span>{filteredIssues.length} Incidents Live</span>
             </div>
