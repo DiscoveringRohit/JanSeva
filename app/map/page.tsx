@@ -1,5 +1,3 @@
-"use client";
-
 import dynamic from "next/dynamic";
 import { Layers, MapPin, Flame } from "lucide-react";
 

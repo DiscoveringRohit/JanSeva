@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 
 // Supported Google Gemini models in order of priority
 const GEMINI_MODELS = [
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
-  "gemini-1.5-pro",
-  "gemini-2.5-flash",
+  "gemini-3.6-flash",
+  "gemini-3.7-flash",
+  "gemini-3.5-flash",
+  "gemini-flash-latest",
 ];
 
 async function generateWithFallback(

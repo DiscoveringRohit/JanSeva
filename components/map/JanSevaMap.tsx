@@ -353,14 +353,9 @@ export default function JanSevaMap({
   onLocationSelect,
   className = "",
 }: JanSevaMapProps) {
-  const [mounted, setMounted] = useState(false);
   const isMini = variant === "mini";
   const appContext = useApp();
   const rawIssues = propIssues || appContext?.issues || [];
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const [mapCenter, setMapCenter] = useState<[number, number]>(initialCenter);
   const [userLocation, setUserLocation] = useState<{
@@ -483,33 +478,17 @@ export default function JanSevaMap({
     }
   };
 
-  if (!mounted) {
-    return (
-      <div
-        className={`relative isolate z-0 w-full overflow-hidden bg-slate-100 flex flex-col items-center justify-center select-none ${
-          isMini ? "h-full rounded-xl border-0 shadow-none" : "rounded-2xl border border-slate-200 shadow-lg"
-        } ${className}`}
-        style={{ height: isMini ? "100%" : height }}
-      >
-        <div className="flex flex-col items-center justify-center text-slate-500 font-bold text-xs animate-pulse space-y-2">
-          <MapPin className="w-7 h-7 text-[#134431] animate-bounce" />
-          <span>Loading Live Map...</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
-      className={`relative isolate z-0 w-full overflow-hidden bg-slate-100 flex flex-col select-none ${isMini
-          ? "h-full rounded-xl border-0 shadow-none"
-          : "rounded-2xl border border-slate-200 shadow-lg"
+      className={`relative w-full overflow-hidden bg-slate-100 flex flex-col select-none ${isMini
+        ? "h-full rounded-xl border-0 shadow-none"
+        : "rounded-2xl border border-slate-200 shadow-lg"
         } ${className}`}
       style={{ height: isMini ? "100%" : height }}
     >
       {/* Top Filter & Threat Level Bar (Only on Full mode) */}
       {!isMini && showControls && (
-        <div className="absolute top-2.5 left-2.5 right-2.5 z-20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pointer-events-none max-w-[calc(100%-1.25rem)]">
+        <div className="absolute top-2.5 left-2.5 right-2.5 z-[400] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pointer-events-none max-w-[calc(100%-1.25rem)]">
           {/* Threat Level & Category Filters */}
           <div className="flex items-center gap-1.5 p-1 sm:p-1.5 rounded-2xl bg-white/95 backdrop-blur-md shadow-md border border-slate-200/90 pointer-events-auto max-w-full overflow-hidden">
             {/* Category / Threat Pill Toggles */}
@@ -524,11 +503,10 @@ export default function JanSevaMap({
                   key={t.id}
                   type="button"
                   onClick={() => setActiveThreatFilter(t.id)}
-                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all shrink-0 whitespace-nowrap ${
-                    activeThreatFilter.toLowerCase() === t.id.toLowerCase()
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all shrink-0 whitespace-nowrap ${activeThreatFilter.toLowerCase() === t.id.toLowerCase()
                       ? "bg-[#134431] text-white shadow-xs"
                       : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                  }`}
+                    }`}
                 >
                   {t.label}
                 </button>
@@ -697,12 +675,12 @@ export default function JanSevaMap({
                       <div className="flex items-center justify-between gap-1 mb-1">
                         <span
                           className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1 ${issue.urgency === "Critical"
-                              ? "bg-rose-100 text-rose-800 border border-rose-200"
-                              : issue.urgency === "High"
-                                ? "bg-amber-100 text-amber-800 border border-amber-200"
-                                : issue.urgency === "Moderate"
-                                  ? "bg-blue-100 text-blue-800 border border-blue-200"
-                                  : "bg-slate-100 text-slate-700"
+                            ? "bg-rose-100 text-rose-800 border border-rose-200"
+                            : issue.urgency === "High"
+                              ? "bg-amber-100 text-amber-800 border border-amber-200"
+                              : issue.urgency === "Moderate"
+                                ? "bg-blue-100 text-blue-800 border border-blue-200"
+                                : "bg-slate-100 text-slate-700"
                             }`}
                         >
                           {issue.urgency === "Critical" && (
@@ -788,7 +766,7 @@ export default function JanSevaMap({
 
       {/* Floating Bottom Left Threat Level Legend (Full mode) */}
       {!isMini && showControls && (
-        <div className="absolute bottom-4 left-4 z-20 hidden sm:flex items-center gap-2 bg-white/95 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-200 shadow-md text-[11px] font-bold">
+        <div className="absolute bottom-4 left-4 z-[400] hidden sm:flex items-center gap-2 bg-white/95 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-200 shadow-md text-[11px] font-bold">
           <span className="text-slate-400 uppercase text-[9px] tracking-wider">
             Threat Levels:
           </span>
@@ -815,7 +793,7 @@ export default function JanSevaMap({
 
       {/* Floating Action Controls (Full mode) */}
       {!isMini && showControls && (
-        <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
+        <div className="absolute bottom-4 right-4 z-[400] flex flex-col gap-2">
           <button
             type="button"
             onClick={locateUser}
