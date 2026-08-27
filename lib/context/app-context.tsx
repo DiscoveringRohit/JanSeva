@@ -447,13 +447,16 @@ export function AppProvider({
     return () => clearInterval(pollInterval);
   }, []);
 
-  // Save issues to localStorage
+  // Save issues to localStorage and bridge to MockContextBridge
   useEffect(() => {
     try {
       localStorage.setItem(
         "janseva_issues",
         JSON.stringify(issues)
       );
+      MockContextBridge.getIssues = () => issues;
+      MockContextBridge.toggleUpvote = toggleUpvote;
+      MockContextBridge.addComment = addComment;
     } catch (e) {
       console.error(e);
     }
