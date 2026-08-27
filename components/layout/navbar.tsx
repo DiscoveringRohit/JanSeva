@@ -1,23 +1,23 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
-import { DEFAULT_LOCATION } from "@/lib/data/default-location";
+import { authService } from "@/lib/auth/auth-service-cookie3";
+import { UserAvatarBadge } from "./user-avatar-badge";
 import {
-  Search,
-  PlusCircle,
-  Bell,
   Sparkles,
-  MapPin,
+  Search,
+  Bell,
+  PlusCircle,
+  Menu,
   Globe,
   ChevronDown,
   Check,
-  Menu,
+  MapPin,
+  Bot
 } from "lucide-react";
-import { authService } from "@/lib/auth/auth-service-cookie3";
-import { UserAvatarBadge } from "@/components/layout/user-avatar-badge";
 import { cn } from "@/lib/utils";
 
 interface NavbarProps {
@@ -25,27 +25,29 @@ interface NavbarProps {
 }
 
 export function Navbar({ onToggleMobileMenu }: NavbarProps) {
+  const pathname = usePathname();
   const router = useRouter();
   const {
     user,
     setUser,
     notifications,
-    unreadNotifsCount,
     markNotificationRead,
+    unreadNotifsCount,
     setIsAiDrawerOpen,
     language,
     setLanguage,
-    t,
     allLanguages,
+    t,
   } = useApp();
 
-  const [searchQuery, setSearchQuery] = useState("");
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const [showLangDropdown, setShowLangDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const notifDropdownRef = useRef<HTMLDivElement>(null);
   const langDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -62,9 +64,7 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
       }
     }
 
-    if (showNotifDropdown || showLangDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
@@ -82,6 +82,13 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
     name: "English",
   };
 
+  const isOfficer = Boolean(
+    user?.role === "officer" ||
+    user?.role === "corporator" ||
+    pathname.startsWith("/officer")
+  );
+  const officerDept = user?.department ? user.department.toLowerCase() : "water";
+
   return (
     <header className="sticky top-0 z-40 w-full border-b border-surface-container-high bg-white/95 backdrop-blur-md transition-all">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-3 sm:px-6 lg:px-8">
@@ -97,7 +104,7 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
             <Menu className="w-5 h-5 text-slate-700" />
           </button>
 
-          <Link href="/" className="flex items-center gap-2 group">
+          <Link href={isOfficer ? `/officer/${officerDept}` : "/"} className="flex items-center gap-2 group">
             <div className="relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#134431] text-white shadow-md shadow-emerald-950/20 group-hover:scale-105 transition-transform shrink-0">
               <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-300" />
               <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 sm:h-3 sm:w-3">
@@ -110,26 +117,38 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
                 <span className="font-headline font-black text-lg sm:text-xl tracking-tight text-slate-900">
                   Jan<span className="text-[#134431]">Seva</span>
                 </span>
+                {isOfficer && (
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-md bg-[#edf7f1] text-[#134431] border border-[#cbe7d7]">
+                    OPS
+                  </span>
+                )}
               </div>
               <span className="text-[10px] font-medium text-slate-500 hidden sm:block -mt-0.5">
-                Civic Social Network
+                {isOfficer ? "Municipal Authority Command" : "Civic Social Network"}
               </span>
             </div>
           </Link>
 
-          {/* Ward Location Tag */}
-          <Link
-            href="/ward"
-            className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#f8faf9] hover:bg-[#edf7f1] border border-slate-200/80 text-xs font-bold text-slate-700 hover:text-[#134431] transition-colors shadow-2xs"
-          >
-            <MapPin className="w-3.5 h-3.5 text-[#134431]" />
-            <span>
-              {user?.pincode
-                ? `PIN ${user.pincode} • ${user.pincode === "751030" ? "Khandagiri" : (user.city || "Bhubaneswar")}`
-                : `PIN 751030 • Khandagiri`}
-            </span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]"></span>
-          </Link>
+          {/* Department or Ward Location Tag */}
+          {isOfficer ? (
+            <div className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#edf7f1] border border-[#cbe7d7] text-xs font-bold text-[#134431] shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981] animate-pulse"></span>
+              <span>BMC {officerDept.toUpperCase()} DIVISION</span>
+            </div>
+          ) : (
+            <Link
+              href="/ward"
+              className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#f8faf9] hover:bg-[#edf7f1] border border-slate-200/80 text-xs font-bold text-slate-700 hover:text-[#134431] transition-colors shadow-2xs"
+            >
+              <MapPin className="w-3.5 h-3.5 text-[#134431]" />
+              <span>
+                {user?.pincode
+                  ? `PIN ${user.pincode} • ${user.pincode === "751030" ? "Khandagiri" : (user.city || "Bhubaneswar")}`
+                  : `PIN 751030 • Khandagiri`}
+              </span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]"></span>
+            </Link>
+          )}
         </div>
 
         {/* Center: Search Bar */}
@@ -140,7 +159,7 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t("searchPlaceholder")}
+              placeholder={isOfficer ? "Search Ticket #, Complainant, Ward, or Location..." : t("searchPlaceholder")}
               className="w-full pl-10 pr-4 py-2 text-xs rounded-full bg-[#f8faf9] border border-slate-200/80 focus:outline-none focus:ring-2 focus:ring-[#134431]/20 focus:border-[#134431] focus:bg-white text-slate-900 placeholder:text-slate-400 transition-all shadow-2xs"
             />
           </form>
@@ -208,20 +227,27 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
             type="button"
             onClick={() => setIsAiDrawerOpen(true)}
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#edf7f1] border border-[#cbe7d7] text-[#134431] hover:bg-[#e1f2e8] text-xs font-bold shadow-2xs hover:scale-[1.02] transition-all select-none min-h-[36px]"
-            title="Open JanSeva AI Civic Assistant"
+            title={isOfficer ? "Open AI Ops Dispatch Assistant" : "Open JanSeva AI Civic Assistant"}
           >
             <Sparkles className="w-3.5 h-3.5 text-emerald-600 animate-pulseSlow" />
-            <span>{t("assistant")}</span>
+            <span>{isOfficer ? "AI Ops Copilot" : t("assistant")}</span>
           </button>
 
-          {/* Quick Report Button (Desktop/Tablet only; Mobile has prominent center bottom nav button) */}
-          <Link
-            href="/report"
-            className="hidden sm:flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#134431] hover:bg-[#0c2e21] text-white text-xs font-bold shadow-md shadow-emerald-950/20 hover:scale-[1.02] active:scale-98 transition-all min-h-[36px]"
-          >
-            <PlusCircle className="w-3.5 h-3.5" />
-            <span>{t("report")}</span>
-          </Link>
+          {/* Report Issue (Citizen) or Active Shift (Officer) */}
+          {isOfficer ? (
+            <div className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#134431] text-emerald-300 text-xs font-bold shadow-md shadow-emerald-950/20 min-h-[36px]">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Active Shift</span>
+            </div>
+          ) : (
+            <Link
+              href="/report"
+              className="hidden sm:flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#134431] hover:bg-[#0c2e21] text-white text-xs font-bold shadow-md shadow-emerald-950/20 hover:scale-[1.02] active:scale-98 transition-all min-h-[36px]"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>{t("report")}</span>
+            </Link>
+          )}
 
           {/* Notifications Dropdown */}
           <div className="relative" ref={notifDropdownRef}>

@@ -6,15 +6,30 @@ import { UserProfile } from "@/lib/data/mock-data";
 import { ChevronDown, Flame, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import { usePathname } from "next/navigation";
+
 interface UserAvatarBadgeProps {
   user: UserProfile | null;
   onLogout?: () => void;
 }
 
 export function UserAvatarBadge({ user, onLogout }: UserAvatarBadgeProps) {
+  const pathname = usePathname();
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  const isOfficerRoute = pathname.startsWith("/officer");
 
   if (!user) {
+    if (isOfficerRoute) {
+      return (
+        <Link
+          href="/officer-portal"
+          className="px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-[#134431] hover:bg-[#0c2e21] shadow-sm transition-colors"
+        >
+          Authority Access
+        </Link>
+      );
+    }
+
     return (
       <div className="flex items-center gap-2">
         <Link href="/login" className="px-3.5 py-1.5 rounded-full text-xs font-bold text-[#134431] bg-[#edf7f1] hover:bg-[#dff0e6] transition-colors">

@@ -75,6 +75,7 @@ interface AppContextType {
   addComment: (issueId: string, text: string) => void;
 
   notifications: NotificationItem[];
+  setNotifications: React.Dispatch<React.SetStateAction<NotificationItem[]>>;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   unreadNotifsCount: number;
@@ -1305,6 +1306,7 @@ export function AppProvider({
         voteVerification,
         addComment,
         notifications,
+        setNotifications,
         markNotificationRead,
         markAllNotificationsRead,
         unreadNotifsCount,

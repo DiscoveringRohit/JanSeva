@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -13,7 +13,12 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // If auth page, show minimal layout without sidebar
-  const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/signup";
+  const isAuthPage = 
+    pathname === "/login" || 
+    pathname === "/register" || 
+    pathname === "/signup" || 
+    pathname === "/officer-portal" ||
+    pathname === "/forgot-password";
 
   if (isAuthPage) {
     return (
@@ -26,15 +31,19 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-surface text-on-surface">
       {/* Top Navbar */}
-      <Navbar onToggleMobileMenu={() => setMobileSidebarOpen(true)} />
+      <Suspense fallback={null}>
+        <Navbar onToggleMobileMenu={() => setMobileSidebarOpen(true)} />
+      </Suspense>
 
       {/* Main Body with Sidebar + Content */}
       <div className="flex-1 flex max-w-7xl w-full mx-auto">
         {/* Left Sidebar */}
-        <Sidebar
-          mobileOpen={mobileSidebarOpen}
-          onCloseMobile={() => setMobileSidebarOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <Sidebar
+            mobileOpen={mobileSidebarOpen}
+            onCloseMobile={() => setMobileSidebarOpen(false)}
+          />
+        </Suspense>
 
         {/* Dynamic Page Content */}
         <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-12">
@@ -47,7 +56,9 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
       <AiAssistantDrawer />
 
       {/* Mobile Bottom Navigation */}
-      <MobileNav />
+      <Suspense fallback={null}>
+        <MobileNav />
+      </Suspense>
     </div>
   );
 }

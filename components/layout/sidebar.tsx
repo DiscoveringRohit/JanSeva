@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
 import { authService } from "@/lib/auth/auth-service-cookie3";
 import {
@@ -18,7 +18,18 @@ import {
   Award,
   Sparkles,
   ExternalLink,
-  User
+  User,
+  AlertTriangle,
+  Layers,
+  Users,
+  Calendar,
+  BarChart3,
+  Vote,
+  Megaphone,
+  FileSpreadsheet,
+  CheckCircle2,
+  ShieldAlert,
+  Radio
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,8 +41,19 @@ interface SidebarProps {
 export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, setUser, unreadNotifsCount, t } = useApp();
   const isProfilePage = pathname === "/profile";
+
+  const isOfficer = Boolean(
+    user?.role === "officer" ||
+    user?.role === "corporator" ||
+    pathname.startsWith("/officer")
+  );
+
+  const officerDept = user?.department ? user.department.toLowerCase() : "water";
+  const currentTab = searchParams ? searchParams.get("tab") : null;
+  const activeOfficerTab = currentTab || "workbench";
 
   const handleLogout = async () => {
     try {
@@ -47,7 +69,18 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
     router.push("/login");
   };
 
-  const navItems = [
+  interface NavItem {
+    label: string;
+    href: string;
+    tab?: string;
+    icon: any;
+    badge?: string;
+    badgeColor?: string;
+    highlight?: boolean;
+  }
+
+  // Citizen navigation items
+  const citizenNavItems: NavItem[] = [
     { label: t("home"), href: "/feed", icon: LayoutGrid },
     { label: t("explore"), href: "/explore", icon: Compass },
     { label: t("map"), href: "/map", icon: Map },
@@ -62,8 +95,37 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
     { label: t("profile"), href: "/profile", icon: User },
   ];
 
+  // Authority / Officer operational items
+  const officerNavItems: NavItem[] = [
+    { label: "Command Workbench", href: `/officer/${officerDept}`, tab: "workbench", icon: LayoutGrid },
+    {
+      label: "Escalations & Breaches",
+      href: `/officer/${officerDept}?tab=escalations`,
+      tab: "escalations",
+      icon: AlertTriangle,
+      badge: "2 Overdue",
+      badgeColor: "bg-rose-100 text-rose-800"
+    },
+    {
+      label: "AI Duplicate Review",
+      href: `/officer/${officerDept}?tab=duplicates`,
+      tab: "duplicates",
+      icon: Layers,
+      badge: "3 Matches",
+      badgeColor: "bg-amber-100 text-amber-800"
+    },
+    { label: "Squad Dispatch", href: `/officer/${officerDept}?tab=squads`, tab: "squads", icon: Users },
+    { label: "SLA Calendar", href: `/officer/${officerDept}?tab=calendar`, tab: "calendar", icon: Calendar },
+    { label: "Department Analytics", href: `/officer/${officerDept}?tab=analytics`, tab: "analytics", icon: BarChart3 },
+    { label: "Citizen Consensus Polls", href: `/officer/${officerDept}?tab=polls`, tab: "polls", icon: Vote },
+    { label: "Official Announcements", href: `/officer/${officerDept}?tab=announcements`, tab: "announcements", icon: Megaphone },
+    { label: "Audit Reports & Export", href: `/officer/${officerDept}?tab=reports`, tab: "reports", icon: FileSpreadsheet },
+  ];
+
+  const activeNavList = isOfficer ? officerNavItems : citizenNavItems;
+
   // Prevent body scrolling when mobile drawer is open
-  React.useEffect(() => {
+  useEffect(() => {
     if (mobileOpen) {
       document.body.style.overflow = "hidden";
     } else {
@@ -93,14 +155,15 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
         )}
       >
         <div className="space-y-6">
-
           {/* Mobile Header in Drawer */}
           <div className="flex items-center justify-between lg:hidden pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-[#134431] flex items-center justify-center text-white font-bold text-xs">
-                JS
+                {isOfficer ? "OPS" : "JS"}
               </div>
-              <span className="font-headline font-black text-base text-slate-900">JanSeva</span>
+              <span className="font-headline font-black text-base text-slate-900">
+                {isOfficer ? "JanSeva Authority" : "JanSeva"}
+              </span>
             </div>
             <button
               onClick={onCloseMobile}
@@ -110,136 +173,169 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
             </button>
           </div>
 
-          {/* 1. TOP PROFILE SECTION */}
+          {/* 1. TOP PROFILE / CONSOLE CONTEXT SECTION */}
           <div className={cn("space-y-4 pt-1", isProfilePage && "lg:space-y-2 lg:pt-0")}>
-
             {/* Centered Avatar */}
             <div className="flex flex-col items-center text-center">
-              <Link href="/profile" onClick={onCloseMobile} className="relative group block">
+              <div className="relative group block">
                 {user?.avatar ? (
                   <img
                     src={user.avatar}
                     alt={user.name}
                     className={cn(
-                      "rounded-full object-cover ring-4 ring-emerald-500/20 border-2 border-white shadow-md group-hover:scale-105 transition-transform",
+                      "rounded-full object-cover ring-4 ring-emerald-500/20 border-2 border-white shadow-md transition-transform",
                       isProfilePage ? "w-20 h-20 lg:w-11 lg:h-11" : "w-20 h-20"
                     )}
                   />
                 ) : (
                   <div className={cn(
-                    "rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-headline font-black ring-4 ring-emerald-500/20 border-2 border-white shadow-md group-hover:scale-105 transition-transform",
+                    "rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-headline font-black ring-4 ring-emerald-500/20 border-2 border-white shadow-md transition-transform",
                     isProfilePage ? "w-20 h-20 lg:w-11 lg:h-11 text-base" : "w-20 h-20 text-2xl"
                   )}>
-                    {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
+                    {user?.name ? user.name.charAt(0).toUpperCase() : (isOfficer ? "O" : "U")}
                   </div>
                 )}
                 <div className={cn(
-                  "absolute bottom-0 right-0 rounded-full bg-emerald-600 text-white flex items-center justify-center border-2 border-white shadow-xs",
+                  "absolute bottom-0 right-0 rounded-full text-white flex items-center justify-center border-2 border-white shadow-xs",
+                  isOfficer ? "bg-[#134431]" : "bg-emerald-600",
                   isProfilePage ? "w-6 h-6 lg:w-4 lg:h-4" : "w-6 h-6"
                 )}>
-                  <ShieldCheck className={cn("w-3.5 h-3.5", isProfilePage && "lg:w-2.5 lg:h-2.5")} />
+                  {isOfficer ? (
+                    <ShieldAlert className={cn("w-3.5 h-3.5 text-amber-300", isProfilePage && "lg:w-2.5 lg:h-2.5")} />
+                  ) : (
+                    <ShieldCheck className={cn("w-3.5 h-3.5", isProfilePage && "lg:w-2.5 lg:h-2.5")} />
+                  )}
                 </div>
-              </Link>
+              </div>
 
-              {/* Name & Handle (hidden in icon-only mode on desktop) */}
+              {/* Name & Role */}
               <div className={cn("mt-2.5", isProfilePage && "lg:hidden")}>
-                <Link
-                  href="/profile"
-                  onClick={onCloseMobile}
-                  className="font-headline font-black text-base text-slate-900 hover:text-emerald-800 transition-colors block leading-tight"
-                >
-                  {user?.name || "Civic Resident"}
-                </Link>
-                <p className="text-xs text-slate-400 font-medium mt-0.5">
-                  @{user?.username || (user?.name ? user.name.toLowerCase().replace(/\s+/g, "_") : "citizen")}
+                <h3 className="font-headline font-black text-base text-slate-900 leading-tight">
+                  {user?.name || (isOfficer ? "Field Operations Officer" : "Civic Resident")}
+                </h3>
+                <p className="text-xs text-emerald-800 font-bold mt-0.5 uppercase tracking-wider text-[10px]">
+                  {isOfficer
+                    ? `BMC ${officerDept.toUpperCase()} DIVISION`
+                    : `@${user?.username || (user?.name ? user.name.toLowerCase().replace(/\s+/g, "_") : "citizen")}`}
                 </p>
               </div>
             </div>
 
-            {/* 3-Column Stats Bar (hidden in icon-only mode on desktop) */}
-            <div className={cn("flex items-center justify-around py-3 px-2 rounded-2xl bg-[#f8faf9] border border-slate-100 text-center", isProfilePage && "lg:hidden")}>
-              <div className="flex-1">
-                <p className="font-headline font-black text-sm text-slate-900">
-                  {user?.stats?.issuesReported ?? 4}
-                </p>
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">
-                  Posts
-                </p>
+            {/* Role-Specific Stats Bar */}
+            {isOfficer ? (
+              /* Officer Operational Quick Stats */
+              <div className={cn("flex items-center justify-around py-3 px-2 rounded-2xl bg-[#edf7f1] border border-[#cbe7d7] text-center", isProfilePage && "lg:hidden")}>
+                <div className="flex-1">
+                  <p className="font-headline font-black text-sm text-slate-900">8</p>
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Active</p>
+                </div>
+                <div className="w-px h-6 bg-[#b2dfc4]"></div>
+                <div className="flex-1">
+                  <p className="font-headline font-black text-sm text-emerald-700">94.2%</p>
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">SLA Met</p>
+                </div>
+                <div className="w-px h-6 bg-[#b2dfc4]"></div>
+                <div className="flex-1">
+                  <p className="font-headline font-black text-sm text-amber-700">5 Live</p>
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Squads</p>
+                </div>
               </div>
-
-              <div className="w-px h-6 bg-slate-200"></div>
-
-              <div className="flex-1">
-                <p className="font-headline font-black text-sm text-slate-900">
-                  {user?.stats?.upvotesGiven ?? 28}
-                </p>
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">
-                  Upvotes
-                </p>
+            ) : (
+              /* Citizen Gamified XP Stats */
+              <div className={cn("flex items-center justify-around py-3 px-2 rounded-2xl bg-[#f8faf9] border border-slate-100 text-center", isProfilePage && "lg:hidden")}>
+                <div className="flex-1">
+                  <p className="font-headline font-black text-sm text-slate-900">
+                    {user?.stats?.issuesReported ?? 4}
+                  </p>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">
+                    Posts
+                  </p>
+                </div>
+                <div className="w-px h-6 bg-slate-200"></div>
+                <div className="flex-1">
+                  <p className="font-headline font-black text-sm text-slate-900">
+                    {user?.stats?.upvotesGiven ?? 28}
+                  </p>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">
+                    Upvotes
+                  </p>
+                </div>
+                <div className="w-px h-6 bg-slate-200"></div>
+                <div className="flex-1">
+                  <p className="font-headline font-black text-sm text-emerald-700">
+                    {user?.civicCitizenXP ?? 100}
+                  </p>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">
+                    XP
+                  </p>
+                </div>
               </div>
+            )}
 
-              <div className="w-px h-6 bg-slate-200"></div>
-
-              <div className="flex-1">
-                <p className="font-headline font-black text-sm text-emerald-700">
-                  {user?.civicCitizenXP ?? 100}
-                </p>
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">
-                  XP
-                </p>
-              </div>
-            </div>
-
-            {/* Bio / Civic Role Details (hidden in icon-only mode on desktop) */}
+            {/* Officer Duty Status or Citizen Ward info */}
             <div className={cn("px-1 text-center sm:text-left space-y-0.5", isProfilePage && "lg:hidden")}>
-              <p className="font-bold text-xs text-slate-800">
-                {user?.name || "Civic Citizen"}
-              </p>
-              <p className="text-[11px] text-slate-500 leading-snug">
-                {user?.role === "officer" ? "Department Authority" : user?.levelTitle || "Active Citizen"} | PIN {user?.pincode || "751030"} • {user?.city || "Bhubaneswar"}
-              </p>
+              {isOfficer ? (
+                <div className="flex items-center justify-between text-[11px] p-2 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="text-slate-500 font-medium">Status:</span>
+                  <span className="font-bold text-emerald-700 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    On Active Duty
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <p className="font-bold text-xs text-slate-800">
+                    {user?.name || "Civic Citizen"}
+                  </p>
+                  <p className="text-[11px] text-slate-500 leading-snug">
+                    {user?.levelTitle || "Active Citizen"} | PIN {user?.pincode || "751030"} • {user?.city || "Bhubaneswar"}
+                  </p>
+                </>
+              )}
             </div>
-
           </div>
 
           {/* 2. VERTICAL NAVIGATION MENU */}
-          <nav className="space-y-1.5 pt-2 border-t border-slate-100">
-            {navItems.map((item) => {
+          <nav className="space-y-1 pt-2 border-t border-slate-100">
+            {activeNavList.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+              // Check active URL reactively
+              const isActive = isOfficer
+                ? (item.tab ? item.tab === activeOfficerTab : activeOfficerTab === "workbench")
+                : (pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href)));
 
               return (
                 <Link
-                  key={item.href}
+                  key={item.label}
                   href={item.href}
                   onClick={onCloseMobile}
                   title={item.label}
                   className={cn(
                     "flex items-center rounded-2xl text-xs font-bold transition-all group select-none",
-                    isProfilePage ? "px-4 py-2.5 lg:px-0 lg:py-3 lg:justify-center" : "justify-between px-4 py-2.5",
+                    isProfilePage ? "px-4 py-2.5 lg:px-0 lg:py-3 lg:justify-center" : "justify-between px-3.5 py-2.5",
                     isActive
                       ? "bg-[#134431] text-white shadow-md shadow-emerald-950/20"
                       : "text-slate-700 hover:bg-[#edf7f1] hover:text-[#134431]"
                   )}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     <Icon
                       className={cn(
-                        "w-4 h-4 transition-transform group-hover:scale-110",
+                        "w-4 h-4 shrink-0 transition-transform group-hover:scale-110",
                         isActive ? "text-white" : "text-slate-500 group-hover:text-[#134431]"
                       )}
                     />
-                    <span className={cn(isProfilePage && "lg:hidden")}>{item.label}</span>
+                    <span className={cn("truncate", isProfilePage && "lg:hidden")}>{item.label}</span>
                   </div>
 
                   {item.badge && (
                     <span
                       className={cn(
-                        "px-2 py-0.5 rounded-full text-[10px] font-bold",
+                        "px-2 py-0.5 rounded-full text-[9px] font-bold shrink-0 ml-1.5",
                         isProfilePage && "lg:hidden",
                         isActive
                           ? "bg-white/20 text-white"
-                          : "bg-emerald-100 text-emerald-800"
+                          : (item.badgeColor || "bg-emerald-100 text-emerald-800")
                       )}
                     >
                       {item.badge}
@@ -249,7 +345,6 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
               );
             })}
           </nav>
-
         </div>
 
         {/* 3. BOTTOM LOGOUT BUTTON */}
@@ -265,7 +360,9 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
               )}
             >
               <LogOut className="w-4 h-4 text-slate-400 group-hover:text-rose-600 transition-colors" />
-              <span className={cn(isProfilePage && "lg:hidden")}>{t("logout")}</span>
+              <span className={cn(isProfilePage && "lg:hidden")}>
+                {isOfficer ? "Sign Out Console" : t("logout")}
+              </span>
             </button>
           ) : (
             <Link
@@ -280,9 +377,7 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
             </Link>
           )}
         </div>
-
       </aside>
     </>
   );
 }
-
