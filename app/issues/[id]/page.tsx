@@ -30,7 +30,9 @@ import {
   Plus,
   Camera,
   X,
-  UserCheck
+  UserCheck,
+  ShieldAlert,
+  Construction
 } from "lucide-react";
 import { formatDate, cn } from "@/lib/utils";
 import { useAutoTranslate } from "@/lib/services/translation-service";
@@ -39,7 +41,7 @@ export default function IssueDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const { voteVerification, user, setUser, deleteIssue, issues, mergeIssues, language } = useApp();
+  const { voteVerification, user, setUser, deleteIssue, issues, mergeIssues, language, updateIssueStatus } = useApp();
 
   const [issue, setIssue] = useState<CivicIssue | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -599,14 +601,76 @@ export default function IssueDetailPage() {
         </div>
       </div>
 
+      {/* MUNICIPAL OFFICER DIRECT CONTROL PANEL */}
+      {isOfficerOrStaff && (
+        <div className="rounded-3xl bg-slate-900 text-white p-6 sm:p-7 shadow-soft space-y-4 border border-slate-800 animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+                <ShieldAlert className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="font-headline font-bold text-sm text-white">Officer Tactical Command</h3>
+                <p className="text-[11px] text-slate-400">Directly transition ticket lifecycle and trigger citizen verification queues.</p>
+              </div>
+            </div>
+            <span className="text-[10px] uppercase font-bold text-amber-300 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20 self-start sm:self-auto">
+              Current Stage: {issue.status}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            <button
+              type="button"
+              onClick={async () => {
+                await updateIssueStatus(issue.id, "In Progress", `[Officer Action by ${user?.name || "Official"}]: Field squad mobilized on site. Heavy repair work active.`);
+                setMergeToast("⚡ Status updated to 'In Progress'. Field squad active.");
+                setTimeout(() => setMergeToast(null), 4000);
+              }}
+              className={cn(
+                "p-3 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 border cursor-pointer",
+                issue.status === "In Progress"
+                  ? "bg-blue-600/30 text-blue-200 border-blue-500"
+                  : "bg-slate-800/80 hover:bg-slate-800 text-slate-200 border-slate-700 hover:border-slate-600"
+              )}
+            >
+              <Construction className="w-4 h-4 text-blue-400" />
+              <span>1. Set In Progress</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={async () => {
+                await updateIssueStatus(issue.id, "Pending Citizen Verification", `[Closed-Loop Protocol]: Municipal crew completed repairs. Queued for citizen live camera audit.`);
+                setMergeToast("🔒 Work marked complete! Queued for Citizen Verification.");
+                setTimeout(() => setMergeToast(null), 4000);
+              }}
+              className={cn(
+                "p-3 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 border cursor-pointer sm:col-span-2",
+                issue.status === "Pending Citizen Verification"
+                  ? "bg-purple-600/30 text-purple-200 border-purple-500"
+                  : "bg-[#134431] hover:bg-[#0c2e21] text-emerald-100 border-emerald-600 shadow-md shadow-emerald-950/40"
+              )}
+            >
+              <Camera className="w-4 h-4 text-emerald-400" />
+              <span>2. Mark Work Done (Queue Citizen Audit)</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* CITIZEN SATISFACTION & CLOSED-LOOP VERIFICATION AUDIT BOX */}
-      {(issue.status === "Pending Citizen Verification" || issue.status === "Verified Resolved") && (
+      {(issue.status === "Pending Citizen Verification" || issue.status === "In Progress" || issue.status === "Resolved" || issue.status === "Verified Resolved") && (
         <div className="rounded-3xl bg-white border border-slate-200 p-6 sm:p-8 shadow-sm space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className={cn(
                 "w-12 h-12 rounded-2xl flex items-center justify-center font-bold shrink-0",
-                issue.status === "Verified Resolved" ? "bg-emerald-100 text-emerald-700" : "bg-purple-100 text-purple-700 animate-pulse"
+                issue.status === "Verified Resolved"
+                  ? "bg-emerald-100 text-emerald-700"
+                  : issue.status === "Pending Citizen Verification"
+                  ? "bg-purple-100 text-purple-700 animate-pulse"
+                  : "bg-blue-100 text-blue-700"
               )}>
                 <ShieldCheck className="w-6 h-6" />
               </div>
@@ -615,7 +679,9 @@ export default function IssueDetailPage() {
                   <h3 className="font-headline font-bold text-base text-slate-900">
                     {issue.status === "Verified Resolved"
                       ? "✓ Closed-Loop Resolution Certified"
-                      : "🔒 Closed-Loop Citizen Audit Required"}
+                      : issue.status === "Pending Citizen Verification"
+                      ? "🔒 Closed-Loop Citizen Audit Required"
+                      : "⚡ Field Squad Active — Citizen Audit Open"}
                   </h3>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#edf7f1] text-[#134431] border border-[#cbe7d7]">
                     100% Transparent
@@ -624,7 +690,9 @@ export default function IssueDetailPage() {
                 <p className="text-xs text-slate-500 mt-0.5">
                   {issue.status === "Verified Resolved"
                     ? "Citizen on-ground live camera inspection verified this repair. Ticket permanently closed in municipal ledger."
-                    : "Municipal squad reported field work complete. Ticket remains OPEN until a resident conducts a live camera on-ground geo-audit."}
+                    : issue.status === "Pending Citizen Verification"
+                    ? "Municipal squad reported field work complete. Ticket remains OPEN until a resident conducts a live camera on-ground geo-audit."
+                    : "Repairs actively underway by municipal authorities. Any local citizen can inspect the site on-ground with live camera."}
                 </p>
               </div>
             </div>
