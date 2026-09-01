@@ -18,13 +18,16 @@ import {
 } from "lucide-react";
 import { formatDate, cn } from "@/lib/utils";
 import { useApp } from "@/lib/context/app-context";
+import { useAutoTranslate } from "@/lib/services/translation-service";
 
 interface IssueCardProps {
   issue: CivicIssue;
 }
 
 export function IssueCard({ issue }: IssueCardProps) {
-  const { deleteIssue, user, toggleUpvote } = useApp();
+  const { deleteIssue, user, toggleUpvote, language } = useApp();
+  const { translated: translatedTitle } = useAutoTranslate(issue.title, language);
+  const { translated: translatedDesc } = useAutoTranslate(issue.description, language);
   const [copied, setCopied] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -227,12 +230,17 @@ export function IssueCard({ issue }: IssueCardProps) {
         {/* Title & Description */}
         <div className="mt-2 mb-3">
           <Link href={`/issues/${issue.id}`} className="block group-hover:text-emerald-800 transition-colors">
-            <h3 className="font-headline font-bold text-lg sm:text-xl text-slate-900 leading-snug mb-1">
-              {issue.title}
+            <h3 className="font-headline font-bold text-lg sm:text-xl text-slate-900 leading-snug mb-1 flex items-center justify-between gap-2">
+              <span>{translatedTitle || issue.title}</span>
+              {language !== "en" && translatedTitle !== issue.title && (
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
+                  🌐 Translated
+                </span>
+              )}
             </h3>
           </Link>
           <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-            {issue.description}
+            {translatedDesc || issue.description}
           </p>
         </div>
 

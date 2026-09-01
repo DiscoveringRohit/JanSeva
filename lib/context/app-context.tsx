@@ -35,6 +35,7 @@ import {
   Language,
   TranslationKey,
 } from "@/i18n/translations";
+import { translationService } from "@/lib/services/translation-service";
 
 interface ChatMessage {
   id: string;
@@ -104,6 +105,7 @@ interface AppContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: TranslationKey) => string;
+  translateText: (text: string) => Promise<string>;
   allLanguages: { code: Language; name: string }[];
 }
 
@@ -180,6 +182,11 @@ export function AppProvider({
     code,
     name: translations[code].name,
   }));
+
+  const translateText = async (text: string): Promise<string> => {
+    const langObj = allLanguages.find((l) => l.code === language);
+    return translationService.translateText(text, language, langObj?.name);
+  };
 
   const [activeFilter, setActiveFilter] =
     useState("all");
@@ -1460,6 +1467,7 @@ export function AppProvider({
         language,
         setLanguage,
         t,
+        translateText,
         allLanguages,
       }}
     >

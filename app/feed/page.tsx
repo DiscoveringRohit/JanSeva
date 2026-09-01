@@ -20,7 +20,7 @@ function FeedPageContent() {
   const initialScopeParam = searchParams.get("scope") as "local" | "global" | null;
   const initialQParam = searchParams.get("q") || "";
 
-  const { user, issues, refreshIssues, isLoadingAuth } = useApp();
+  const { user, issues, refreshIssues, isLoadingAuth, t, language } = useApp();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -347,10 +347,10 @@ function FeedPageContent() {
         {/* Main Status Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           {[
-            { id: "all", label: "All Statuses" },
-            { id: "critical", label: "🔥 Critical Urgency" },
-            { id: "in_progress", label: "⚡ In Progress" },
-            { id: "resolved", label: "✓ Resolved & Verified" },
+            { id: "all", label: t("home") ? `${t("home")} (${t("all" as any) || "All"})` : "All Statuses" },
+            { id: "critical", label: `🔥 ${t("critical") || "Critical"}` },
+            { id: "in_progress", label: `⚡ ${t("inProgress") || "In Progress"}` },
+            { id: "resolved", label: `✓ ${t("resolved") || "Resolved"}` },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -391,7 +391,7 @@ function FeedPageContent() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Filter by keyword / ID..."
+                placeholder={t("searchPlaceholder") || "Filter by keyword / ID..."}
                 className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-[#f8faf9] border border-slate-200/80 focus:outline-none focus:ring-1 focus:ring-[#134431] text-slate-900 placeholder:text-slate-400"
               />
             </div>
