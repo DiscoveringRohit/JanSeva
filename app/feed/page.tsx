@@ -5,45 +5,79 @@ import Link from "next/link";
 import { useApp } from "@/lib/context/app-context";
 import { getFeed } from "@/lib/api/issues";
 import { CivicIssue } from "@/lib/data/mock-data";
+import { useSearchParams } from "next/navigation";
 import { IssueCard } from "@/components/feed/issue-card";
 import { WeatherWidget } from "@/components/feed/weather-widget";
 import { LeaderboardWidget } from "@/components/feed/leaderboard-widget";
 import { CategoryPill } from "@/components/ui/category-pill";
-import { Award, Camera, MapPin, Search, Filter, TrendingUp, AlertCircle, CheckCircle2, ChevronRight, X, Clock, Settings, LogOut, Sparkles, Layers, ArrowUpDown, Globe2, Navigation, Edit3 } from "lucide-react";
+import { Award, Camera, MapPin, Search, Filter, TrendingUp, AlertCircle, CheckCircle2, ChevronRight, X, Clock, Settings, LogOut, Sparkles, Layers, ArrowUpDown, Globe2, Navigation, Edit3, RefreshCw } from "lucide-react";
 import { GUEST_USER } from "@/lib/data/default-location";
 import { cn } from "@/lib/utils";
 
 export default function FeedPage() {
-  const { user } = useApp();
+  const searchParams = useSearchParams();
+  const initialPinParam = searchParams.get("pin") || "";
+  const initialScopeParam = searchParams.get("scope") as "local" | "global" | null;
+  const initialQParam = searchParams.get("q") || "";
 
-  const [issues, setIssues] = useState<CivicIssue[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, issues, refreshIssues, isLoadingAuth } = useApp();
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Feed Scope: "local" (default start with local pincode) or "global" (all areas)
-  const [feedScope, setFeedScope] = useState<"local" | "global">("local");
-  const [localPincode, setLocalPincode] = useState<string>(user?.pincode || "751030");
-  const [pincodeSearchInput, setPincodeSearchInput] = useState<string>(user?.pincode || "751030");
+  const [feedScope, setFeedScope] = useState<"local" | "global">(initialScopeParam || (initialPinParam ? "local" : "local"));
+  const [localPincode, setLocalPincode] = useState<string>(initialPinParam || user?.pincode || "751024");
+  const [pincodeSearchInput, setPincodeSearchInput] = useState<string>(initialPinParam || user?.pincode || "751024");
+  const [isLocating, setIsLocating] = useState(false);
+
+  const getIssuePin = (issue: CivicIssue): string => {
+    if ((issue as any).pin_code) return String((issue as any).pin_code).trim();
+    if ((issue as any).pincode) return String((issue as any).pincode).trim();
+    if (issue.location?.pincode) return String(issue.location.pincode).trim();
+    const address = issue.location?.address || "";
+    const match = address.match(/\b\d{6}\b/);
+    if (match) return match[0];
+    return "";
+  };
+
+  // Collect all available unique PIN codes present across all reported problems
+  const availablePincodes = React.useMemo(() => {
+    const pinCounts: Record<string, number> = {};
+    issues.forEach((issue) => {
+      const pin = getIssuePin(issue);
+      if (pin) {
+        pinCounts[pin] = (pinCounts[pin] || 0) + 1;
+      }
+    });
+    return Object.entries(pinCounts).map(([pin, count]) => ({ pin, count }));
+  }, [issues]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshIssues();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   React.useEffect(() => {
-    getFeed().then((data) => {
-      setIssues(data);
-      setIsLoading(false);
-    });
+    refreshIssues();
   }, []);
 
   React.useEffect(() => {
-    if (user?.pincode) {
+    if (initialPinParam) {
+      setLocalPincode(initialPinParam);
+      setPincodeSearchInput(initialPinParam);
+      setFeedScope("local");
+    } else if (user?.pincode) {
       setLocalPincode(user.pincode);
       setPincodeSearchInput(user.pincode);
+    } else if (availablePincodes.length > 0 && !localPincode) {
+      setLocalPincode(availablePincodes[0].pin);
+      setPincodeSearchInput(availablePincodes[0].pin);
     }
-  }, [user?.pincode]);
-
-  const [activeTab, setActiveTab] = useState<"all" | "critical" | "resolved" | "in_progress">("all");
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"upvotes" | "recent" | "urgency">("recent");
-
-  const categories = ["All", "Sanitation", "Roads", "Water", "Electricity", "Waste", "Traffic", "Parks"];
+  }, [user?.pincode, availablePincodes, initialPinParam]);
 
   const handlePincodeSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,45 +88,96 @@ export default function FeedPage() {
     }
   };
 
+  const handleDetectGPS = () => {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.");
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+            { headers: { "Accept-Language": "en" } }
+          );
+          const data = await res.json();
+          const detectedPin = data.address?.postcode?.replace(/\D/g, "") || "751024";
+          setLocalPincode(detectedPin);
+          setPincodeSearchInput(detectedPin);
+          setFeedScope("local");
+        } catch (e) {
+          console.error("GPS Reverse Geocode Error", e);
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (err) => {
+        console.warn("Geolocation permission error:", err);
+        setIsLocating(false);
+      },
+      { timeout: 8000 }
+    );
+  };
+
+  const [activeTab, setActiveTab] = useState<"all" | "critical" | "resolved" | "in_progress">("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [searchQuery, setSearchQuery] = useState(initialQParam);
+  const [sortBy, setSortBy] = useState<"upvotes" | "recent" | "urgency">("recent");
+
+  const categories = ["All", "Sanitation", "Roads", "Water", "Electricity", "Waste", "Traffic", "Parks"];
+
   const filteredIssues = issues
     .filter((issue) => {
       // 1. Global vs Local (Pincode) Scope Filter
       if (feedScope === "local") {
-        const issuePincode = issue.location.pincode || "751030";
-        if (issuePincode !== localPincode) return false;
+        const issuePincode = getIssuePin(issue);
+        const address = (issue.location?.address || "").toLowerCase();
+        const pinMatch = issuePincode === localPincode.trim() || address.includes(localPincode.trim());
+        if (!pinMatch) return false;
       }
 
       // 2. Status Tab filter
       if (activeTab === "critical" && issue.urgency !== "Critical") return false;
-      if (activeTab === "resolved" && issue.status !== "Resolved") return false;
-      if (activeTab === "in_progress" && issue.status !== "In Progress") return false;
+      if (activeTab === "resolved" && issue.status !== "Resolved" && issue.status !== "Verified Resolved") return false;
+      if (activeTab === "in_progress" && issue.status !== "In Progress" && issue.status !== "Assigned") return false;
 
       // 3. Category filter
-      if (selectedCategory !== "All" && issue.category !== selectedCategory) return false;
+      if (selectedCategory !== "All" && issue.category.toLowerCase() !== selectedCategory.toLowerCase()) return false;
 
       // 4. Search query filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchesTitle = issue.title.toLowerCase().includes(q);
-        const matchesDesc = issue.description.toLowerCase().includes(q);
-        const matchesAddress = issue.location.address.toLowerCase().includes(q);
-        const matchesId = issue.id.toLowerCase().includes(q);
-        if (!matchesTitle && !matchesDesc && !matchesAddress && !matchesId) return false;
+        const matchesTitle = (issue.title || "").toLowerCase().includes(q);
+        const matchesDesc = (issue.description || "").toLowerCase().includes(q);
+        const matchesAddress = (issue.location?.address || "").toLowerCase().includes(q);
+        const matchesId = (issue.id || "").toLowerCase().includes(q);
+        const matchesPin = getIssuePin(issue).includes(q);
+        if (!matchesTitle && !matchesDesc && !matchesAddress && !matchesId && !matchesPin) return false;
       }
 
       return true;
     })
     .sort((a, b) => {
-      if (sortBy === "upvotes") return b.upvotes - a.upvotes;
-      if (sortBy === "recent") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      if (sortBy === "upvotes") return (b.upvotes || 0) - (a.upvotes || 0);
+      if (sortBy === "recent") {
+        const timeB = new Date(b.createdAt || (b as any).created_at || 0).getTime();
+        const timeA = new Date(a.createdAt || (a as any).created_at || 0).getTime();
+        return timeB - timeA;
+      }
       if (sortBy === "urgency") {
-        const order = { Critical: 4, High: 3, Moderate: 2, Low: 1 };
-        return order[b.urgency] - order[a.urgency];
+        const order: Record<string, number> = { Critical: 4, High: 3, Moderate: 2, Low: 1 };
+        return (order[b.urgency] || 0) - (order[a.urgency] || 0);
       }
       return 0;
     });
 
-  const localCount = issues.filter(i => (i.location.pincode || "751030") === localPincode).length;
+  const localCount = issues.filter(i => {
+    const p = getIssuePin(i);
+    return p === localPincode.trim() || (i.location?.address || "").includes(localPincode.trim());
+  }).length;
   const globalCount = issues.length;
 
   return (
@@ -101,7 +186,7 @@ export default function FeedPage() {
       {/* Top Header & Quick Report Trigger */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="font-headline font-black text-2xl sm:text-3xl text-slate-900 tracking-tight">
               {feedScope === "local" 
                 ? `Local Pincode ${localPincode} Feed`
@@ -111,6 +196,16 @@ export default function FeedPage() {
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
               Live Pulse
             </span>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+              title="Refresh latest issues"
+            >
+              <RefreshCw className={cn("w-3 h-3 text-emerald-700", isRefreshing && "animate-spin")} />
+              <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+            </button>
           </div>
           <p className="text-xs sm:text-sm text-slate-600 mt-1">
             {feedScope === "local"
@@ -175,28 +270,75 @@ export default function FeedPage() {
             </button>
           </div>
 
-          {/* Pincode Search Box */}
-          <form onSubmit={handlePincodeSearch} className="flex items-center gap-2">
-            <div className="relative flex-1 sm:w-60">
-              <MapPin className="w-3.5 h-3.5 text-[#134431] absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                maxLength={6}
-                value={pincodeSearchInput}
-                onChange={(e) => setPincodeSearchInput(e.target.value.replace(/\D/g, ''))}
-                placeholder="Find Pincode (e.g. 751030)..."
-                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-[#f8faf9] border border-slate-200/80 focus:outline-none focus:ring-1 focus:ring-[#134431] text-slate-900 placeholder:text-slate-400 font-medium"
-              />
-            </div>
+          {/* Pincode Search & GPS Detect Box */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <form onSubmit={handlePincodeSearch} className="flex items-center gap-2 flex-1 sm:flex-none">
+              <div className="relative flex-1 sm:w-56">
+                <MapPin className="w-3.5 h-3.5 text-[#134431] absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={pincodeSearchInput}
+                  onChange={(e) => setPincodeSearchInput(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Filter PIN (e.g. 751024)..."
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-[#f8faf9] border border-slate-200/80 focus:outline-none focus:ring-1 focus:ring-[#134431] text-slate-900 placeholder:text-slate-400 font-medium"
+                />
+              </div>
+              <button
+                type="submit"
+                className="px-3 py-1.5 rounded-xl bg-[#134431] hover:bg-[#0c2e21] text-white text-xs font-bold transition-colors cursor-pointer shrink-0 shadow-xs"
+              >
+                Go
+              </button>
+            </form>
+
             <button
-              type="submit"
-              className="px-3 py-1.5 rounded-xl bg-[#134431] hover:bg-[#0c2e21] text-white text-xs font-bold transition-colors cursor-pointer shrink-0 shadow-xs"
+              type="button"
+              onClick={handleDetectGPS}
+              disabled={isLocating}
+              className="px-3 py-1.5 rounded-xl bg-[#edf7f1] hover:bg-[#cbe7d7] text-[#134431] text-xs font-bold transition-all flex items-center gap-1.5 border border-[#cbe7d7] shrink-0"
+              title="Detect your current location PIN"
             >
-              Find Area
+              <Navigation className={cn("w-3.5 h-3.5 text-[#134431]", isLocating && "animate-spin")} />
+              <span>{isLocating ? "Locating..." : "My GPS PIN"}</span>
             </button>
-          </form>
+          </div>
 
         </div>
+
+        {/* Active Hyperlocal PIN Chips */}
+        {availablePincodes.length > 0 && (
+          <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-slate-100 no-scrollbar">
+            <span className="text-[11px] font-bold text-slate-500 shrink-0 flex items-center gap-1 mr-1">
+              <MapPin className="w-3 h-3 text-[#134431]" /> Active Zones:
+            </span>
+            {availablePincodes.map(({ pin, count }) => (
+              <button
+                key={pin}
+                type="button"
+                onClick={() => {
+                  setLocalPincode(pin);
+                  setPincodeSearchInput(pin);
+                  setFeedScope("local");
+                }}
+                className={cn(
+                  "px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer",
+                  feedScope === "local" && localPincode === pin
+                    ? "bg-[#134431] text-white shadow-xs"
+                    : "bg-[#f1f5f3] text-slate-700 hover:bg-[#edf7f1] hover:text-[#134431]"
+                )}
+              >
+                <span>PIN {pin}</span>
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.2 rounded-full font-bold",
+                  feedScope === "local" && localPincode === pin ? "bg-emerald-700 text-emerald-100" : "bg-slate-200 text-slate-600"
+                )}>
+                  {count}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Filter Tabs & Search Bar */}
@@ -276,31 +418,51 @@ export default function FeedPage() {
         
         {/* Left 2 Columns: Feed Stream */}
         <div className="lg:col-span-2 space-y-6">
-          {isLoading ? (
+          {isLoadingAuth && issues.length === 0 ? (
             <div className="rounded-3xl bg-white border border-surface-container-high p-12 text-center">
-              <div className="w-8 h-8 rounded-full border-4 border-primary-200 border-t-primary-600 animate-spin mx-auto mb-3"></div>
-              <p className="text-sm font-semibold text-on-surface-variant">Loading community feed...</p>
+              <div className="w-8 h-8 rounded-full border-4 border-[#134431] border-t-transparent animate-spin mx-auto mb-3"></div>
+              <p className="text-sm font-semibold text-slate-600">Loading community feed...</p>
             </div>
           ) : filteredIssues.length === 0 ? (
-            <div className="rounded-3xl bg-white border border-surface-container-high p-12 text-center space-y-3">
-              <div className="w-12 h-12 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center mx-auto font-bold">
-                🔍
+            <div className="rounded-3xl bg-white border border-slate-200 p-8 sm:p-12 text-center space-y-4 shadow-sm">
+              <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mx-auto text-xl font-bold border border-amber-200">
+                📍
               </div>
-              <h3 className="font-headline font-bold text-base text-on-surface">No Issues Match Your Filters</h3>
-              <p className="text-xs text-on-surface-variant max-w-sm mx-auto">
-                Try resetting your search query or selecting a different category tab.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab("all");
-                  setSelectedCategory("All");
-                  setSearchQuery("");
-                }}
-                className="mt-2 px-4 py-2 rounded-xl bg-primary-50 text-primary-700 font-bold text-xs hover:bg-primary-100"
-              >
-                Reset All Filters
-              </button>
+              <div className="space-y-1">
+                <h3 className="font-headline font-bold text-base text-slate-900">
+                  {feedScope === "local"
+                    ? `No active reports in PIN ${localPincode}`
+                    : "No issues match your current filters"}
+                </h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  {feedScope === "local"
+                    ? `There are ${globalCount} total reports logged across other municipal PIN codes.`
+                    : "Try resetting your search query or selecting 'All Statuses'."}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-center gap-2 flex-wrap pt-2">
+                {feedScope === "local" && (
+                  <button
+                    type="button"
+                    onClick={() => setFeedScope("global")}
+                    className="px-4 py-2 rounded-xl bg-[#134431] text-white font-bold text-xs hover:bg-[#0c2e21] shadow-xs cursor-pointer"
+                  >
+                    View Global Feed ({globalCount})
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab("all");
+                    setSelectedCategory("All");
+                    setSearchQuery("");
+                  }}
+                  className="px-4 py-2 rounded-xl bg-[#edf7f1] text-[#134431] font-bold text-xs hover:bg-[#cbe7d7] border border-[#cbe7d7] cursor-pointer"
+                >
+                  Reset Filters
+                </button>
+              </div>
             </div>
           ) : (
             filteredIssues.map((issue) => (

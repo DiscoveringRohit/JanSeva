@@ -39,7 +39,7 @@ import { cn } from "@/lib/utils";
 
 export default function WardPage() {
   const router = useRouter();
-  const { wardData, user } = useApp();
+  const { wardData, user, issues } = useApp();
   const [scrollOffsetY, setScrollOffsetY] = useState(0);
 
   // Parallax scroll listener
@@ -51,44 +51,17 @@ export default function WardPage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Visual Audit Hotspot Gallery (5-Column Showcase)
-  const auditGallery = [
-    {
-      id: "g1",
-      title: "Khandagiri Cave Road",
-      tag: "Road Paving Completed",
-      status: "Verified ✓",
-      image: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600&auto=format&fit=crop&q=80",
-    },
-    {
-      id: "g2",
-      title: "Saheed Nagar Sluice",
-      tag: "Drain Desilting Active",
-      status: "SLA: 12h",
-      image: "https://images.unsplash.com/photo-1584467735815-f778f274e296?w=600&auto=format&fit=crop&q=80",
-    },
-    {
-      id: "g3",
-      title: "Patia Smart Grid",
-      tag: "Solar LED Retrofit",
-      status: "100% Operational",
-      image: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600&auto=format&fit=crop&q=80",
-    },
-    {
-      id: "g4",
-      title: "Eco Green Corridor",
-      tag: "Community Play Zone",
-      status: "Clean Air 94%",
-      image: "https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=600&auto=format&fit=crop&q=80",
-    },
-    {
-      id: "g5",
-      title: "Cauvery Pipeline IV",
-      tag: "Potable Line Overhaul",
-      status: "Active ⚡",
-      image: "https://images.unsplash.com/photo-1611288870280-4a307c87c95e?w=600&auto=format&fit=crop&q=80",
-    }
-  ];
+  // Visual Audit Hotspot Gallery (Dynamic from Live Issues)
+  const auditGallery = React.useMemo(() => {
+    if (!issues || issues.length === 0) return [];
+    return issues.slice(0, 5).map((issue, idx) => ({
+      id: issue.id || `g${idx + 1}`,
+      title: issue.title,
+      tag: `${issue.category} ${issue.status}`,
+      status: issue.status === "Verified Resolved" ? "Verified ✓" : issue.status,
+      image: issue.images?.resolved || issue.images?.reported || "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600&auto=format&fit=crop&q=80",
+    }));
+  }, [issues]);
 
   // Citizen Testimonials
   const citizenReviews = [

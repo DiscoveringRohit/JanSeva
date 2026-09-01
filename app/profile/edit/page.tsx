@@ -16,7 +16,8 @@ import {
   Check,
   Save,
   Camera,
-  Loader2
+  Loader2,
+  AtSign
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ export default function EditProfilePage() {
   const { user, setUser } = useApp();
 
   const [name, setName] = useState(user?.name || "");
+  const [username, setUsername] = useState(user?.username || "");
   const [email, setEmail] = useState(user?.email || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [gender, setGender] = useState(user?.gender || "Prefer not to say");
@@ -39,18 +41,25 @@ export default function EditProfilePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    const cleanUsername = username.trim().toLowerCase();
+    if (cleanUsername && !/^[a-zA-Z0-9_]{3,30}$/.test(cleanUsername)) {
+      setError("Username must be 3-30 characters long and contain only letters, numbers, and underscores.");
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
 
-    // We send data to backend. Backend uses `phone_number`, `pin_code`, `first_name`, `last_name` etc.
-    // authApi.updateProfile handles the fetch.
     const res = await authApi.updateProfile({
+      username: cleanUsername,
       email,
       phone_number: phone,
       gender,
       city,
       pin_code: pincode,
       avatar,
+      full_name: name,
       first_name: name.split(' ')[0],
       last_name: name.split(' ').slice(1).join(' ')
     });
@@ -119,67 +128,51 @@ export default function EditProfilePage() {
           <h1 className="font-headline font-black text-2xl text-on-surface">
             Edit Profile & Civic Preferences
           </h1>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            Manage your verified citizen credentials, registered ward, and alert channels.
+          <p className="text-xs text-on-surface-variant mt-1">
+            Update your public citizen identity, verified location, and communication details.
           </p>
         </div>
 
-        {/* Avatar Section */}
+        {error && (
+          <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+            {error}
+          </div>
+        )}
+
+        {/* Profile Avatar & ID Banner */}
         <div className="flex items-center gap-4 p-4 rounded-2xl bg-surface-container-low border border-surface-dim">
-          <div className="relative group cursor-pointer">
-            {avatar ? (
-              <img
-                src={avatar}
-                alt={name}
-                className="w-16 h-16 rounded-full object-cover ring-2 ring-primary-200"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-headline font-bold text-2xl ring-2 ring-primary-200">
-                {name ? name.charAt(0).toUpperCase() : "U"}
-              </div>
-            )}
-            <label className="absolute inset-0 flex items-center justify-center bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" title="Click to upload profile photo (No AI verification required)">
-              <Camera className="w-5 h-5" />
+          <div className="relative">
+            <div className="w-16 h-16 rounded-full overflow-hidden bg-primary-100 ring-2 ring-primary-500/20 shadow-sm flex items-center justify-center">
+              {avatar ? (
+                <img
+                  src={avatar}
+                  alt={name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="font-headline font-black text-xl text-primary-700">
+                  {name.charAt(0).toUpperCase() || "C"}
+                </span>
+              )}
+            </div>
+            <label
+              htmlFor="avatar-upload"
+              className="absolute bottom-0 right-0 p-1.5 rounded-full bg-primary-600 text-white shadow-md cursor-pointer hover:bg-primary-700 transition-colors"
+            >
+              <Camera className="w-3.5 h-3.5" />
               <input
+                id="avatar-upload"
                 type="file"
                 accept="image/*"
                 className="hidden"
                 onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    const file = e.target.files[0];
+                  const file = e.target.files?.[0];
+                  if (file) {
                     const reader = new FileReader();
                     reader.onload = (ev) => {
-                      const img = document.createElement("img");
-                      img.onload = () => {
-                        const canvas = document.createElement("canvas");
-                        const MAX_SIZE = 256;
-                        let width = img.width;
-                        let height = img.height;
-
-                        if (width > height) {
-                          if (width > MAX_SIZE) {
-                            height = Math.round((height * MAX_SIZE) / width);
-                            width = MAX_SIZE;
-                          }
-                        } else {
-                          if (height > MAX_SIZE) {
-                            width = Math.round((width * MAX_SIZE) / height);
-                            height = MAX_SIZE;
-                          }
-                        }
-
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext("2d");
-                        if (ctx) {
-                          ctx.drawImage(img, 0, 0, width, height);
-                          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
-                          setAvatar(compressedDataUrl);
-                        } else {
-                          setAvatar(ev.target?.result as string);
-                        }
-                      };
-                      img.src = ev.target?.result as string;
+                      if (ev.target?.result) {
+                        setAvatar(ev.target.result as string);
+                      }
                     };
                     reader.readAsDataURL(file);
                   }
@@ -187,30 +180,49 @@ export default function EditProfilePage() {
               />
             </label>
           </div>
+
           <div>
             <p className="text-xs font-bold text-on-surface">{name}</p>
+            <p className="text-[11px] font-mono text-slate-500 font-semibold">@{username || "username"}</p>
             <p className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Verified Resident</span>
             </p>
             <span className="text-[10px] text-on-surface-variant">Civic Level {user.level} ({user.civicCitizenXP} XP)</span>
-            <p className="text-[10px] text-slate-400 mt-0.5">Direct photo upload • No AI inspection required</p>
           </div>
         </div>
 
         {/* Input Fields */}
         <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-on-surface mb-1">Full Legal Name</label>
-            <div className="relative">
-              <User className="w-4 h-4 text-primary-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="w-full pl-10 pr-4 py-2.5 text-xs rounded-2xl bg-surface-container-low border border-surface-dim focus:outline-none focus:ring-2 focus:ring-primary-500 text-on-surface"
-              />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1">Full Legal Name</label>
+              <div className="relative">
+                <User className="w-4 h-4 text-primary-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  placeholder="Your full name"
+                  className="w-full pl-10 pr-4 py-2.5 text-xs rounded-2xl bg-surface-container-low border border-surface-dim focus:outline-none focus:ring-2 focus:ring-primary-500 text-on-surface font-medium"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1">Username</label>
+              <div className="relative">
+                <AtSign className="w-4 h-4 text-primary-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                  required
+                  placeholder="username (e.g. sujal_patra)"
+                  className="w-full pl-10 pr-4 py-2.5 text-xs font-mono font-bold rounded-2xl bg-surface-container-low border border-surface-dim focus:outline-none focus:ring-2 focus:ring-primary-500 text-on-surface"
+                />
+              </div>
             </div>
           </div>
 
@@ -230,7 +242,7 @@ export default function EditProfilePage() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-on-surface mb-1">Mobile Phone (WhatsApp)</label>
+              <label className="block text-xs font-bold text-on-surface mb-1">Mobile Phone Number</label>
               <div className="relative">
                 <Phone className="w-4 h-4 text-primary-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
@@ -238,6 +250,7 @@ export default function EditProfilePage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   required
+                  placeholder="+91 98765 43210"
                   className="w-full pl-10 pr-4 py-2.5 text-xs rounded-2xl bg-surface-container-low border border-surface-dim focus:outline-none focus:ring-2 focus:ring-primary-500 text-on-surface"
                 />
               </div>

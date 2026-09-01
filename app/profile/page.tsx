@@ -181,9 +181,10 @@ export default function ProfilePage() {
       name: "Civic Champion",
       icon: "🌟",
       description: "Reach 1,500+ XP and rank in the top 5% of your municipal zone.",
-      criteria: "Achieve Level 4 Citizen status",
-      isUnlocked: false,
-      progress: `${user.civicCitizenXP} / 1500 XP`,
+      criteria: "Achieve Level 4 Citizen status (1500+ XP)",
+      isUnlocked: (user.civicCitizenXP || 0) >= 1500,
+      unlockedAt: (user.civicCitizenXP || 0) >= 1500 ? "Active" : undefined,
+      progress: `${user.civicCitizenXP || 0} / 1500 XP`,
       category: "Honor",
       reward: "+500 XP & Gold Badge"
     },
@@ -193,8 +194,9 @@ export default function ProfilePage() {
       icon: "🌳",
       description: "Contribute to park maintenance and arbor protection.",
       criteria: "Report 3 park/green zone upkeep tasks",
-      isUnlocked: false,
-      progress: "1 / 3 completed",
+      isUnlocked: (dynamicIssuesReported || 0) >= 3,
+      unlockedAt: (dynamicIssuesReported || 0) >= 3 ? "Active" : undefined,
+      progress: `${Math.min(3, dynamicIssuesReported || 0)} / 3 completed`,
       category: "Environment",
       reward: "+200 XP"
     },
@@ -202,10 +204,11 @@ export default function ProfilePage() {
       id: "quick-snap",
       name: "AI Quick-Snap Master",
       icon: "📸",
-      description: "Submit 15 AI-detected reports with 95%+ triage accuracy.",
-      criteria: "15 successful camera snap submissions",
-      isUnlocked: false,
-      progress: "4 / 15 completed",
+      description: "Submit 5 AI-detected reports with 95%+ triage accuracy.",
+      criteria: "5 successful camera snap submissions",
+      isUnlocked: (dynamicIssuesReported || 0) >= 5,
+      unlockedAt: (dynamicIssuesReported || 0) >= 5 ? "Active" : undefined,
+      progress: `${Math.min(5, dynamicIssuesReported || 0)} / 5 completed`,
       category: "AI Technology",
       reward: "+350 XP"
     }
@@ -319,6 +322,62 @@ export default function ProfilePage() {
           </Link>
         </div>
 
+      </div>
+
+      {/* CITIZEN IDENTITY CARD (Displays Name, Username, Role, Location, Contact & Edit Link) */}
+      <div className="rounded-3xl bg-white border border-slate-200/80 p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fadeIn">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="relative shrink-0">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-emerald-100 ring-4 ring-emerald-500/20 shadow-md flex items-center justify-center">
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name || user.username}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="font-headline font-black text-2xl text-emerald-800">
+                  {(user.name || user.username || "C").charAt(0).toUpperCase()}
+                </span>
+              )}
+            </div>
+            <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold border-2 border-white shadow-xs" title="Verified Citizen">
+              ✓
+            </span>
+          </div>
+
+          <div className="space-y-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="font-headline font-black text-xl sm:text-2xl text-slate-900 leading-tight">
+                {user.name}
+              </h2>
+              <span className="font-mono text-xs font-bold text-slate-600 bg-[#f1f5f3] px-2.5 py-0.5 rounded-full border border-slate-200">
+                @{user.username || "citizen"}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap text-xs text-slate-600 font-medium">
+              <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 font-bold border border-emerald-200 text-[11px]">
+                {user.role === "officer" ? (user.levelTitle || "Ward Officer") : (user.role === "corporator" ? "Corporator" : "Active Citizen")}
+              </span>
+              <span className="flex items-center gap-1 text-[11px]">
+                <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                <span>{user.city ? `${user.city}, PIN ${user.pincode}` : `PIN ${user.pincode || "751030"}`}</span>
+              </span>
+              {user.email && (
+                <span className="text-slate-400 text-[11px] truncate max-w-[200px]">• {user.email}</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <Link
+          href="/profile/edit"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#134431] hover:bg-[#0c2e21] text-white text-xs font-bold shadow-md shadow-emerald-950/15 hover:scale-102 active:scale-98 transition-all shrink-0 cursor-pointer"
+        >
+          <Edit3 className="w-4 h-4 text-emerald-300" />
+          <span>Edit Profile</span>
+        </Link>
       </div>
 
       {/* 2. MAIN 2-COLUMN DASHBOARD GRID */}

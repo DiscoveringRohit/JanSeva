@@ -69,10 +69,18 @@ export async function fetchWithAuth(
 
   headers.set("Content-Type", "application/json");
 
-  if (accessToken) {
+  let token = accessToken;
+  if (!token && typeof window !== "undefined") {
+    token = localStorage.getItem("janseva_token");
+    if (token) {
+      setAccessToken(token);
+    }
+  }
+
+  if (token) {
     headers.set(
       "Authorization",
-      `Bearer ${accessToken}`
+      `Bearer ${token}`
     );
   }
 

@@ -213,88 +213,6 @@ export type MapIssue = {
   slaHours?: number;
 };
 
-// Default fallback issues around Bhubaneswar / Ranchi
-const defaultIssuesData: MapIssue[] = [
-  {
-    id: "JS-101",
-    title: "Severe Drainage Overflow & Bio-Hazard on Main Road",
-    category: "Sanitation",
-    status: "In Progress",
-    urgency: "Critical",
-    latitude: 20.2961,
-    longitude: 85.8245,
-    description: "High-risk contaminated wastewater flooding pedestrian walkway.",
-    address: "4th Main Road, Behind Market, PIN 751030",
-    upvotes: 42,
-    slaHours: 12,
-  },
-  {
-    id: "JS-102",
-    title: "High Voltage Cable Sparking Near Public School",
-    category: "Electricity",
-    status: "Reported",
-    urgency: "Critical",
-    latitude: 20.2995,
-    longitude: 85.829,
-    description: "Live hanging wire exposed to monsoon rain causing sparks.",
-    address: "80ft Road, School Junction, PIN 751030",
-    upvotes: 56,
-    slaHours: 6,
-  },
-  {
-    id: "JS-103",
-    title: "Hazardous Deep Pothole Crater at Metro Junction",
-    category: "Roads",
-    status: "In Progress",
-    urgency: "High",
-    latitude: 20.2915,
-    longitude: 85.819,
-    description: "Severe road cave-in causing frequent two-wheeler accidents.",
-    address: "Khandagiri Crossing, PIN 751030",
-    upvotes: 65,
-    slaHours: 24,
-  },
-  {
-    id: "JS-104",
-    title: "Drinking Water Pipeline Burst & Road Flooding",
-    category: "Water",
-    status: "In Progress",
-    urgency: "High",
-    latitude: 20.288,
-    longitude: 85.826,
-    description: "Clean water supply line ruptured, wasting potable municipal water.",
-    address: "Sector 2 Ring Road, PIN 751030",
-    upvotes: 31,
-    slaHours: 24,
-  },
-  {
-    id: "JS-105",
-    title: "Uncollected Community Waste Bin Overflow",
-    category: "Waste",
-    status: "Resolved",
-    urgency: "Moderate",
-    latitude: 20.302,
-    longitude: 85.822,
-    description: "Overflowing dump bin cleared by municipal squad.",
-    address: "Sector 3 Park Lane, PIN 751030",
-    upvotes: 19,
-    slaHours: 48,
-  },
-  {
-    id: "JS-106",
-    title: "Broken Park Bench & Garden Fence Repair",
-    category: "Parks",
-    status: "Reported",
-    urgency: "Low",
-    latitude: 20.294,
-    longitude: 85.832,
-    description: "Minor maintenance requested for park visitors.",
-    address: "Community Green Park, PIN 751030",
-    upvotes: 8,
-    slaHours: 72,
-  },
-];
-
 // Sub-component to handle map clicks
 function MapClickHandler({
   onSelect,
@@ -404,7 +322,7 @@ export default function JanSevaMap({
         };
       });
     }
-    return defaultIssuesData;
+    return [];
   }, [rawIssues]);
 
   // Filter issues by category AND threat level

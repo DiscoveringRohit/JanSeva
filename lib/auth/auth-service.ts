@@ -85,9 +85,9 @@ export const authService = {
         wardNumber: userProfile.ward_number || DEFAULT_USER_FALLBACK.wardNumber,
         pincode: userProfile.pin_code || userProfile.pincode || "751030",
         role: userProfile.role,
-        civicCitizenXP: userProfile.civic_citizen_xp ?? userProfile.karma_xp ?? 10,
-        level: userProfile.level,
-        levelTitle: userProfile.level_title,
+        civicCitizenXP: Number(userProfile.civic_citizen_xp ?? userProfile.civicCitizenXP ?? userProfile.karma_xp ?? 100),
+        level: userProfile.level || (Number(userProfile.civic_citizen_xp ?? 100) >= 500 ? 3 : Number(userProfile.civic_citizen_xp ?? 100) >= 200 ? 2 : 1),
+        levelTitle: userProfile.level_title || (userProfile.role === "officer" ? "Ward Officer" : "Active Citizen"),
         verifiedCitizen: userProfile.verified_citizen,
         aadhaarLinked: userProfile.aadhaar_linked,
         stats: userProfile.stats || {
@@ -95,7 +95,7 @@ export const authService = {
           issuesResolved: 0,
           upvotesGiven: 0,
           verificationVotes: 0,
-          civicImpactScore: 10,
+          civicImpactScore: Math.floor(Number(userProfile.civic_citizen_xp ?? 100) / 10),
         },
         badges: userProfile.badges || [],
       };
@@ -166,9 +166,9 @@ export const authService = {
         wardNumber: userProfile.ward_number || DEFAULT_USER_FALLBACK.wardNumber,
         pincode: userProfile.pin_code || userProfile.pincode || "751030",
         role: userProfile.role,
-        civicCitizenXP: userProfile.civic_citizen_xp ?? userProfile.karma_xp ?? 10,
-        level: userProfile.level,
-        levelTitle: userProfile.level_title,
+        civicCitizenXP: Number(userProfile.civic_citizen_xp ?? userProfile.civicCitizenXP ?? userProfile.karma_xp ?? 100),
+        level: userProfile.level || (Number(userProfile.civic_citizen_xp ?? 100) >= 500 ? 3 : Number(userProfile.civic_citizen_xp ?? 100) >= 200 ? 2 : 1),
+        levelTitle: userProfile.level_title || (userProfile.role === "officer" ? "Ward Officer" : "Active Citizen"),
         verifiedCitizen: userProfile.verified_citizen,
         aadhaarLinked: userProfile.aadhaar_linked,
         stats: userProfile.stats || {
@@ -176,7 +176,7 @@ export const authService = {
           issuesResolved: 0,
           upvotesGiven: 0,
           verificationVotes: 0,
-          civicImpactScore: 10,
+          civicImpactScore: Math.floor(Number(userProfile.civic_citizen_xp ?? 100) / 10),
         },
         badges: userProfile.badges || [],
       };

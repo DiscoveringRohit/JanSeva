@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
@@ -39,7 +39,7 @@ import { cn } from "@/lib/utils";
 
 export default function ExplorePage() {
   const router = useRouter();
-  const { user } = useApp();
+  const { user, issues } = useApp();
 
   // Search & Filter State
   const [searchWard, setSearchWard] = useState("");
@@ -55,53 +55,24 @@ export default function ExplorePage() {
   // Active sub-nav filter
   const [activeNav, setActiveNav] = useState<"hotspots" | "guide" | "rewards" | "about">("hotspots");
 
-  // Curated spotlight hotspots (matching the 4 card grid layout)
-  const spotlightHotspots = [
-    {
-      id: "JS-101",
-      title: "Khandagiri Road (PIN 751030)",
-      tagline: "Road & Surface Infrastructure",
-      rating: "4.8",
-      upvotes: "142 Upvotes",
-      urgency: "High",
-      image: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&auto=format&fit=crop&q=80",
-      status: "In Progress",
-      category: "Roads"
-    },
-    {
-      id: "JS-102",
-      title: "Saheed Nagar, Ward 34",
-      tagline: "Water Drainage & Sewerage",
-      rating: "4.7",
-      upvotes: "98 Upvotes",
-      urgency: "Critical",
-      image: "https://images.unsplash.com/photo-1584467735815-f778f274e296?w=800&auto=format&fit=crop&q=80",
-      status: "In Progress",
-      category: "Water"
-    },
-    {
-      id: "JS-103",
-      title: "Patia Tech Zone, Ward 12",
-      tagline: "Streetlight & Smart Grid",
-      rating: "4.9",
-      upvotes: "210 Upvotes",
-      urgency: "Moderate",
-      image: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800&auto=format&fit=crop&q=80",
-      status: "Resolved",
-      category: "Electricity"
-    },
-    {
-      id: "JS-104",
-      title: "Rasulgarh Square, Ward 22",
-      tagline: "Solid Waste & Sanitation",
-      rating: "4.6",
-      upvotes: "115 Upvotes",
-      urgency: "Critical",
-      image: "https://images.unsplash.com/photo-1611288870280-4a307c87c95e?w=800&auto=format&fit=crop&q=80",
-      status: "Reported",
-      category: "Sanitation"
-    }
-  ];
+  // Dynamic spotlight hotspots from live database issues
+  const spotlightHotspots = useMemo(() => {
+    if (!issues || issues.length === 0) return [];
+    return [...issues]
+      .sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0))
+      .slice(0, 4)
+      .map((issue) => ({
+        id: issue.id,
+        title: issue.title,
+        tagline: `${issue.category} Infrastructure`,
+        rating: (4.5 + Math.min(0.5, (issue.upvotes || 0) * 0.01)).toFixed(1),
+        upvotes: `${issue.upvotes || 0} Upvotes`,
+        urgency: issue.urgency,
+        image: issue.images?.reported || "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=800&auto=format&fit=crop&q=80",
+        status: issue.status,
+        category: issue.category,
+      }));
+  }, [issues]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,13 +182,13 @@ export default function ExplorePage() {
               </div>
               <div className="flex-1">
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Where?
+                  PIN Code / Area
                 </label>
                 <input
                   type="text"
                   value={searchWard}
                   onChange={(e) => setSearchWard(e.target.value)}
-                  placeholder="PIN 751030, Khandagiri, Patia..."
+                  placeholder="e.g. 751024, 751020, Khandagiri..."
                   className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none placeholder:text-slate-400 placeholder:font-normal"
                 />
               </div>

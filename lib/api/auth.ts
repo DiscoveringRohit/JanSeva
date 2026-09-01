@@ -57,19 +57,32 @@ export function normalizeUser(rawUser: any): UserProfile {
   const phone = rawUser.phone || rawUser.phone_number || rawUser.mobile || "";
   const avatar = rawUser.avatar || "";
   const role = rawUser.role || "citizen";
-  
-  const levelTitle = rawUser.levelTitle || rawUser.level_title || (role === "officer" ? "Ward Officer" : "Active Citizen");
-  
   let department = rawUser.department || "";
-  if (!department && role === "officer" && levelTitle.includes(" Officer")) {
-    department = levelTitle.replace(" Officer", "").trim();
-  }
   
   const ward = rawUser.ward_details?.name || rawUser.ward || "ITER College Road";
   const wardNumber = rawUser.ward_details?.ward_number || rawUser.wardNumber || 63;
 
-  const civicCitizenXP = rawUser.civicCitizenXP ?? rawUser.karma_xp ?? 10;
-  const level = rawUser.level ?? 1;
+  const civicCitizenXP = Number(rawUser.civicCitizenXP ?? rawUser.civic_citizen_xp ?? rawUser.karma_xp ?? rawUser.karma ?? 100);
+
+  // Dynamic Level Progression Calculation
+  let calculatedLevel = 1;
+  let calculatedLevelTitle = role === "officer" ? "Ward Officer" : "Active Citizen";
+  if (civicCitizenXP >= 2000) {
+    calculatedLevel = 5;
+    calculatedLevelTitle = role === "officer" ? "Chief Municipal Officer" : "City Guardian";
+  } else if (civicCitizenXP >= 1000) {
+    calculatedLevel = 4;
+    calculatedLevelTitle = role === "officer" ? "Senior Ward Officer" : "Ward Vanguard";
+  } else if (civicCitizenXP >= 500) {
+    calculatedLevel = 3;
+    calculatedLevelTitle = role === "officer" ? "Senior Engineer" : "Civic Champion";
+  } else if (civicCitizenXP >= 200) {
+    calculatedLevel = 2;
+    calculatedLevelTitle = role === "officer" ? "Field Inspector" : "Engaged Resident";
+  }
+
+  const level = Number(rawUser.level || calculatedLevel);
+  const levelTitle = rawUser.levelTitle || rawUser.level_title || calculatedLevelTitle;
 
   const verifiedCitizen = rawUser.verifiedCitizen ?? rawUser.verified_citizen ?? false;
   const aadhaarLinked = rawUser.aadhaarLinked ?? rawUser.aadhaar_linked ?? false;
@@ -79,7 +92,7 @@ export function normalizeUser(rawUser: any): UserProfile {
     issuesResolved: 0,
     upvotesGiven: 0,
     verificationVotes: 0,
-    civicImpactScore: 10,
+    civicImpactScore: Math.floor(civicCitizenXP / 10),
   };
 
   const badges = rawUser.badges || [];
@@ -235,14 +248,17 @@ export const authApi = {
 
   login: async (data: any): Promise<AuthResponse> => {
     try {
-      const identifier = data.identifier || data.username || data.phone || "";
-      const isPhone = /^[0-9+]+$/.test(identifier.trim());
+      const identifier = data.identifier || data.username || data.phone || data.email || "";
+      const isPhone = /^[0-9+]{10,14}$/.test(identifier.trim());
 
-      const payload: any = { password: data.password };
+      const payload: any = {
+        password: data.password,
+        username: identifier,
+        email: identifier,
+        identifier: identifier,
+      };
       if (isPhone) {
         payload.phone = identifier;
-      } else {
-        payload.username = identifier;
       }
 
       const res = await fetchWithTimeout(`${API}/api/auth/login/`, {
@@ -252,29 +268,44 @@ export const authApi = {
       }, 10000);
       const resData = await parseJsonResponse(res);
       if (!res.ok) {
-        return { success: false, message: resData.error || resData.detail || resData.message || "Invalid credentials" };
+        return { success: false, message: resData.message || resData.error || resData.detail || "Invalid credentials" };
       }
       return {
         success: true,
         user: normalizeUser(resData.user),
         token: resData.access,
       };
-    } catch (err) {
-      console.warn("Using mock auth fallback: login");
-      await delay(800);
-      
-      const identifier = data.identifier || "";
-      const isEmail = identifier.includes("@");
-      
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err.message || "Network connection error. Please try again.",
+      };
+    }
+  },
+
+  googleLogin: async (token: string): Promise<AuthResponse> => {
+    try {
+      const res = await fetchWithTimeout(`${API}/api/auth/google/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      }, 15000);
+      const resData = await parseJsonResponse(res);
+      if (!res.ok) {
+        return {
+          success: false,
+          message: resData.error || resData.details || "Google authentication failed.",
+        };
+      }
       return {
         success: true,
-        user: normalizeUser({
-          ...MOCK_AUTH_USER,
-          username: data.identifier && !isEmail ? data.identifier : MOCK_AUTH_USER.username,
-          email: isEmail ? identifier : MOCK_AUTH_USER.email,
-          phone: !isEmail && identifier ? identifier : MOCK_AUTH_USER.phone,
-        }),
-        token: "mock-jwt-token-login",
+        user: normalizeUser(resData.user),
+        token: resData.access,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err.message || "Failed to connect to Google authentication service.",
       };
     }
   },
@@ -354,11 +385,15 @@ export const authApi = {
             body: JSON.stringify(data),
           });
 
+          const resData = await res.json();
           if (res.ok) {
-            userData = await res.json();
+            userData = resData;
+          } else {
+            const errorMsg = resData.username?.[0] || resData.error || resData.detail || "Failed to update profile on backend.";
+            return { success: false, message: errorMsg, errors: resData };
           }
         } catch (backendErr) {
-          console.warn("Backend update failed, updating client session:", backendErr);
+          console.warn("Backend update error:", backendErr);
         }
       }
 
@@ -370,6 +405,7 @@ export const authApi = {
         ...existingUser,
         ...(userData || {}),
         ...data,
+        username: data.username || userData?.username || existingUser.username,
         name: data.full_name || data.name || (data.first_name ? `${data.first_name} ${data.last_name || ''}`.trim() : existingUser.name),
         avatar: data.avatar !== undefined ? data.avatar : existingUser.avatar,
         phone: data.phone_number || data.phone || existingUser.phone,

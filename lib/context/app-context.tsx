@@ -57,14 +57,21 @@ interface AppContextType {
   ) => void;
 
   issues: CivicIssue[];
+  refreshIssues: () => Promise<void>;
   toggleUpvote: (issueId: string) => void;
-  addIssue: (issue: Partial<CivicIssue>) => CivicIssue;
+  addIssue: (issue: Partial<CivicIssue>) => Promise<CivicIssue>;
   deleteIssue: (issueId: string) => void;
+  mergeIssues: (
+    primaryId: string,
+    duplicateId: string,
+    reason?: string
+  ) => Promise<{ success: boolean; message: string }>;
 
   updateIssueStatus: (
     issueId: string,
     status: CivicIssue["status"],
-    note?: string
+    note?: string,
+    photo?: string
   ) => void;
 
   voteVerification: (
@@ -109,6 +116,7 @@ export const MockContextBridge: {
   getIssues: () => CivicIssue[];
   toggleUpvote: (issueId: string) => void;
   addComment: (issueId: string, text: string) => void;
+  mergeIssues?: (primaryId: string, duplicateId: string, reason?: string) => void;
 } = {
   getIssues: () => [],
   toggleUpvote: () => { },
@@ -255,35 +263,24 @@ export function AppProvider({
       process.env.NEXT_PUBLIC_API_URL ||
       "http://127.0.0.1:8000";
 
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem("janseva_token")
-        : null;
-
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
-    };
-
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
     try {
       const res = await fetchWithAuth(
-        `${API_URL}/api/issues/`
+        `${API_URL}/api/issues/`,
+        { cache: "no-store" }
       );
 
       if (res.ok) {
         const data = await res.json();
 
-        setIssues((prevIssues) => {
-          // If the backend returns data, we still want to keep any local mock issues 
-          // (like those submitted during the demo) that haven't been synced to the backend yet.
-          const backendIds = new Set(data.map((i: any) => i.id));
-          const localOnlyIssues = prevIssues.filter(i => !backendIds.has(i.id));
+        if (Array.isArray(data)) {
+          setIssues((prevIssues) => {
+            // Keep any local unpersisted issues along with fresh backend data
+            const backendIds = new Set(data.map((i: any) => i.id));
+            const localOnlyIssues = prevIssues.filter(i => !backendIds.has(i.id));
 
-          return [...data, ...localOnlyIssues];
-        });
+            return [...data, ...localOnlyIssues];
+          });
+        }
       }
     } catch (e) {
       console.error(
@@ -538,15 +535,22 @@ export function AppProvider({
       })
     );
 
-    // Give user Civic Citizen XP optimistically
-    setUser((prev: UserProfile | null) => prev ? ({
-      ...prev,
-      civicCitizenXP: prev.civicCitizenXP + 5,
-      stats: {
-        ...prev.stats,
-        upvotesGiven: prev.stats.upvotesGiven + 1,
-      },
-    }) : prev);
+    const target = issues.find((i: CivicIssue) => i.id === issueId);
+    const willUpvote = !target?.isUpvoted;
+
+    // Give or deduct user Civic Citizen XP optimistically
+    setUser((prev: UserProfile | null) => {
+      if (!prev) return prev;
+      const newXP = willUpvote ? (prev.civicCitizenXP + 5) : Math.max(0, prev.civicCitizenXP - 5);
+      return {
+        ...prev,
+        civicCitizenXP: newXP,
+        stats: {
+          ...prev.stats,
+          upvotesGiven: willUpvote ? ((prev.stats?.upvotesGiven || 0) + 1) : Math.max(0, (prev.stats?.upvotesGiven || 0) - 1),
+        },
+      };
+    });
 
     const API_URL =
       process.env.NEXT_PUBLIC_API_URL ||
@@ -581,17 +585,18 @@ export function AppProvider({
     }
   };
 
-  const addIssue = (
+  const addIssue = async (
     newIssueData: Partial<CivicIssue>
-  ): CivicIssue => {
+  ): Promise<CivicIssue> => {
     if (!user) throw new Error("User not authenticated");
+    const isTempId = !newIssueData.id || newIssueData.id.startsWith("JS-temp-");
     const id = newIssueData.id || `JS-${Math.floor(
       100 + Math.random() * 900
     )}`;
 
     const now = new Date().toISOString();
 
-    const createdIssue: CivicIssue = {
+    let createdIssue: CivicIssue = {
       id,
       title:
         newIssueData.title ||
@@ -608,6 +613,7 @@ export function AppProvider({
         address: `${DEFAULT_LOCATION.ward}, ${DEFAULT_LOCATION.city}, ${DEFAULT_LOCATION.state}`,
         ward: DEFAULT_LOCATION.ward,
         wardNumber: DEFAULT_LOCATION.wardNumber,
+        pincode: (newIssueData as any)?.pin_code || (newIssueData as any)?.pincode || user?.pincode || "751024",
         lat: 20.270 + (Math.random() - 0.5) * 0.01,
         lng: 85.760 + (Math.random() - 0.5) * 0.01,
       },
@@ -653,6 +659,7 @@ export function AppProvider({
       upvotes: 1,
       isUpvoted: true,
       commentsCount: 0,
+      timesReported: 1,
       verificationVotes: {
         yes: 0,
         no: 0,
@@ -663,7 +670,7 @@ export function AppProvider({
 
     setIssues((prev: CivicIssue[]) => [
       createdIssue,
-      ...prev,
+      ...prev.filter(i => i.id !== id),
     ]);
 
     // Give user Civic Citizen XP & update stats optimistically
@@ -673,7 +680,7 @@ export function AppProvider({
       stats: {
         ...prev.stats,
         issuesReported:
-          prev.stats.issuesReported + 1,
+          (prev.stats?.issuesReported || 0) + 1,
       },
     }) : prev);
 
@@ -698,47 +705,71 @@ export function AppProvider({
       process.env.NEXT_PUBLIC_API_URL ||
       "http://127.0.0.1:8000";
 
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem("janseva_token")
-        : null;
+    // Only dispatch network POST if this issue is not already persisted with a backend ID
+    if (isTempId) {
+      try {
+        const res = await fetchWithAuth(`${API_URL}/api/issues/`, {
+          method: "POST",
+          body: JSON.stringify({
+            title: createdIssue.title,
+            description: createdIssue.description,
+            category: createdIssue.category,
+            status: createdIssue.status,
+            urgency: createdIssue.urgency,
+            location: createdIssue.location,
+            pin_code: (newIssueData as any)?.pin_code || (createdIssue.location as any)?.pincode || "",
+            images: createdIssue.images,
+            aiAnalysis: createdIssue.aiAnalysis,
+            assignedDepartment: createdIssue.assignedDepartment,
+          }),
+        });
 
-    fetchWithAuth(`${API_URL}/api/issues/`, {
-      method: "POST",
-      body: JSON.stringify({
-        title: createdIssue.title,
-        description: createdIssue.description,
-        category: createdIssue.category,
-        status: createdIssue.status,
-        urgency: createdIssue.urgency,
-        location: createdIssue.location,
-        images: createdIssue.images,
-        aiAnalysis: createdIssue.aiAnalysis,
-        assignedDepartment: createdIssue.assignedDepartment,
-      }),
-    })
-      .then(async (res) => {
         if (res.ok) {
-          const dbIssue = await res.json();
+          const resData = await res.json();
 
-          // Replace optimistic model with real DB object without duplicates
-          setIssues((prev: CivicIssue[]) => {
-            const filtered = prev.filter(
-              (item: CivicIssue) => item.id !== id && item.id !== dbIssue.id
-            );
-            return [dbIssue, ...filtered];
-          });
+          if (resData.auto_merged && resData.primary_issue) {
+            const primaryDbIssue = resData.primary_issue;
+            const duplicateDbIssue = resData;
 
-          fetchUserProfile();
-          fetchNotifications();
+            setIssues((prev: CivicIssue[]) => {
+              const filtered = prev.filter(
+                (item: CivicIssue) => item.id !== id && item.id !== duplicateDbIssue.id && item.id !== primaryDbIssue.id
+              );
+              return [primaryDbIssue, ...filtered];
+            });
+
+            fetchUserProfile();
+            fetchNotifications();
+            return {
+              ...primaryDbIssue,
+              auto_merged: true,
+              primary_issue_id: primaryDbIssue.id,
+              primary_issue: primaryDbIssue,
+              merge_reason: resData.merge_reason,
+              duplicate_id: duplicateDbIssue.id,
+            };
+          } else {
+            const dbIssue = resData;
+            // Replace optimistic model with real DB object without duplicates
+            setIssues((prev: CivicIssue[]) => {
+              const filtered = prev.filter(
+                (item: CivicIssue) => item.id !== id && item.id !== dbIssue.id
+              );
+              return [dbIssue, ...filtered];
+            });
+
+            fetchUserProfile();
+            fetchNotifications();
+            return dbIssue;
+          }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          console.error("Backend issue save returned non-ok:", res.status, errData);
         }
-      })
-      .catch((e) =>
-        console.error(
-          "Failed to save issue to backend",
-          e
-        )
-      );
+      } catch (e) {
+        console.error("Failed to save issue to backend", e);
+      }
+    }
 
     return createdIssue;
   };
@@ -758,10 +789,107 @@ export function AppProvider({
     }
   };
 
+  const mergeIssues = async (
+    primaryId: string,
+    duplicateId: string,
+    reason?: string
+  ): Promise<{ success: boolean; message: string }> => {
+    if (primaryId === duplicateId) {
+      return { success: false, message: "Cannot merge an issue with itself." };
+    }
+
+    const now = new Date().toISOString();
+    const actorName = user?.name || "Municipal Authority";
+
+    // 1. Optimistic updates in React state
+    setIssues((prev: CivicIssue[]) => {
+      const primary = prev.find((i) => i.id === primaryId);
+      const duplicate = prev.find((i) => i.id === duplicateId);
+
+      if (!primary || !duplicate) return prev;
+
+      const combinedUpvotes = Math.max(primary.upvotes + (duplicate.upvotes || 0), 1);
+      const combinedComments = (primary.commentsCount || 0) + (duplicate.commentsCount || 0);
+
+      const updatedPrimary: CivicIssue = {
+        ...primary,
+        upvotes: combinedUpvotes,
+        commentsCount: combinedComments,
+        timeline: [
+          ...(primary.timeline || []),
+          {
+            stage: "Duplicate Merged",
+            timestamp: now,
+            note: `Merged duplicate report #${duplicate.id} ("${duplicate.title}") reported by ${duplicate.reporter?.name || "citizen"}. Upvotes and community reports consolidated.`,
+            actor: actorName,
+          },
+        ],
+      };
+
+      const updatedDuplicate: CivicIssue = {
+        ...duplicate,
+        status: "Resolved",
+        timeline: [
+          ...(duplicate.timeline || []),
+          {
+            stage: "Merged into Primary",
+            timestamp: now,
+            note: `This report was confirmed as a duplicate and merged into #${primary.id}. Community upvotes and impact consolidated under #${primary.id}.`,
+            actor: actorName,
+          },
+        ],
+      };
+
+      return prev.map((item) => {
+        if (item.id === primaryId) return updatedPrimary;
+        if (item.id === duplicateId) return updatedDuplicate;
+        return item;
+      });
+    });
+
+    // 2. Add notification for feedback
+    const mergeNotif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      title: `Report #${duplicateId} Merged into #${primaryId} 🔗`,
+      message: `Duplicate ticket #${duplicateId} was consolidated into primary ticket #${primaryId}.`,
+      type: "officer",
+      timestamp: now,
+      read: false,
+      issueId: primaryId,
+      actionUrl: `/issues/${primaryId}`,
+    };
+    setNotifications((prev) => [mergeNotif, ...prev]);
+
+    // 3. Persist to backend
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    try {
+      const res = await fetchWithAuth(`${API_URL}/api/issues/merge/`, {
+        method: "POST",
+        body: JSON.stringify({
+          primary_id: primaryId,
+          duplicate_id: duplicateId,
+          reason: reason || "Spatial AI & Visual similarity match confirmed duplicate.",
+        }),
+      });
+
+      if (res.ok) {
+        fetchIssues();
+      }
+    } catch (e) {
+      console.warn("Backend merge sync fallback:", e);
+    }
+
+    return {
+      success: true,
+      message: `Issue #${duplicateId} successfully merged into #${primaryId}.`,
+    };
+  };
+
   const updateIssueStatus = async (
     issueId: string,
     status: CivicIssue["status"],
-    note?: string
+    note?: string,
+    photo?: string
   ) => {
     if (!user) return;
     const now = new Date().toISOString();
@@ -788,12 +916,13 @@ export function AppProvider({
             timeline: updatedTimeline,
             images: {
               ...issue.images,
-              ...(status === "Resolved" &&
-                !issue.images.resolved
+              ...(photo
+                ? { resolved: photo }
+                : (status === "Verified Resolved" || status === "Resolved") && !issue.images?.resolved
                 ? {
-                  resolved:
-                    "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&auto=format&fit=crop&q=80",
-                }
+                    resolved:
+                      "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&auto=format&fit=crop&q=80",
+                  }
                 : {}),
             },
           };
@@ -834,6 +963,7 @@ export function AppProvider({
           body: JSON.stringify({
             status,
             note,
+            resolved_image: photo,
           }),
         }
       );
@@ -875,6 +1005,16 @@ export function AppProvider({
         return issue;
       })
     );
+
+    // Optimistically award +15 XP for citizen verification
+    setUser((prev: UserProfile | null) => prev ? ({
+      ...prev,
+      civicCitizenXP: prev.civicCitizenXP + 15,
+      stats: {
+        ...prev.stats,
+        verificationVotes: (prev.stats?.verificationVotes || 0) + 1,
+      },
+    }) : prev);
 
     const API_URL =
       process.env.NEXT_PUBLIC_API_URL ||
@@ -938,6 +1078,12 @@ export function AppProvider({
       })
     );
 
+    // Award +10 XP for constructive community engagement
+    setUser((prev: UserProfile | null) => prev ? ({
+      ...prev,
+      civicCitizenXP: prev.civicCitizenXP + 10,
+    }) : prev);
+
     const API_URL =
       process.env.NEXT_PUBLIC_API_URL ||
       "http://127.0.0.1:8000";
@@ -963,6 +1109,7 @@ export function AppProvider({
           }
         );
 
+        fetchUserProfile();
         fetchIssues();
       } catch (e) {
         console.error(
@@ -1274,7 +1421,10 @@ export function AppProvider({
     MockContextBridge.getIssues = () => issues;
     MockContextBridge.toggleUpvote = toggleUpvote;
     MockContextBridge.addComment = addComment;
-  }, [issues, toggleUpvote, addComment]);
+    MockContextBridge.mergeIssues = (pId, dId, r) => {
+      mergeIssues(pId, dId, r);
+    };
+  }, [issues, toggleUpvote, addComment, mergeIssues]);
 
   return (
     <AppContext.Provider
@@ -1284,9 +1434,11 @@ export function AppProvider({
         setUser,
         switchRole,
         issues,
+        refreshIssues: fetchIssues,
         toggleUpvote,
         addIssue,
         deleteIssue,
+        mergeIssues,
         updateIssueStatus,
         voteVerification,
         addComment,

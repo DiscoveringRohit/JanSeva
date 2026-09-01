@@ -9,7 +9,7 @@ import {
   Compass,
   Map,
   User,
-  Bot,
+  PlusCircle,
   AlertTriangle,
   Users,
   Calendar,
@@ -38,7 +38,7 @@ export function MobileNav() {
   const citizenNavItems = [
     { label: t("home"), href: "/feed", icon: LayoutGrid },
     { label: t("explore"), href: "/explore", icon: Compass },
-    { label: t("report"), href: "/report", icon: Bot, isCenter: true },
+    { label: t("report"), href: "/report", icon: PlusCircle, isCenter: true },
     { label: t("map"), href: "/map", icon: Map },
     { label: t("profile"), href: "/profile", icon: User },
   ];
