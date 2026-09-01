@@ -325,15 +325,26 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Footer Link */}
-        <div className="pt-1 text-center text-xs text-white/70">
-          <span>Don&apos;t have an account? </span>
-          <Link
-            href="/register"
-            className="text-white font-bold hover:underline ml-1"
-          >
-            Sign Up
-          </Link>
+        {/* Footer Link & Officer Portal Access */}
+        <div className="pt-1 text-center text-xs text-white/70 space-y-2.5">
+          <div>
+            <span>Don&apos;t have an account? </span>
+            <Link
+              href="/register"
+              className="text-white font-bold hover:underline ml-1"
+            >
+              Sign Up
+            </Link>
+          </div>
+
+          <div className="pt-2 border-t border-white/10">
+            <Link
+              href="/officer-portal"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 hover:text-emerald-200 text-xs font-bold transition-all"
+            >
+              <span>🏛️ Municipal Officer / Authority Sign In →</span>
+            </Link>
+          </div>
         </div>
 
       </div>

@@ -33,16 +33,20 @@ import {
   UserCheck
 } from "lucide-react";
 import { formatDate, cn } from "@/lib/utils";
+import { useAutoTranslate } from "@/lib/services/translation-service";
 
 export default function IssueDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const { voteVerification, user, setUser, deleteIssue, issues, mergeIssues } = useApp();
+  const { voteVerification, user, setUser, deleteIssue, issues, mergeIssues, language } = useApp();
 
   const [issue, setIssue] = useState<CivicIssue | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
+
+  const { translated: translatedTitle } = useAutoTranslate(issue?.title || "", language);
+  const { translated: translatedDesc } = useAutoTranslate(issue?.description || "", language);
   const [candidateDuplicateId, setCandidateDuplicateId] = useState("");
   const [mergeReason, setMergeReason] = useState("");
   const [mergeLoading, setMergeLoading] = useState(false);
@@ -362,8 +366,13 @@ export default function IssueDetailPage() {
             )}
           </div>
 
-          <h1 className="font-headline font-black text-2xl sm:text-3xl text-on-surface leading-tight">
-            {issue.title}
+          <h1 className="font-headline font-black text-2xl sm:text-3xl text-on-surface leading-tight flex items-center justify-between gap-3">
+            <span>{translatedTitle || issue.title}</span>
+            {language !== "en" && translatedTitle !== issue.title && (
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shrink-0">
+                🌐 Translated
+              </span>
+            )}
           </h1>
 
           <div className="flex flex-wrap items-center gap-4 text-xs text-on-surface-variant">
@@ -451,7 +460,7 @@ export default function IssueDetailPage() {
             Issue Overview
           </h3>
           <p className="text-sm sm:text-base text-on-surface leading-relaxed">
-            {issue.description}
+            {translatedDesc || issue.description}
           </p>
         </div>
 
