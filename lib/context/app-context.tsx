@@ -962,11 +962,24 @@ export function AppProvider({
       process.env.NEXT_PUBLIC_API_URL ||
       "http://127.0.0.1:8000";
 
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("janseva_token")
+        : null;
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     try {
-      await fetchWithAuth(
-        `${API_URL}/api/issues/${issueId}/status/`,
+      const res = await fetch(
+        `${API_URL}/api/issues/${encodeURIComponent(issueId)}/status/`,
         {
           method: "PATCH",
+          headers,
           body: JSON.stringify({
             status,
             note,
@@ -975,7 +988,11 @@ export function AppProvider({
         }
       );
 
-      fetchIssues();
+      if (res.ok) {
+        fetchIssues();
+      } else {
+        console.warn(`Backend status update returned ${res.status}`);
+      }
     } catch (e) {
       console.error(
         "Failed to update status on backend",
