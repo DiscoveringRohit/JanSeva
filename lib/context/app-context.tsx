@@ -898,7 +898,7 @@ export function AppProvider({
     note?: string,
     photo?: string
   ) => {
-    if (!user) return;
+    const actorName = user?.name || "Verified Resident";
     const now = new Date().toISOString();
 
     setIssues((prev: CivicIssue[]) =>
@@ -911,8 +911,8 @@ export function AppProvider({
               timestamp: now,
               note:
                 note ||
-                `Status updated to ${status} by ${user.name}.`,
-              actor: user.name,
+                `Status updated to ${status} by ${actorName}.`,
+              actor: actorName,
             },
           ];
 
@@ -945,7 +945,7 @@ export function AppProvider({
       title: `Ticket #${issueId} Status: ${status}`,
       message:
         note ||
-        `Officer ${user.name} transitioned ticket to ${status}.`,
+        `${actorName} transitioned ticket to ${status}.`,
       type: "officer",
       timestamp: now,
       read: false,
