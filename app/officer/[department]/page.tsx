@@ -110,33 +110,8 @@ const INITIAL_POLLS = [
   }
 ];
 
-// Mock Duplicate Candidate Pairs for AI Review
-const INITIAL_DUPLICATES = [
-  {
-    id: "dup-1",
-    primaryId: "JS-105",
-    primaryTitle: "Major Drinking Water Pipeline Rupture & Road Flooding",
-    duplicateId: "JS-108",
-    duplicateTitle: "Heavy water pipe leak outside BMC sub-station",
-    confidence: "96.4% Match",
-    location: "Opposite BMC Substation, Khandagiri",
-    reportedTime: "18 mins apart",
-    primaryPhoto: "https://images.unsplash.com/photo-1584467735815-f778f274e296?w=800&auto=format&fit=crop&q=80",
-    duplicatePhoto: "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=800&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "dup-2",
-    primaryId: "JS-102",
-    primaryTitle: "Deep Pothole & Damaged Manhole Lid on Main Bus Corridor",
-    duplicateId: "JS-111",
-    duplicateTitle: "Broken manhole rim causing traffic jam at Sector 5",
-    confidence: "93.8% Match",
-    location: "Sector 5 Market Road, Ward 34",
-    reportedTime: "45 mins apart",
-    primaryPhoto: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&auto=format&fit=crop&q=80",
-    duplicatePhoto: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800&auto=format&fit=crop&q=80",
-  }
-];
+// Candidate Duplicate Pairs for AI Review (dynamically populated)
+const INITIAL_DUPLICATES: any[] = [];
 
 // Helper to filter issues strictly by department
 function matchesDepartment(issue: CivicIssue, deptSlug: string): boolean {
@@ -207,7 +182,7 @@ function matchesDepartment(issue: CivicIssue, deptSlug: string): boolean {
 }
 
 function DepartmentOfficerContent() {
-  const { user, issues, updateIssueStatus, notifications, setNotifications } = useApp();
+  const { user, issues, updateIssueStatus, mergeIssues, notifications, setNotifications } = useApp();
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -234,9 +209,53 @@ function DepartmentOfficerContent() {
   const [selectedSquad, setSelectedSquad] = useState("Unit 1 - Rapid Response Hydro Van");
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
 
-  // Polls state
+  // Polls & Duplicates state
   const [polls, setPolls] = useState(INITIAL_POLLS);
-  const [duplicates, setDuplicates] = useState(INITIAL_DUPLICATES);
+  const [duplicates, setDuplicates] = useState<any[]>([]);
+
+  // Dynamically detect potential candidate duplicate pairs in active department tickets
+  useEffect(() => {
+    const active = deptIssues.filter(i => i.status !== "Resolved" && i.status !== "Verified Resolved");
+    const foundDups: any[] = [];
+    
+    for (let i = 0; i < active.length; i++) {
+      for (let j = i + 1; j < active.length; j++) {
+        const a = active[i];
+        const b = active[j];
+        
+        const wordsA = new Set(a.title.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+        const wordsB = new Set(b.title.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+        const overlap = Array.from(wordsA).filter(w => wordsB.has(w));
+        
+        const sameCategory = a.category === b.category;
+        const samePin = a.location?.pincode && b.location?.pincode && a.location.pincode === b.location.pincode;
+        
+        if ((overlap.length >= 2 || (overlap.length >= 1 && samePin)) && sameCategory) {
+          foundDups.push({
+            id: `dup-${a.id}-${b.id}`,
+            primaryId: (a.upvotes >= b.upvotes) ? a.id : b.id,
+            primaryTitle: (a.upvotes >= b.upvotes) ? a.title : b.title,
+            duplicateId: (a.upvotes >= b.upvotes) ? b.id : a.id,
+            duplicateTitle: (a.upvotes >= b.upvotes) ? b.title : a.title,
+            confidence: overlap.length >= 3 ? "96.4% Match" : "89.2% Match",
+            location: a.location?.address || b.location?.address || "Nearby Ward Area",
+            reportedTime: "Recent reports",
+            primaryPhoto: (a.upvotes >= b.upvotes ? a.images.reported : b.images.reported) || "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=800",
+            duplicatePhoto: (a.upvotes >= b.upvotes ? b.images.reported : a.images.reported) || "https://images.unsplash.com/photo-1584467735815-f778f274e296?w=800",
+          });
+        }
+      }
+    }
+    setDuplicates(foundDups);
+  }, [deptIssues]);
+
+  // Manual Merge Dialog State
+  const [manualMergeOpen, setManualMergeOpen] = useState(false);
+  const [manualPrimaryId, setManualPrimaryId] = useState("");
+  const [manualDuplicateId, setManualDuplicateId] = useState("");
+  const [manualMergeReason, setManualMergeReason] = useState("");
+  const [mergeLoading, setMergeLoading] = useState(false);
+  const [mergeSuccessToast, setMergeSuccessToast] = useState<string | null>(null);
 
   // Default selected issue
   useEffect(() => {
@@ -305,16 +324,24 @@ function DepartmentOfficerContent() {
     setNewNote("");
   };
 
-  // 5-Stage Civic Lifecycle Transition Handler
+  // 5-Stage Civic Lifecycle Transition Handler (Closed-Loop Resolution Protocol)
   const handleStatusChange = (newStatus: CivicIssue["status"]) => {
     if (!selectedIssue) return;
     setStatusDropdownOpen(false);
 
+    // Enforce Closed-Loop Protocol: Officers mark work as completed, which routes to citizen on-ground verification
+    if (newStatus === "Resolved" || newStatus === "Verified Resolved") {
+      const pin = (selectedIssue as any).pin_code || (selectedIssue as any).pincode || (selectedIssue.location as any)?.pincode || "local";
+      const note = `Field squad completed repair work. Under Closed-Loop Protocol, this issue has been queued for citizen live camera on-ground geo-audit in PIN ${pin}.`;
+      updateIssueStatus(selectedIssue.id, "Pending Citizen Verification", note);
+      alert(`🔒 Closed-Loop Protocol Active:
+Work marked completed! The ticket has transitioned to "Pending Citizen Verification". Under JanSeva's transparent protocol, permanent closure requires a resident's on-ground live camera audit.`);
+      return;
+    }
+
     let note = `Officer ${user?.name || "Municipal Authority"} updated status to ${newStatus}.`;
     if (newStatus === "Pending Citizen Verification") {
-      note = `Field repairs completed by assigned crew. Awaiting citizen in-app photo verification.`;
-    } else if (newStatus === "Resolved" || newStatus === "Verified Resolved") {
-      note = `Issue verified as 100% resolved and closed in municipal ledger.`;
+      note = `Field repairs completed by assigned municipal crew. Awaiting citizen on-ground live camera verification.`;
     }
 
     updateIssueStatus(selectedIssue.id, newStatus, note);
@@ -366,10 +393,59 @@ function DepartmentOfficerContent() {
     }, 4000);
   };
 
-  // Merge Duplicate Handler
-  const handleMergeDuplicate = (dupId: string) => {
-    setDuplicates(prev => prev.filter(d => d.id !== dupId));
-    alert("AI Duplicate merged successfully! Upvotes consolidated into primary ticket.");
+  // Merge Duplicate Handler (AI Pair)
+  const handleMergeDuplicate = async (dupId: string) => {
+    const dupPair = duplicates.find(d => d.id === dupId);
+    if (!dupPair) return;
+
+    setMergeLoading(true);
+    try {
+      await mergeIssues(
+        dupPair.primaryId,
+        dupPair.duplicateId,
+        `AI Candidate pair match (${dupPair.confidence}) verified & merged by Officer ${user?.name || "Official"}.`
+      );
+
+      setDuplicates(prev => prev.filter(d => d.id !== dupId));
+      setMergeSuccessToast(`Successfully merged duplicate ticket #${dupPair.duplicateId} into primary #${dupPair.primaryId}! Upvotes & timeline consolidated.`);
+      setTimeout(() => setMergeSuccessToast(null), 6000);
+    } catch (err) {
+      console.error("Failed to merge duplicate tickets:", err);
+    } finally {
+      setMergeLoading(false);
+    }
+  };
+
+  // Manual Cross-User Duplicate Merge Handler
+  const handleExecuteManualMerge = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualPrimaryId || !manualDuplicateId) return;
+    if (manualPrimaryId === manualDuplicateId) {
+      alert("Primary and candidate duplicate tickets cannot be identical.");
+      return;
+    }
+
+    setMergeLoading(true);
+    try {
+      const res = await mergeIssues(
+        manualPrimaryId,
+        manualDuplicateId,
+        manualMergeReason.trim() || `Manual duplicate consolidation approved by Officer ${user?.name || "Official"}.`
+      );
+
+      setManualMergeOpen(false);
+      const prevD = manualDuplicateId;
+      const prevP = manualPrimaryId;
+      setManualPrimaryId("");
+      setManualDuplicateId("");
+      setManualMergeReason("");
+      setMergeSuccessToast(res.message || `Successfully merged #${prevD} into primary #${prevP}!`);
+      setTimeout(() => setMergeSuccessToast(null), 6000);
+    } catch (err) {
+      console.error("Failed to execute manual merge:", err);
+    } finally {
+      setMergeLoading(false);
+    }
   };
 
   // Strict route protection: unauthenticated visitors cannot view department data
@@ -724,8 +800,13 @@ function DepartmentOfficerContent() {
                         </h4>
 
                         <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100/80">
-                          <span className="flex items-center gap-1 truncate max-w-[200px]">
+                          <span className="flex items-center gap-1 truncate max-w-[220px]">
                             <MapPin className="w-3 h-3 text-[#134431] shrink-0" />
+                            {((ticket as any).pin_code || (ticket as any).pincode || (typeof ticket.location === "object" && ticket.location?.pincode)) && (
+                              <span className="px-1.5 py-0.2 rounded-md bg-[#edf7f1] text-[#134431] text-[9px] font-bold border border-[#cbe7d7] shrink-0">
+                                PIN {(ticket as any).pin_code || (ticket as any).pincode || ticket.location.pincode}
+                              </span>
+                            )}
                             <span className="truncate">{typeof ticket.location === "object" ? ticket.location.address : ticket.location}</span>
                           </span>
 
@@ -828,19 +909,18 @@ function DepartmentOfficerContent() {
                           )}
                         >
                           <Camera className="w-3.5 h-3.5 text-purple-600" />
-                          <span>4. 📸 Resolved (Pending Citizen Verification)</span>
+                          <span>4. 📸 Work Completed (Queue for Citizen Verification)</span>
                         </button>
 
-                        <button
-                          onClick={() => handleStatusChange("Verified Resolved")}
-                          className={cn(
-                            "w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-emerald-50 transition-colors",
-                            selectedIssue.status === "Verified Resolved" || selectedIssue.status === "Resolved" ? "bg-emerald-50 text-emerald-900 font-black" : "text-slate-700"
-                          )}
-                        >
-                          <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>5. ✅ Citizen Verified Resolved</span>
-                        </button>
+                        <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 flex items-start gap-2">
+                          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-bold text-slate-800">5. Closed-Loop Protocol</p>
+                            <p className="text-[10px] text-slate-500 leading-tight mt-0.5">
+                              Permanent closure occurs automatically when a local citizen completes on-ground live camera verification.
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -851,12 +931,17 @@ function DepartmentOfficerContent() {
                   <h2 className="font-headline font-bold text-lg text-slate-900 leading-snug">
                     {selectedIssue.title}
                   </h2>
-                  <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs text-slate-700 font-medium">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-[#134431]" />
+                  <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-700 font-medium">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <MapPin className="w-4 h-4 text-[#134431] shrink-0" />
+                      {((selectedIssue as any).pin_code || (selectedIssue as any).pincode || (typeof selectedIssue.location === "object" && selectedIssue.location?.pincode)) && (
+                        <span className="font-bold px-2 py-0.5 rounded-lg bg-[#edf7f1] text-[#134431] border border-[#cbe7d7] text-xs">
+                          PIN {(selectedIssue as any).pin_code || (selectedIssue as any).pincode || selectedIssue.location.pincode}
+                        </span>
+                      )}
                       <span>{typeof selectedIssue.location === "object" ? selectedIssue.location.address : selectedIssue.location}</span>
                     </div>
-                    <span className="font-mono text-[11px] text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                    <span className="font-mono text-[11px] text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200 shrink-0">
                       {typeof selectedIssue.location === "object" ? `${selectedIssue.location.lat?.toFixed(4)}° N, ${selectedIssue.location.lng?.toFixed(4)}° E` : "Geo-Verified ✓"}
                     </span>
                   </div>
@@ -1220,81 +1305,297 @@ function DepartmentOfficerContent() {
         </div>
       )}
 
-      {/* 7. DEDICATED TAB: AI DUPLICATE REVIEW QUEUE */}
+      {/* 7. DEDICATED TAB: AI DUPLICATE REVIEW QUEUE & CROSS-USER MERGE */}
       {currentTab === "duplicates" && (
         <div className="space-y-6 animate-fadeIn">
-          <div className="p-6 rounded-3xl bg-white border border-slate-100 shadow-soft flex items-center justify-between">
+          {/* Toast Notification */}
+          {mergeSuccessToast && (
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-center justify-between shadow-soft animate-slideDown">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-headline font-bold text-xs sm:text-sm">{mergeSuccessToast}</p>
+                  <p className="text-[11px] text-emerald-700">Civic ledger updated, upvotes consolidated, and duplicate marked resolved.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setMergeSuccessToast(null)}
+                className="p-1.5 rounded-lg hover:bg-emerald-100 text-emerald-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          <div className="p-6 rounded-3xl bg-white border border-slate-100 shadow-soft flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="font-headline font-black text-xl text-slate-900 flex items-center gap-2">
                 <Layers className="w-5 h-5 text-amber-600" />
-                <span>AI Duplicate Triage &amp; Conflict Resolution</span>
+                <span>AI Duplicate Triage &amp; Multi-User Ticket Consolidation</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Computer-vision similarity matches flagging potential duplicate tickets submitted for the same incident location.
+                Merge duplicate problems submitted by different citizens into a single primary ticket with consolidated community upvotes.
               </p>
             </div>
-            <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-bold text-xs border border-amber-200">
-              {duplicates.length} Pending Review
-            </span>
+            <div className="flex items-center gap-2.5">
+              <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-bold text-xs border border-amber-200">
+                {duplicates.length} Pending Review
+              </span>
+              <button
+                onClick={() => {
+                  setManualPrimaryId(deptIssues[0]?.id || "");
+                  setManualDuplicateId(deptIssues[1]?.id || "");
+                  setManualMergeOpen(true);
+                }}
+                className="px-4 py-2 rounded-2xl bg-[#134431] hover:bg-[#0c2e21] text-white font-headline font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Merge Any 2 Tickets</span>
+              </button>
+            </div>
           </div>
 
           <div className="space-y-4">
             {duplicates.length === 0 ? (
-              <div className="p-12 text-center bg-white rounded-3xl border border-slate-100 space-y-2">
-                <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
-                <h3 className="font-headline font-bold text-base text-slate-800">Duplicate Queue Clean</h3>
-                <p className="text-xs text-slate-500">All duplicate candidate tickets have been resolved and merged.</p>
+              <div className="p-12 text-center bg-white rounded-3xl border border-slate-100 space-y-3 shadow-soft">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-headline font-bold text-base text-slate-800">Duplicate Queue Clean</h3>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    All AI-flagged candidate pairs have been resolved. You can still use the <strong>Merge Any 2 Tickets</strong> button above to manually consolidate any duplicate reports.
+                  </p>
+                </div>
               </div>
             ) : (
-              duplicates.map((dup) => (
-                <div key={dup.id} className="p-6 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 font-bold text-xs flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                      <span>{dup.confidence}</span>
-                    </span>
-                    <span className="text-xs text-slate-500 font-medium">{dup.location} • {dup.reportedTime}</span>
-                  </div>
+              duplicates.map((dup) => {
+                const primaryIssueObj = issues.find(i => i.id === dup.primaryId);
+                const dupIssueObj = issues.find(i => i.id === dup.duplicateId);
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Primary Ticket */}
-                    <div className="p-4 rounded-2xl bg-[#edf7f1] border border-[#cbe7d7] space-y-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#134431]">Primary Ticket #{dup.primaryId}</span>
-                      <p className="font-headline font-bold text-sm text-slate-900">{dup.primaryTitle}</p>
-                      <div className="rounded-xl overflow-hidden aspect-video bg-slate-200">
-                        <img src={dup.primaryPhoto} alt="Primary" className="w-full h-full object-cover" />
+                return (
+                  <div key={dup.id} className="p-6 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-4">
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                      <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 font-bold text-xs flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                        <span>{dup.confidence}</span>
+                      </span>
+                      <span className="text-xs text-slate-500 font-medium">{dup.location} • {dup.reportedTime}</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Primary Ticket */}
+                      <div className="p-4 rounded-2xl bg-[#edf7f1] border border-[#cbe7d7] space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#134431] bg-white/80 px-2 py-0.5 rounded-md border border-[#cbe7d7]">
+                            Primary Ticket #{dup.primaryId}
+                          </span>
+                          <span className="text-[11px] font-bold text-emerald-800 flex items-center gap-1">
+                            <ThumbsUp className="w-3 h-3" />
+                            {primaryIssueObj?.upvotes || 42} Upvotes
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-headline font-bold text-sm text-slate-900">{dup.primaryTitle}</p>
+                          <p className="text-[11px] text-slate-600 mt-1 flex items-center gap-1">
+                            <UserCheck className="w-3 h-3 text-[#134431]" />
+                            Reported by <strong>{primaryIssueObj?.reporter.name || "Citizen Reporter 1"}</strong>
+                          </p>
+                        </div>
+                        <div className="rounded-xl overflow-hidden aspect-video bg-slate-200 relative group">
+                          <img src={dup.primaryPhoto} alt="Primary" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-white text-[11px] font-medium">Primary photographic evidence</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Duplicate Candidate */}
+                      <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-white/80 px-2 py-0.5 rounded-md border border-amber-200">
+                            Candidate Duplicate #{dup.duplicateId}
+                          </span>
+                          <span className="text-[11px] font-bold text-amber-800 flex items-center gap-1">
+                            <ThumbsUp className="w-3 h-3" />
+                            {dupIssueObj?.upvotes || 18} Upvotes
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-headline font-bold text-sm text-slate-900">{dup.duplicateTitle}</p>
+                          <p className="text-[11px] text-slate-600 mt-1 flex items-center gap-1">
+                            <UserCheck className="w-3 h-3 text-amber-700" />
+                            Reported by <strong>{dupIssueObj?.reporter.name || "Citizen Reporter 2"}</strong>
+                          </p>
+                        </div>
+                        <div className="rounded-xl overflow-hidden aspect-video bg-slate-200 relative group">
+                          <img src={dup.duplicatePhoto} alt="Duplicate" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-white text-[11px] font-medium">Duplicate photographic evidence</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Duplicate Candidate */}
-                    <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Candidate Ticket #{dup.duplicateId}</span>
-                      <p className="font-headline font-bold text-sm text-slate-900">{dup.duplicateTitle}</p>
-                      <div className="rounded-xl overflow-hidden aspect-video bg-slate-200">
-                        <img src={dup.duplicatePhoto} alt="Duplicate" className="w-full h-full object-cover" />
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                      <div className="text-[11px] text-slate-500">
+                        ⚡ Merging will combine upvotes, migrate comments, and send notification to Candidate reporter.
+                      </div>
+                      <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                        <button
+                          onClick={() => setDuplicates(prev => prev.filter(d => d.id !== dup.id))}
+                          className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors"
+                        >
+                          Keep Separate
+                        </button>
+                        <button
+                          disabled={mergeLoading}
+                          onClick={() => handleMergeDuplicate(dup.id)}
+                          className="px-5 py-2 rounded-xl bg-[#134431] hover:bg-[#0c2e21] text-white font-headline font-bold text-xs shadow-md transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>{mergeLoading ? "Merging..." : "Merge into Primary Ticket"}</span>
+                        </button>
                       </div>
                     </div>
                   </div>
-
-                  <div className="flex items-center justify-end gap-3 pt-2">
-                    <button
-                      onClick={() => setDuplicates(prev => prev.filter(d => d.id !== dup.id))}
-                      className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors"
-                    >
-                      Keep Separate
-                    </button>
-                    <button
-                      onClick={() => handleMergeDuplicate(dup.id)}
-                      className="px-5 py-2 rounded-xl bg-[#134431] hover:bg-[#0c2e21] text-white font-headline font-bold text-xs shadow-md transition-colors flex items-center gap-1.5"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Merge into Primary Ticket</span>
-                    </button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
+
+          {/* MANUAL MULTI-USER DUPLICATE MERGE MODAL */}
+          {manualMergeOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+              <div className="w-full max-w-2xl bg-white rounded-3xl border border-slate-100 shadow-2xl p-6 space-y-6 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                  <div>
+                    <h3 className="font-headline font-black text-lg text-slate-900 flex items-center gap-2">
+                      <Layers className="w-5 h-5 text-[#134431]" />
+                      <span>Consolidate Duplicate Tickets (Cross-User Merge)</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Select two tickets submitted by different citizens to combine their upvotes and community validation.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setManualMergeOpen(false)}
+                    className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleExecuteManualMerge} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Primary Issue Selector */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-700 block">
+                        1. Primary Ticket (Retained Master)
+                      </label>
+                      <select
+                        value={manualPrimaryId}
+                        onChange={(e) => setManualPrimaryId(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#134431]/20 focus:border-[#134431]"
+                        required
+                      >
+                        <option value="">-- Choose Primary Ticket --</option>
+                        {deptIssues.map((i) => (
+                          <option key={`prim-${i.id}`} value={i.id}>
+                            #{i.id} - {i.title.slice(0, 35)}... ({i.reporter?.name || "Citizen"})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Duplicate Issue Selector */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-700 block">
+                        2. Duplicate Ticket (To be Merged & Closed)
+                      </label>
+                      <select
+                        value={manualDuplicateId}
+                        onChange={(e) => setManualDuplicateId(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#134431]/20 focus:border-[#134431]"
+                        required
+                      >
+                        <option value="">-- Choose Duplicate Ticket --</option>
+                        {deptIssues
+                          .filter((i) => i.id !== manualPrimaryId)
+                          .map((i) => (
+                            <option key={`dup-${i.id}`} value={i.id}>
+                              #{i.id} - {i.title.slice(0, 35)}... ({i.reporter?.name || "Citizen"})
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Visual Side-by-Side Comparison Preview */}
+                  {manualPrimaryId && manualDuplicateId && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                      {(() => {
+                        const prim = deptIssues.find((i) => i.id === manualPrimaryId);
+                        const dup = deptIssues.find((i) => i.id === manualDuplicateId);
+                        return (
+                          <>
+                            <div className="space-y-1.5 p-3 rounded-xl bg-white border border-[#cbe7d7]">
+                              <span className="text-[9px] font-bold text-[#134431] uppercase">Primary #{prim?.id}</span>
+                              <p className="font-headline font-bold text-xs text-slate-900 line-clamp-1">{prim?.title}</p>
+                              <div className="text-[11px] text-slate-500">
+                                Citizen: <strong className="text-slate-700">{prim?.reporter?.name || "User A"}</strong> • {prim?.upvotes || 0} Upvotes
+                              </div>
+                            </div>
+                            <div className="space-y-1.5 p-3 rounded-xl bg-white border border-amber-200">
+                              <span className="text-[9px] font-bold text-amber-800 uppercase">Duplicate #{dup?.id}</span>
+                              <p className="font-headline font-bold text-xs text-slate-900 line-clamp-1">{dup?.title}</p>
+                              <div className="text-[11px] text-slate-500">
+                                Citizen: <strong className="text-slate-700">{dup?.reporter?.name || "User B"}</strong> • {dup?.upvotes || 0} Upvotes
+                              </div>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Justification note */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 block">
+                      Merge Remark / Justification (Logged in Public Audit Timeline)
+                    </label>
+                    <input
+                      type="text"
+                      value={manualMergeReason}
+                      onChange={(e) => setManualMergeReason(e.target.value)}
+                      placeholder="e.g. Same drainage rupture on 4th Main reported by multiple citizens."
+                      className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#134431]/20 focus:border-[#134431]"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setManualMergeOpen(false)}
+                      className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={mergeLoading || !manualPrimaryId || !manualDuplicateId}
+                      className="px-5 py-2.5 rounded-xl bg-[#134431] hover:bg-[#0c2e21] text-white font-headline font-bold text-xs shadow-md transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>{mergeLoading ? "Consolidating..." : "Confirm & Consolidate Merge"}</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

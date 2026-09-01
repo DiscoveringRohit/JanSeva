@@ -10,7 +10,7 @@ import {
   Compass,
   Map,
   Building2,
-  Bot,
+  PlusCircle,
   Bell,
   Settings,
   LogOut,
@@ -83,9 +83,9 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
   const citizenNavItems: NavItem[] = [
     { label: t("home"), href: "/feed", icon: LayoutGrid },
     { label: t("explore"), href: "/explore", icon: Compass },
+    { label: t("report"), href: "/report", icon: PlusCircle, highlight: true },
     { label: t("map"), href: "/map", icon: Map },
     { label: t("ward"), href: "/ward", icon: Building2 },
-    { label: t("assistant"), href: "/assistant", icon: Bot, highlight: true },
     {
       label: t("notifications"),
       href: "/notifications",

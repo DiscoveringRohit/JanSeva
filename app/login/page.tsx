@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
-import { authApi } from "@/lib/api/auth";
+import { authApi, normalizeUser } from "@/lib/api/auth";
 import { GoogleLogin } from "@react-oauth/google";
 import {
   Sun,
@@ -38,6 +38,12 @@ export default function LoginPage() {
     setError(null);
     try {
       const token = credentialResponse.credential;
+      if (!token) {
+        setError("Google did not return an authorization credential.");
+        setIsLoading(false);
+        return;
+      }
+
       const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
       const res = await fetch(`${API}/api/auth/google/`, {
         method: "POST",
@@ -46,19 +52,29 @@ export default function LoginPage() {
         },
         body: JSON.stringify({ token })
       });
-      if (res.ok) {
-        const data = await res.json();
+
+      const data = await res.json();
+
+      if (res.ok && data) {
         if (typeof window !== "undefined") {
-          localStorage.setItem("janseva_token", data.access);
+          if (data.access) localStorage.setItem("janseva_token", data.access);
+          if (data.user) {
+            const normalized = normalizeUser(data.user);
+            localStorage.setItem("janseva_user", JSON.stringify(normalized));
+            setUser(normalized);
+            switchRole(normalized.role || "citizen");
+          }
         }
-        setSuccessMessage("Google sign in successful!");
-        window.location.href = "/feed";
+        setSuccessMessage("Google Sign-In successful! Redirecting...");
+        setTimeout(() => {
+          router.push("/feed");
+        }, 600);
       } else {
-        const err = await res.json();
-        setError(err.error || "Google authentication failed.");
+        setError(data.error || data.details || "Google authentication failed.");
       }
-    } catch (e) {
-      setError("An unexpected error occurred.");
+    } catch (e: any) {
+      console.error("Google sign in error:", e);
+      setError(e.message || "An unexpected error occurred during Google Sign In.");
     } finally {
       setIsLoading(false);
     }

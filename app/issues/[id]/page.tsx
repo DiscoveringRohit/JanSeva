@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
-import { getIssueById, upvoteIssue, addComment as addCommentApi } from "@/lib/api/issues";
+import { getIssueById, upvoteIssue, addComment as addCommentApi, getComments, deleteComment as deleteCommentApi } from "@/lib/api/issues";
 import { CivicIssue } from "@/lib/data/mock-data";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/status-badge";
 import {
@@ -25,7 +25,12 @@ import {
   Flame,
   MoreVertical,
   Edit,
-  Trash2
+  Trash2,
+  Layers,
+  Plus,
+  Camera,
+  X,
+  UserCheck
 } from "lucide-react";
 import { formatDate, cn } from "@/lib/utils";
 
@@ -33,10 +38,23 @@ export default function IssueDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const { voteVerification, user, deleteIssue, issues } = useApp();
+  const { voteVerification, user, setUser, deleteIssue, issues, mergeIssues } = useApp();
 
   const [issue, setIssue] = useState<CivicIssue | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [mergeModalOpen, setMergeModalOpen] = useState(false);
+  const [candidateDuplicateId, setCandidateDuplicateId] = useState("");
+  const [mergeReason, setMergeReason] = useState("");
+  const [mergeLoading, setMergeLoading] = useState(false);
+  const [mergeToast, setMergeToast] = useState<string | null>(null);
+  const [comments, setComments] = useState<any[]>([]);
+  const [isPostingComment, setIsPostingComment] = useState(false);
+
+  const fetchComments = React.useCallback(async () => {
+    if (!id) return;
+    const res = await getComments(id);
+    setComments(res || []);
+  }, [id]);
 
   React.useEffect(() => {
     // 1. Check live issues stream from AppContext first
@@ -59,12 +77,16 @@ export default function IssueDetailPage() {
     };
 
     fetchIssue();
+    fetchComments();
 
     // Poll for real-time cross-tab sync without WebSockets
-    const pollInterval = setInterval(fetchIssue, 3000);
+    const pollInterval = setInterval(() => {
+      fetchIssue();
+      fetchComments();
+    }, 4000);
 
     return () => clearInterval(pollInterval);
-  }, [id, issues]);
+  }, [id, issues, fetchComments]);
 
   const [commentText, setCommentText] = useState("");
   const [copied, setCopied] = useState(false);
@@ -84,64 +106,76 @@ export default function IssueDetailPage() {
     }
   }, [issue]);
 
-  // Sample discussion comments
-  const [comments, setComments] = useState([
-    {
-      id: "c1",
-      author: "Pooja Hegde",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80",
-      role: "Ward 42 Resident",
-      text: "Thanks for reporting this! The smell was terrible yesterday evening. Glad to see the BMC Water team on site now.",
-      timestamp: "2026-08-15T10:30:00Z",
-      likes: 14,
-    },
-    {
-      id: "c2",
-      author: "Er. Ramesh Kulkarni",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
-      role: "Senior Sanitary Inspector (Officer)",
-      isOfficer: true,
-      text: "Our suction tanker and desilting crew are currently cleaning the conduit blockage. Main pipeline will be sealed within the next 2 hours.",
-      timestamp: "2026-08-15T11:20:00Z",
-      likes: 38,
-    },
-  ]);
-
   const handleToggleUpvote = async () => {
     if (!issue) return;
     const wasUpvoted = localIsUpvoted;
     setLocalIsUpvoted(!wasUpvoted);
-    setLocalUpvotes(prev => wasUpvoted ? prev - 1 : prev + 1);
+    setLocalUpvotes(prev => wasUpvoted ? Math.max(0, prev - 1) : prev + 1);
 
     await upvoteIssue(issue.id);
   };
 
   const handlePostComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (commentText.trim() && issue) {
-      const newC = {
-        id: `c-${Date.now()}`,
-        author: user?.name || "Guest Citizen",
-        avatar: user?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100",
-        role: user?.role === "officer" ? "Senior Ward Officer" : "Ward 42 Citizen",
-        isOfficer: user?.role === "officer",
-        text: commentText.trim(),
-        timestamp: new Date().toISOString(),
-        likes: 1,
-      };
-      setComments([...comments, newC]);
+    if (!commentText.trim() || !issue) return;
 
-      await addCommentApi(issue.id, commentText.trim());
+    const textToPost = commentText.trim();
+    setCommentText("");
+    setIsPostingComment(true);
 
-      setCommentText("");
+    const res = await addCommentApi(issue.id, textToPost);
+    if (res.success) {
+      await fetchComments();
+      setIssue(prev => prev ? { ...prev, commentsCount: (prev.commentsCount || 0) + 1 } : prev);
+      if (setUser) {
+        setUser((prev: any) => prev ? ({
+          ...prev,
+          civicCitizenXP: (prev.civicCitizenXP || 0) + 10,
+        }) : prev);
+      }
+    }
+    setIsPostingComment(false);
+  };
+
+  const handleDeleteComment = async (commentId: number | string) => {
+    if (typeof window !== "undefined" && !window.confirm("Are you sure you want to delete this comment?")) {
+      return;
+    }
+    const success = await deleteCommentApi(commentId);
+    if (success) {
+      setComments(prev => prev.filter(c => c.id !== commentId));
+      setIssue(prev => prev ? { ...prev, commentsCount: Math.max(0, (prev.commentsCount || 1) - 1) } : prev);
     }
   };
 
-  const handleShare = () => {
-    if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(window.location.href);
+  const handleShare = async () => {
+    if (typeof window === "undefined") return;
+
+    const shareData = {
+      title: issue?.title || "JanSeva Civic Report",
+      text: `Civic issue reported: ${issue?.title} at ${issue?.location?.address || "Ward 42"}. Check status on JanSeva.`,
+      url: window.location.href,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (err) {
+        if ((err as any)?.name !== "AbortError") {
+          console.warn("Native share fallback to clipboard:", err);
+        } else {
+          return;
+        }
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(window.location.href);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), 2500);
+    } catch (clipErr) {
+      console.error("Clipboard copy error:", clipErr);
     }
   };
 
@@ -168,8 +202,60 @@ export default function IssueDetailPage() {
     currentStageIndex = 4; // Resolved stage
   }
 
+  const handleExecuteMerge = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!candidateDuplicateId || !issue) return;
+    if (candidateDuplicateId === issue.id) {
+      alert("Cannot merge an issue with itself.");
+      return;
+    }
+
+    setMergeLoading(true);
+    try {
+      const res = await mergeIssues(
+        issue.id,
+        candidateDuplicateId,
+        mergeReason.trim() || `Merged by Officer ${user?.name || "Official"} on issue detail inspector.`
+      );
+
+      setMergeModalOpen(false);
+      setCandidateDuplicateId("");
+      setMergeReason("");
+      setMergeToast(res.message || `Successfully merged duplicate report into Ticket #${issue.id}!`);
+      setTimeout(() => setMergeToast(null), 6000);
+    } catch (err) {
+      console.error("Failed to merge duplicate:", err);
+    } finally {
+      setMergeLoading(false);
+    }
+  };
+
+  const isOfficerOrStaff = Boolean(user && (user.role === "officer" || user.role === "corporator"));
+  const mergedDuplicateEvents = (issue?.timeline || []).filter(t => t.stage === "Duplicate Merged");
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-fadeIn pb-12">
+
+      {/* Merge Success Toast */}
+      {mergeToast && (
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-center justify-between shadow-soft animate-slideDown">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-headline font-bold text-xs sm:text-sm">{mergeToast}</p>
+              <p className="text-[11px] text-emerald-700">All community upvotes, comments, and audit timeline logs consolidated.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setMergeToast(null)}
+            className="p-1.5 rounded-lg hover:bg-emerald-100 text-emerald-600 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Back Button & Top Navigation */}
       <div className="flex items-center justify-between">
@@ -183,6 +269,17 @@ export default function IssueDetailPage() {
         </button>
 
         <div className="flex items-center gap-2">
+          {isOfficerOrStaff && (
+            <button
+              type="button"
+              onClick={() => setMergeModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-[#134431] hover:bg-[#0c2e21] text-white text-xs font-bold transition-all shadow-sm"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Merge Duplicate</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={handleShare}
@@ -251,6 +348,18 @@ export default function IssueDetailPage() {
             <span className="px-2.5 py-1 rounded-xl bg-surface-container-low text-on-surface-variant text-xs font-semibold">
               Category: {issue.category}
             </span>
+            {((issue.timesReported && issue.timesReported > 1) || ((issue as any).times_reported && (issue as any).times_reported > 1) || mergedDuplicateEvents.length > 0) && (
+              <span className="px-2.5 py-1 rounded-xl bg-purple-100 text-purple-900 border border-purple-300 text-xs font-bold flex items-center gap-1">
+                <Layers className="w-3.5 h-3.5 text-purple-700" />
+                <span>⚡ Reported {issue.timesReported || (issue as any).times_reported || (mergedDuplicateEvents.length + 1)} Times by Community</span>
+              </span>
+            )}
+            {mergedDuplicateEvents.length > 0 && !issue.timesReported && (
+              <span className="px-2.5 py-1 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold flex items-center gap-1">
+                <Layers className="w-3 h-3 text-amber-700" />
+                <span>Consolidated ({mergedDuplicateEvents.length} Merged)</span>
+              </span>
+            )}
           </div>
 
           <h1 className="font-headline font-black text-2xl sm:text-3xl text-on-surface leading-tight">
@@ -263,11 +372,31 @@ export default function IssueDetailPage() {
               <span className="font-semibold text-on-surface">{issue.location.address}</span>
             </div>
             <span>•</span>
-            <div>Ward {issue.location.wardNumber} ({issue.location.ward})</div>
+            <div className="font-bold px-2.5 py-0.5 rounded-lg bg-[#edf7f1] text-[#134431] border border-[#cbe7d7] text-xs">
+              PIN {(issue as any).pin_code || (issue as any).pincode || issue.location?.pincode || (issue.location?.address?.match(/\b\d{6}\b/) ? issue.location.address.match(/\b\d{6}\b/)![0] : "")}
+            </div>
             <span>•</span>
             <div>Reported {formatDate(issue.createdAt)}</div>
           </div>
         </div>
+
+        {/* Highlight Banner if Duplicate Reports Were Merged into this ticket */}
+        {mergedDuplicateEvents.length > 0 && (
+          <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-2">
+            <div className="flex items-center gap-2 text-amber-900 font-headline font-bold text-xs">
+              <Layers className="w-4 h-4 text-amber-700" />
+              <span>Multi-Citizen Consolidation Audit Log</span>
+            </div>
+            <div className="space-y-1.5">
+              {mergedDuplicateEvents.map((evt, idx) => (
+                <div key={idx} className="p-2.5 rounded-xl bg-white/90 border border-amber-200/70 text-xs text-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <span>{evt.note}</span>
+                  <span className="text-[10px] text-amber-800 font-bold whitespace-nowrap">{formatDate(evt.timestamp)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 5-STAGE PROGRESSION STEPPER */}
         <div className="p-5 rounded-2xl bg-gradient-to-r from-surface-container-low via-indigo-50/30 to-emerald-50/30 border border-surface-dim space-y-3">
@@ -461,93 +590,95 @@ export default function IssueDetailPage() {
         </div>
       </div>
 
-      {/* CITIZEN SATISFACTION & VERIFICATION AUDIT BOX */}
+      {/* CITIZEN SATISFACTION & CLOSED-LOOP VERIFICATION AUDIT BOX */}
       {(issue.status === "Pending Citizen Verification" || issue.status === "Verified Resolved") && (
-        <div className="rounded-3xl bg-white border border-surface-container-high p-6 sm:p-8 shadow-soft space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                <ShieldCheck className="w-5 h-5" />
+        <div className="rounded-3xl bg-white border border-slate-200 p-6 sm:p-8 shadow-sm space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "w-12 h-12 rounded-2xl flex items-center justify-center font-bold shrink-0",
+                issue.status === "Verified Resolved" ? "bg-emerald-100 text-emerald-700" : "bg-purple-100 text-purple-700 animate-pulse"
+              )}>
+                <ShieldCheck className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-headline font-bold text-base text-on-surface">
-                  Citizen Resolution Audit & Verification
-                </h3>
-                <p className="text-xs text-on-surface-variant">
-                  Did the municipal squad fix this problem completely? Vote to certify.
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-headline font-bold text-base text-slate-900">
+                    {issue.status === "Verified Resolved"
+                      ? "✓ Closed-Loop Resolution Certified"
+                      : "🔒 Closed-Loop Citizen Audit Required"}
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#edf7f1] text-[#134431] border border-[#cbe7d7]">
+                    100% Transparent
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {issue.status === "Verified Resolved"
+                    ? "Citizen on-ground live camera inspection verified this repair. Ticket permanently closed in municipal ledger."
+                    : "Municipal squad reported field work complete. Ticket remains OPEN until a resident conducts a live camera on-ground geo-audit."}
                 </p>
               </div>
             </div>
 
-            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-              +15 Civic Citizen XP
+            <span className="text-xs font-bold text-emerald-800 bg-[#edf7f1] px-3.5 py-1.5 rounded-xl border border-[#cbe7d7] shrink-0 self-start sm:self-auto">
+              +25 Civic Citizen XP
             </span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-surface-container-low border border-surface-dim space-y-3">
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
             <div className="flex items-center justify-between text-xs font-bold">
-              <span className="text-emerald-700">
-                ✓ Yes, Problem Resolved ({issue.verificationVotes.yes} votes)
+              <span className="text-emerald-700 flex items-center gap-1">
+                <span>✓ On-Ground Approvals: {issue.verificationVotes?.yes || 0}</span>
               </span>
               <span className="text-rose-700">
-                ✕ No, Still Pending ({issue.verificationVotes.no} votes)
+                ✕ Flagged Incomplete: {issue.verificationVotes?.no || 0}
               </span>
             </div>
 
             {/* Progress split bar */}
-            <div className="w-full h-3 rounded-full bg-surface-dim overflow-hidden flex">
+            <div className="w-full h-3 rounded-full bg-slate-200 overflow-hidden flex">
               <div
                 className="bg-emerald-500 h-full transition-all duration-500"
                 style={{
-                  width: `${issue.verificationVotes.yes + issue.verificationVotes.no > 0
+                  width: `${((issue.verificationVotes?.yes || 0) + (issue.verificationVotes?.no || 0)) > 0
                       ? Math.round(
-                        (issue.verificationVotes.yes /
-                          (issue.verificationVotes.yes + issue.verificationVotes.no)) *
+                        ((issue.verificationVotes?.yes || 0) /
+                          ((issue.verificationVotes?.yes || 0) + (issue.verificationVotes?.no || 0))) *
                         100
                       )
-                      : 50
+                      : issue.status === "Verified Resolved" ? 100 : 50
                     }%`,
                 }}
               />
               <div
                 className="bg-rose-500 h-full transition-all duration-500"
                 style={{
-                  width: `${issue.verificationVotes.yes + issue.verificationVotes.no > 0
+                  width: `${((issue.verificationVotes?.yes || 0) + (issue.verificationVotes?.no || 0)) > 0
                       ? Math.round(
-                        (issue.verificationVotes.no /
-                          (issue.verificationVotes.yes + issue.verificationVotes.no)) *
+                        ((issue.verificationVotes?.no || 0) /
+                          ((issue.verificationVotes?.yes || 0) + (issue.verificationVotes?.no || 0))) *
                         100
                       )
-                      : 50
+                      : 0
                     }%`,
                 }}
               />
             </div>
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => router.push(`/verify/${issue.id}`)}
-                className={cn(
-                  "flex-1 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5",
-                  issue.verificationVotes.userVoted === "yes"
-                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
-                    : "bg-white text-emerald-700 border border-emerald-300 hover:bg-emerald-50"
-                )}
+                className="flex-1 py-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 bg-[#134431] hover:bg-[#0c2e21] text-white shadow-md shadow-emerald-950/20 cursor-pointer"
               >
-                <Check className="w-4 h-4" />
-                <span>Verify Resolved</span>
+                <Camera className="w-4 h-4 text-emerald-300" />
+                <span>📸 Open Live Camera to Audit &amp; Verify (+25 XP)</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => voteVerification(issue.id, "no")}
-                className={cn(
-                  "flex-1 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5",
-                  issue.verificationVotes.userVoted === "no"
-                    ? "bg-rose-600 text-white shadow-md shadow-rose-600/30"
-                    : "bg-white text-rose-700 border border-rose-300 hover:bg-rose-50"
-                )}
+                className="py-3 px-4 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 bg-white text-rose-700 border border-rose-300 hover:bg-rose-50 cursor-pointer"
               >
                 <span>✕ Report Incomplete</span>
               </button>
@@ -556,24 +687,51 @@ export default function IssueDetailPage() {
         </div>
       )}
 
-      {/* OFFICIAL TIMELINE & ACTION LOG */}
-      <div className="rounded-3xl bg-white border border-surface-container-high p-6 sm:p-8 shadow-soft space-y-6">
-        <h3 className="font-headline font-bold text-base text-on-surface">
-          Official Action Timeline
-        </h3>
+      {/* 100% PUBLIC TRANSPARENT STATUS TIMELINE & ACTION AUDIT LOG */}
+      <div className="rounded-3xl bg-white border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-headline font-bold text-base text-slate-900">
+              100% Public Action Timeline
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Immutable end-to-end municipal ledger from report to citizen closure.
+            </p>
+          </div>
+          <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#edf7f1] text-[#134431] border border-[#cbe7d7]">
+            Public Ledger ✓
+          </span>
+        </div>
 
-        <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-surface-dim">
-          {issue.timeline.map((event, idx) => (
-            <div key={idx} className="relative space-y-1">
-              <div className="absolute -left-6 top-1 w-4 h-4 rounded-full bg-primary-600 ring-4 ring-white" />
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-on-surface">{event.stage}</span>
-                <span className="text-on-surface-variant font-medium">{formatDate(event.timestamp)}</span>
+        <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+          {issue.timeline.map((event, idx) => {
+            const isVerifiedResolved = event.stage === "Verified Resolved" || event.stage.toLowerCase().includes("verified");
+            const isPendingVerification = event.stage === "Pending Citizen Verification" || event.stage.toLowerCase().includes("pending");
+
+            return (
+              <div key={idx} className="relative space-y-1.5 bg-[#f8faf9] p-3.5 rounded-2xl border border-slate-200/80">
+                <div className={cn(
+                  "absolute -left-7.5 top-3 w-4 h-4 rounded-full ring-4 ring-white",
+                  isVerifiedResolved ? "bg-emerald-600" : isPendingVerification ? "bg-purple-600" : "bg-[#134431]"
+                )} />
+                
+                <div className="flex items-center justify-between text-xs flex-wrap gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      "font-bold px-2 py-0.5 rounded-md text-[11px]",
+                      isVerifiedResolved ? "bg-emerald-100 text-emerald-900 border border-emerald-300 font-black" : isPendingVerification ? "bg-purple-100 text-purple-900 border border-purple-300" : "bg-slate-200 text-slate-800"
+                    )}>
+                      {event.stage}
+                    </span>
+                    <span className="font-semibold text-slate-700 text-xs">{event.actor}</span>
+                  </div>
+                  <span className="text-slate-400 font-medium text-[11px]">{formatDate(event.timestamp)}</span>
+                </div>
+                
+                <p className="text-xs text-slate-600 leading-relaxed font-medium">{event.note}</p>
               </div>
-              <p className="text-xs text-on-surface-variant">{event.note}</p>
-              <p className="text-[10px] text-primary-700 font-bold">Action by: {event.actor}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -614,35 +772,174 @@ export default function IssueDetailPage() {
 
         {/* Comments Stream */}
         <div className="space-y-4 pt-2 divide-y divide-surface-dim">
-          {comments.map((c) => (
-            <div key={c.id} className="pt-4 flex gap-3">
-              <img
-                src={c.avatar}
-                alt={c.author}
-                className="w-9 h-9 rounded-full object-cover shrink-0"
-              />
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-on-surface">{c.author}</span>
-                    {c.isOfficer && (
-                      <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold text-[10px] border border-indigo-200">
-                        Official Officer
-                      </span>
-                    )}
-                    <span className="text-[10px] text-on-surface-variant font-medium">
-                      • {formatDate(c.timestamp)}
-                    </span>
+          {comments.length === 0 ? (
+            <div className="text-center py-8 text-xs text-slate-400">
+              No community comments yet. Be the first neighbor to post an update!
+            </div>
+          ) : (
+            comments.map((c) => {
+              const authorName = c.author_name || c.author || "Citizen";
+              const authorUsername = c.author_username || "";
+              const authorAvatar = c.author_avatar || c.avatar || "";
+              const isOfficer = Boolean(c.is_officer || c.isOfficer || c.author_role === "officer");
+              const isCommentOwner = Boolean(
+                user &&
+                (user.username === authorUsername ||
+                  user.name === authorName ||
+                  user.role === "officer" ||
+                  user.id === c.author)
+              );
+
+              return (
+                <div key={c.id} className="pt-4 flex gap-3 group">
+                  {authorAvatar ? (
+                    <img
+                      src={authorAvatar}
+                      alt={authorName}
+                      className="w-9 h-9 rounded-full object-cover shrink-0 ring-1 ring-slate-200"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0 ring-1 ring-slate-200">
+                      {authorName.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-bold text-on-surface">{authorName}</span>
+                        {authorUsername && (
+                          <span className="font-mono text-[10px] text-slate-500 font-medium">
+                            @{authorUsername}
+                          </span>
+                        )}
+                        {isOfficer && (
+                          <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold text-[10px] border border-indigo-200">
+                            Official Officer
+                          </span>
+                        )}
+                        <span className="text-[10px] text-on-surface-variant font-medium">
+                          • {formatDate(c.timestamp || c.created_at)}
+                        </span>
+                      </div>
+
+                      {isCommentOwner && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteComment(c.id)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors opacity-80 group-hover:opacity-100"
+                          title="Delete your comment"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs sm:text-sm text-on-surface leading-relaxed whitespace-pre-wrap">
+                      {c.text}
+                    </p>
                   </div>
                 </div>
-                <p className="text-xs sm:text-sm text-on-surface leading-relaxed">
-                  {c.text}
-                </p>
-              </div>
-            </div>
-          ))}
+              );
+            })
+          )}
         </div>
       </div>
+
+      {/* MERGE DUPLICATE MODAL FOR OFFICERS */}
+      {mergeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-xl bg-white rounded-3xl border border-slate-100 shadow-2xl p-6 space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div>
+                <h3 className="font-headline font-black text-lg text-slate-900 flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-[#134431]" />
+                  <span>Merge Duplicate into Ticket #{issue.id}</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Select a candidate duplicate ticket submitted by another citizen to consolidate under this primary report.
+                </p>
+              </div>
+              <button
+                onClick={() => setMergeModalOpen(false)}
+                className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleExecuteMerge} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700 block">
+                  Select Candidate Duplicate Ticket
+                </label>
+                <select
+                  value={candidateDuplicateId}
+                  onChange={(e) => setCandidateDuplicateId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#134431]/20 focus:border-[#134431]"
+                  required
+                >
+                  <option value="">-- Choose Candidate Duplicate --</option>
+                  {issues
+                    .filter((i) => i.id !== issue.id && i.status !== "Resolved" && i.status !== "Verified Resolved")
+                    .map((i) => (
+                      <option key={`dup-cand-${i.id}`} value={i.id}>
+                        #{i.id} - {i.title.slice(0, 40)}... (Reported by: {i.reporter?.name || "Citizen"}, {i.upvotes} Upvotes)
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {candidateDuplicateId && (
+                <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-2">
+                  {(() => {
+                    const cand = issues.find((i) => i.id === candidateDuplicateId);
+                    if (!cand) return null;
+                    return (
+                      <div className="space-y-1 text-xs">
+                        <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider">Candidate Summary</span>
+                        <p className="font-headline font-bold text-slate-900">{cand.title}</p>
+                        <p className="text-slate-600">Location: {cand.location.address}</p>
+                        <p className="text-slate-600">Citizen: <strong>{cand.reporter.name}</strong> • {cand.upvotes} Upvotes</p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 block">
+                  Consolidation Remark / Reason
+                </label>
+                <input
+                  type="text"
+                  value={mergeReason}
+                  onChange={(e) => setMergeReason(e.target.value)}
+                  placeholder="e.g. Duplicate report for identical hazard at same coordinate."
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#134431]/20 focus:border-[#134431]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setMergeModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={mergeLoading || !candidateDuplicateId}
+                  className="px-5 py-2.5 rounded-xl bg-[#134431] hover:bg-[#0c2e21] text-white font-headline font-bold text-xs shadow-md transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{mergeLoading ? "Merging..." : "Confirm & Merge"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

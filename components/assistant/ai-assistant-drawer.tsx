@@ -225,10 +225,10 @@ export function AiAssistantDrawer() {
           </button>
           <button
             type="button"
-            onClick={() => sendChatMessage("What is the status of complaint #JS-101?")}
+            onClick={() => sendChatMessage("What is the status of my recent civic complaints?")}
             className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-surface-container-low hover:bg-surface-container text-on-surface-variant hover:text-on-surface border border-surface-dim shrink-0"
           >
-            🔍 Status of #JS-101
+            🔍 Status of my complaints
           </button>
           <button
             type="button"

@@ -82,8 +82,8 @@ export function WeatherWidget() {
     let lat = 20.2961;
     let lng = 85.8245;
     let locName = user?.city ? `${user.city}` : "Bhubaneswar";
-    if (user?.wardNumber) {
-      locName += ` • Ward ${user.wardNumber}`;
+    if (user?.pincode) {
+      locName += ` • PIN ${user.pincode}`;
     }
 
     const loadWeatherForCoords = async (latitude: number, longitude: number, placeName?: string) => {
@@ -165,7 +165,7 @@ export function WeatherWidget() {
 
   useEffect(() => {
     fetchWeather();
-  }, [user?.city, user?.wardNumber]);
+  }, [user?.city, user?.pincode]);
 
   // Weather Icon Component Selector
   const getWeatherIcon = (code: number, isDay: boolean) => {

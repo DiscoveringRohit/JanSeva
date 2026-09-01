@@ -222,17 +222,6 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
             )}
           </div>
 
-          {/* Quick AI Assistant Trigger (Desktop/Tablet only; Mobile has floating button & bottom nav) */}
-          <button
-            type="button"
-            onClick={() => setIsAiDrawerOpen(true)}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#edf7f1] border border-[#cbe7d7] text-[#134431] hover:bg-[#e1f2e8] text-xs font-bold shadow-2xs hover:scale-[1.02] transition-all select-none min-h-[36px]"
-            title={isOfficer ? "Open AI Ops Dispatch Assistant" : "Open JanSeva AI Civic Assistant"}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-600 animate-pulseSlow" />
-            <span>{isOfficer ? "AI Ops Copilot" : t("assistant")}</span>
-          </button>
-
           {/* Report Issue (Citizen) or Active Shift (Officer) */}
           {isOfficer ? (
             <div className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#134431] text-emerald-300 text-xs font-bold shadow-md shadow-emerald-950/20 min-h-[36px]">
@@ -242,7 +231,7 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
           ) : (
             <Link
               href="/report"
-              className="hidden sm:flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#134431] hover:bg-[#0c2e21] text-white text-xs font-bold shadow-md shadow-emerald-950/20 hover:scale-[1.02] active:scale-98 transition-all min-h-[36px]"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#134431] hover:bg-[#0c2e21] text-white text-xs font-bold shadow-md shadow-emerald-950/20 hover:scale-[1.02] active:scale-98 transition-all min-h-[36px]"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span>{t("report")}</span>

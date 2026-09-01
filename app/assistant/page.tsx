@@ -92,10 +92,10 @@ export default function AssistantPage() {
     };
     const quickPrompts = [
       "📸 How do I report a broken road with AI?",
-      "🔍 Status of sewage issue #JS-101",
-      "💧 Ward 42 Drinking Water Schedule",
+      "🔍 What is the status of my recent civic complaints?",
+      "💧 Check local municipal drinking water schedule",
       "🏛️ Who is my Ward Corporator and office address?",
-      "⚡ BMC Streetlight power outage helpline",
+      "⚡ Municipal streetlight & power outage helpline",
     ];
 
     return (

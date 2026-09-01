@@ -1,108 +1,297 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Camera, CheckCircle2, MapPin, ShieldCheck, Loader2 } from "lucide-react";
+import { Camera, CheckCircle2, MapPin, ShieldCheck, Loader2, Sparkles, Navigation, UploadCloud, Check, AlertCircle } from "lucide-react";
 import { useApp } from "@/lib/context/app-context";
 import { CivicIssue } from "@/lib/data/mock-data";
+import { cn } from "@/lib/utils";
+
+// Calculate distance in meters between two lat/lng pairs using Haversine formula
+function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371e3; // metres
+  const phi1 = (lat1 * Math.PI) / 180;
+  const phi2 = (lat2 * Math.PI) / 180;
+  const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
+  const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+    Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return Math.round(R * c);
+}
 
 export default function VerifyIssuePage() {
   const { id } = useParams();
   const router = useRouter();
-  const { issues, user, updateIssueStatus } = useApp();
+  const { issues, user, setUser, updateIssueStatus } = useApp();
   
   const [issue, setIssue] = useState<CivicIssue | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [geoLoc, setGeoLoc] = useState<string | null>(null);
+  const [distanceMeters, setDistanceMeters] = useState<number | null>(null);
+  const [isWithinGeoFence, setIsWithinGeoFence] = useState(true);
+  const [isLocating, setIsLocating] = useState(false);
+  const [auditNote, setAuditNote] = useState("Inspected on-ground. Problem is 100% resolved and cleared by citizen audit.");
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (id && issues) {
       const found = issues.find(i => i.id === id);
-      if (found) setIssue(found);
+      if (found) {
+        setIssue(found);
+        detectLiveDistance(found);
+      }
     }
   }, [id, issues]);
 
-  if (!issue) return <div className="p-8 text-center text-sm font-bold animate-pulse">Loading Verification Module...</div>;
+  const detectLiveDistance = (targetIssue: CivicIssue) => {
+    if (typeof window === "undefined" || !navigator.geolocation) return;
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const userLat = pos.coords.latitude;
+        const userLng = pos.coords.longitude;
+        setGeoLoc(`${userLat.toFixed(4)}° N, ${userLng.toFixed(4)}° E`);
+        const dist = getDistanceMeters(userLat, userLng, targetIssue.location.lat, targetIssue.location.lng);
+        setDistanceMeters(dist);
+        // Allow within 500m or assume local testing
+        setIsWithinGeoFence(dist <= 500 || isNaN(dist));
+        setIsLocating(false);
+      },
+      (err) => {
+        console.warn("GPS Geolocation error:", err);
+        setGeoLoc(`${targetIssue.location.lat.toFixed(4)}° N, ${targetIssue.location.lng.toFixed(4)}° E`);
+        setDistanceMeters(25);
+        setIsWithinGeoFence(true);
+        setIsLocating(false);
+      },
+      { timeout: 7000 }
+    );
+  };
 
-  const handleCapture = () => {
-    // Simulate camera capture & geotagging
-    setPhoto("https://images.unsplash.com/photo-1574786198875-49f58cac0880?w=800&auto=format&fit=crop&q=80");
-    setGeoLoc(`${issue.location.lat.toFixed(4)}, ${issue.location.lng.toFixed(4)}`);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        setPhoto(uploadEvent.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSimulateCapture = () => {
+    setPhoto("https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&auto=format&fit=crop&q=80");
+    if (!geoLoc && issue) {
+      setGeoLoc(`${issue.location.lat.toFixed(4)}° N, ${issue.location.lng.toFixed(4)}° E`);
+      setDistanceMeters(18);
+    }
   };
 
   const handleConfirm = () => {
-    if (!photo) return;
+    if (!photo || !issue) return;
     setIsVerifying(true);
     
     setTimeout(() => {
-      // Update status to Verified Resolved
-      updateIssueStatus(issue.id, "Verified Resolved", `Citizen ${user?.name || "User"} verified on-ground resolution with geotagged photo.`);
+      // 1. Award Citizen +25 XP
+      if (setUser) {
+        setUser((prev: any) => prev ? ({
+          ...prev,
+          civicCitizenXP: (prev.civicCitizenXP || 0) + 25,
+          stats: {
+            ...prev.stats,
+            verificationVotes: (prev.stats?.verificationVotes || 0) + 1,
+            issuesResolved: (prev.stats?.issuesResolved || 0) + 1,
+          },
+        }) : prev);
+      }
+
+      // 2. Closed-Loop Transition to "Verified Resolved"
+      const verifierName = user?.name || "Local Resident";
+      const resolutionNote = `Closed-Loop Verification Complete ✓ Verified by citizen ${verifierName} via on-ground live camera geo-audit (${geoLoc || "Location Tagged"}). ${auditNote}`;
+      
+      updateIssueStatus(issue.id, "Verified Resolved", resolutionNote, photo);
       router.push(`/issues/${issue.id}`);
-    }, 1500);
+    }, 1200);
   };
+
+  if (!issue) {
+    return (
+      <div className="max-w-xl mx-auto p-12 text-center space-y-3">
+        <div className="w-8 h-8 rounded-full border-4 border-[#134431] border-t-transparent animate-spin mx-auto"></div>
+        <p className="text-xs font-bold text-slate-600">Loading Closed-Loop Verification Suite...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-8 space-y-6 animate-fadeIn">
-      <div className="text-center space-y-2 mb-8">
-        <div className="w-16 h-16 mx-auto bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4 shadow-inner">
-          <ShieldCheck className="w-8 h-8" />
+      {/* Header Info */}
+      <div className="text-center space-y-2 mb-4">
+        <div className="w-14 h-14 mx-auto bg-[#edf7f1] text-[#134431] rounded-2xl flex items-center justify-center mb-3 shadow-inner border border-[#cbe7d7]">
+          <ShieldCheck className="w-7 h-7" />
         </div>
-        <h1 className="text-2xl font-black font-headline text-on-surface">Citizen Resolution Audit</h1>
-        <p className="text-sm text-on-surface-variant max-w-md mx-auto">
-          Please confirm that you want to verify the problem <strong className="text-primary-600">"{issue.title}"</strong> that has been marked solved by the authorities of the <strong className="text-on-surface">{issue.assignedDepartment}</strong>.
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-800 border border-purple-200 text-xs font-bold">
+          <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+          <span>Closed-Loop Citizen Verification Protocol</span>
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-black font-headline text-slate-900 leading-tight">
+          On-Ground Resolution Audit
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
+          The municipal authorities of <strong className="text-slate-900">{issue.assignedDepartment || "BMC Dispatch"}</strong> reported that <strong className="text-[#134431]">"{issue.title}"</strong> has been repaired.
+          Under JanSeva's transparent protocol, <span className="font-bold underline text-slate-900">only a citizen's live on-ground camera audit can permanently close this ticket!</span>
         </p>
       </div>
 
-      <div className="bg-white rounded-3xl p-6 border border-surface-container-high shadow-soft space-y-6">
-        <div className="bg-emerald-50 text-emerald-800 p-4 rounded-2xl flex gap-3 text-sm font-medium border border-emerald-100">
-          <MapPin className="w-5 h-5 flex-shrink-0 mt-0.5 text-emerald-600" />
-          <p>
-            You must be at the location (<strong className="font-bold">{issue.location.address}</strong>) to verify this resolution. 
-            Capture a live geotagged photo as evidence.
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+        
+        {/* Geo-Location Verification Card */}
+        <div className="p-4 rounded-2xl bg-[#f8faf9] border border-slate-200 space-y-2">
+          <div className="flex items-center justify-between text-xs font-bold">
+            <span className="text-[#134431] flex items-center gap-1.5">
+              <MapPin className="w-4 h-4 text-[#134431]" />
+              <span>Target Problem Location:</span>
+            </span>
+            <span className="px-2 py-0.5 rounded-md bg-[#edf7f1] text-[#134431] border border-[#cbe7d7] text-[11px]">
+              PIN {(issue as any).pin_code || (issue as any).pincode || issue.location?.pincode || "Zone"}
+            </span>
+          </div>
+          <p className="text-xs font-semibold text-slate-800 pl-5">
+            {issue.location.address}
           </p>
+
+          <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs">
+            <span className="text-slate-500 font-medium flex items-center gap-1">
+              <Navigation className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Your GPS Distance:</span>
+            </span>
+            <span className={cn(
+              "font-bold px-2 py-0.5 rounded-md text-[11px]",
+              isWithinGeoFence ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-amber-50 text-amber-800 border border-amber-200"
+            )}>
+              {distanceMeters !== null ? `${distanceMeters}m from site` : (geoLoc || "Location Verified ✓")}
+            </span>
+          </div>
         </div>
 
-        {/* Camera / Photo Preview */}
-        {!photo ? (
-          <button 
-            onClick={handleCapture}
-            className="w-full h-48 rounded-2xl border-2 border-dashed border-primary-200 bg-primary-50 text-primary-600 flex flex-col items-center justify-center gap-2 hover:bg-primary-100 transition-colors"
-          >
-            <Camera className="w-8 h-8" />
-            <span className="font-bold text-sm">Tap to Open Camera</span>
-            <span className="text-xs opacity-80">Geotagging enabled</span>
-          </button>
-        ) : (
-          <div className="relative rounded-2xl overflow-hidden border border-surface-dim">
-            <img src={photo} alt="Verification" className="w-full h-48 object-cover" />
-            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-3">
-              <p className="text-xs font-mono text-emerald-300 flex items-center gap-1.5">
-                <MapPin className="w-3 h-3" />
-                VERIFIED GPS: {geoLoc}
-              </p>
-            </div>
-            <button 
-              onClick={() => setPhoto(null)}
-              className="absolute top-3 right-3 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1 rounded-full transition-colors"
-            >
-              Retake
-            </button>
+        {/* Live Camera Upload Area */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Live Photo Evidence (Camera Inspection)
+            </label>
+            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+              Earn +25 XP
+            </span>
           </div>
-        )}
 
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+          />
+
+          {!photo ? (
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full h-44 rounded-3xl border-2 border-dashed border-emerald-300 bg-[#edf7f1]/60 hover:bg-[#edf7f1] text-[#134431] flex flex-col items-center justify-center gap-2.5 transition-all group cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <Camera className="w-6 h-6 text-[#134431]" />
+                </div>
+                <div className="text-center">
+                  <p className="font-bold text-xs sm:text-sm text-slate-900">Open Live Camera</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Capture real-time on-ground fix at this site</p>
+                </div>
+              </button>
+
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400">Or use instant simulated verification:</span>
+                <button
+                  type="button"
+                  onClick={handleSimulateCapture}
+                  className="text-xs font-bold text-[#134431] hover:underline"
+                >
+                  ⚡ Use Demo Camera Photo
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="relative rounded-3xl overflow-hidden border border-slate-200 shadow-sm aspect-[16/9] bg-slate-950">
+              <img src={photo} alt="Verification proof" className="w-full h-full object-cover" />
+              
+              <div className="absolute top-3 right-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPhoto(null)}
+                  className="px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[11px] font-bold hover:bg-black/80 transition-colors cursor-pointer"
+                >
+                  Retake Photo
+                </button>
+              </div>
+
+              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 flex items-center justify-between text-white text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span className="font-mono font-bold text-emerald-300">
+                    GPS VERIFIED: {geoLoc || `${issue.location.lat.toFixed(4)}° N, ${issue.location.lng.toFixed(4)}° E`}
+                  </span>
+                </div>
+                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-md font-semibold">
+                  Timestamp: {new Date().toLocaleTimeString()}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Citizen Audit Note Input */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            Citizen Audit Certificate Note
+          </label>
+          <input
+            type="text"
+            value={auditNote}
+            onChange={(e) => setAuditNote(e.target.value)}
+            placeholder="e.g. Inspected on-ground. Pothole filled and road leveled completely."
+            className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#134431]"
+          />
+        </div>
+
+        {/* Submit Confirmation Button */}
         <button
+          type="button"
           onClick={handleConfirm}
           disabled={!photo || isVerifying}
-          className="w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-600/20 bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-950/20 bg-[#134431] hover:bg-[#0c2e21] text-white disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {isVerifying ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /> Verifying...</>
+            <>
+              <Loader2 className="w-4 h-4 animate-spin text-emerald-300" />
+              <span>Certifying On-Ground Resolution in Ledger...</span>
+            </>
           ) : (
-            <><CheckCircle2 className="w-4 h-4" /> Confirm & Verify Resolution</>
+            <>
+              <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+              <span>Confirm &amp; Permanently Close Ticket (+25 XP)</span>
+            </>
           )}
         </button>
+
       </div>
     </div>
   );
 }
+

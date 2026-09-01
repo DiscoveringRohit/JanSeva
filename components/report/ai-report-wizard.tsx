@@ -28,6 +28,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { detectCurrentLocation, reverseGeocode } from "@/lib/services/geocoding";
 
 // Dynamic import for Leaflet map component to prevent SSR errors
 const JanSevaMap = dynamic(() => import("@/components/map/JanSevaMap"), {
@@ -68,13 +69,13 @@ export function AiReportWizard() {
   const [verificationResult, setVerificationResult] =
     useState<GeminiVerificationData | null>(null);
 
-  // Auto-filled & Editable Location / Metadata State
+  // Dynamic GPS Location Tracking & Metadata State
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number }>({
-    lat: 23.3441,
-    lng: 85.3096,
+    lat: 20.2961,
+    lng: 85.8245,
   });
-  const [pincode, setPincode] = useState(user?.pincode || "835103");
-  const [area, setArea] = useState("Main Road, Near Chowk");
+  const [pincode, setPincode] = useState(user?.pincode || "");
+  const [area, setArea] = useState(user?.city || "");
   const [landmark, setLandmark] = useState("");
   const [reportDate, setReportDate] = useState(() =>
     new Date().toISOString().split("T")[0]
@@ -82,6 +83,8 @@ export function AiReportWizard() {
   const [reportTime, setReportTime] = useState(() =>
     new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
   );
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<string | null>(null);
 
   // Form State
   const [title, setTitle] = useState("Civic Issue Report");
@@ -89,8 +92,13 @@ export function AiReportWizard() {
   const [category, setCategory] = useState<string>("Roads");
   const [urgency, setUrgency] = useState<string>("High");
   const [isAnonymous, setIsAnonymous] = useState(false);
-  const [notifySms, setNotifySms] = useState(true);
-  const [notifyWhatsapp, setNotifyWhatsapp] = useState(true);
+  const [createdTicketId, setCreatedTicketId] = useState<string>("");
+  const [mergeInfo, setMergeInfo] = useState<{
+    isMerged: boolean;
+    primaryId: string;
+    timesReported: number;
+    reason?: string;
+  } | null>(null);
 
   // Live Camera & File Upload State
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -131,8 +139,6 @@ export function AiReportWizard() {
     suggestedSlaHours: 24,
     summary: "AI detected civic defect at captured GPS coordinates.",
   });
-
-  const [createdTicketId, setCreatedTicketId] = useState<string | null>(null);
 
   // Gemini AI Vision Image Verification
   const verifyImageWithGemini = async (dataUrl: string) => {
@@ -196,27 +202,31 @@ export function AiReportWizard() {
     }
   };
 
-  // Helper to fetch live GPS and auto-fill metadata
-  const fetchLiveGPS = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          setCoordinates({ lat, lng });
-          setReportDate(new Date(pos.timestamp).toISOString().split("T")[0]);
-          setReportTime(
-            new Date(pos.timestamp).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          );
-        },
-        (err) => console.warn("Geolocation fallback used:", err.message),
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
+  // Helper to fetch live GPS and auto-fill metadata & landmark via reverse geocoding
+  const handleDetectGPS = async () => {
+    setIsLocating(true);
+    setLocationStatus("Detecting live GPS coordinates & landmark...");
+    try {
+      const loc = await detectCurrentLocation();
+      setCoordinates({ lat: loc.lat, lng: loc.lng });
+      if (loc.pincode) setPincode(loc.pincode);
+      if (loc.area) setArea(loc.area);
+      if (loc.landmark) setLandmark(loc.landmark);
+      setReportDate(loc.date);
+      setReportTime(loc.time);
+      setLocationStatus(`✓ GPS Detected: ${loc.area}${loc.city ? `, ${loc.city}` : ""}${loc.pincode ? ` (PIN ${loc.pincode})` : ""}`);
+    } catch (err: any) {
+      console.warn("Geolocation warning:", err.message);
+      setLocationStatus(err.message || "GPS unavailable. Please verify manually.");
+    } finally {
+      setIsLocating(false);
     }
   };
+
+  // Auto-detect GPS on component mount
+  useEffect(() => {
+    handleDetectGPS();
+  }, []);
 
   const startCamera = async () => {
     setCameraError(null);
@@ -226,7 +236,7 @@ export function AiReportWizard() {
       });
       setMediaStream(stream);
       setIsCameraActive(true);
-      fetchLiveGPS();
+      handleDetectGPS();
     } catch (err) {
       console.error("Error accessing camera", err);
       setCameraError(
@@ -266,7 +276,8 @@ export function AiReportWizard() {
             })
           );
 
-          // Trigger Gemini AI Vision Verification
+          // Trigger Gemini AI Vision Verification & refresh GPS
+          handleDetectGPS();
           verifyImageWithGemini(dataUrl);
         }
       };
@@ -297,7 +308,7 @@ export function AiReportWizard() {
           minute: "2-digit",
         })
       );
-      fetchLiveGPS();
+      handleDetectGPS();
 
       // Trigger Gemini AI Vision Verification
       verifyImageWithGemini(result);
@@ -305,44 +316,45 @@ export function AiReportWizard() {
     reader.readAsDataURL(file);
   };
 
-  const handleMapLocationSelect = (lat: number, lng: number) => {
+  const handleMapLocationSelect = async (lat: number, lng: number) => {
     setCoordinates({ lat, lng });
+    try {
+      const loc = await reverseGeocode(lat, lng);
+      if (loc.pincode) setPincode(loc.pincode);
+      if (loc.area) setArea(loc.area);
+      if (loc.landmark) setLandmark(loc.landmark);
+      setLocationStatus(`✓ Map Pin Location: ${loc.area}${loc.city ? `, ${loc.city}` : ""}${loc.pincode ? ` (PIN ${loc.pincode})` : ""}`);
+    } catch (err) {
+      console.warn("Map pin reverse geocode error:", err);
+    }
   };
 
   const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const payload = {
-      title,
-      description,
-      category,
-      urgency,
-      reporterId: user.id,
-      pin_code: pincode,
-      location: {
-        address: `${area}${landmark ? ` (${landmark})` : ""}`,
-        pincode: pincode,
-        lat: coordinates.lat,
-        lng: coordinates.lng,
-        date: reportDate,
-        time: reportTime,
-      },
-      images: {
-        reported: selectedImage || "",
-      },
-      aiAnalysis: aiData,
-      assignedDepartment: `${category} Infrastructure Division`,
-    };
-
-    const response = await submitIssue(payload);
-
-    if (response.success) {
-      const created = addIssue({
-        ...payload,
-        id: response.data.id,
-        status: "Reported",
-        createdAt: new Date().toISOString(),
+    try {
+      const payload = {
+        title,
+        description,
+        category,
+        urgency,
+        pin_code: pincode,
+        location: {
+          address: `${area}${landmark ? ` (${landmark})` : ""}`,
+          pincode: pincode,
+          ward: `${area} Ward`,
+          wardNumber: 42,
+          lat: coordinates.lat,
+          lng: coordinates.lng,
+          date: reportDate,
+          time: reportTime,
+        },
+        images: {
+          reported: selectedImage || "",
+        },
+        aiAnalysis: aiData,
+        assignedDepartment: `${category} Infrastructure Division`,
         reporter: {
           name: isAnonymous ? "Anonymous Citizen" : user.name,
           username: isAnonymous ? undefined : user.username,
@@ -351,26 +363,24 @@ export function AiReportWizard() {
             : user.avatar,
           level: user.level,
         },
-        isUpvoted: false,
-        upvotes: 0,
-        commentsCount: 0,
-      } as any);
+      };
 
-      if (user && !isAnonymous && setUser) {
-        setUser((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            civicCitizenXP: (prev.civicCitizenXP || 0) + 15,
-            stats: {
-              ...prev.stats,
-              issuesReported: (prev.stats.issuesReported || 0) + 1,
-            },
-          };
+      const created: any = await addIssue(payload as any);
+
+      if (created?.auto_merged || created?.primary_issue_id) {
+        const pId = created.primary_issue_id || created.id;
+        setCreatedTicketId(pId);
+        setMergeInfo({
+          isMerged: true,
+          primaryId: pId,
+          timesReported: created.primary_issue?.timesReported || created.timesReported || 2,
+          reason: created.merge_reason || "Spatial proximity match",
         });
+      } else {
+        setCreatedTicketId(created?.id || "");
+        setMergeInfo(null);
       }
 
-      setCreatedTicketId(created.id);
       setStep(4);
 
       try {
@@ -380,9 +390,11 @@ export function AiReportWizard() {
           origin: { y: 0.6 },
         });
       } catch (err) { }
+    } catch (error) {
+      console.error("Failed to submit issue:", error);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
   };
 
   const isVerifiedCivic =
@@ -759,21 +771,42 @@ export function AiReportWizard() {
                 Confirm Location & Details
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Coordinates, pincode, date, time, and area are auto-filled from
-                the image. Adjust any field below.
+                Coordinates, pincode, date, time, and area are auto-detected from GPS & reverse geocoded. Adjust any field below.
               </p>
             </div>
 
             <button
               type="button"
-              onClick={fetchLiveGPS}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-[#134431] border border-emerald-200 text-xs font-bold transition-colors shrink-0"
+              onClick={handleDetectGPS}
+              disabled={isLocating}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-[#134431] border border-emerald-300 text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer disabled:opacity-50"
               title="Refresh GPS Coordinates"
             >
-              <Navigation className="w-3.5 h-3.5" />
-              <span>Use Current GPS</span>
+              {isLocating ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-700" />
+                  <span>Detecting GPS...</span>
+                </>
+              ) : (
+                <>
+                  <Navigation className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Use Current GPS</span>
+                </>
+              )}
             </button>
           </div>
+
+          {locationStatus && (
+            <div className="p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 flex items-center justify-between text-xs text-emerald-900 font-semibold animate-fadeIn">
+              <span className="flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                <span>{locationStatus}</span>
+              </span>
+              <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100/80 px-2 py-0.5 rounded-full">
+                Live Geocoded
+              </span>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* Left Column (Inputs: Area, Landmark, Pincode, Date, Time, Coordinates) */}
@@ -789,7 +822,7 @@ export function AiReportWizard() {
                     type="text"
                     value={area}
                     onChange={(e) => setArea(e.target.value)}
-                    placeholder="e.g. Main Road, Sector 3"
+                    placeholder="e.g. Khandagiri Main Road"
                     className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#134431] text-slate-900 font-medium"
                   />
                 </div>
@@ -798,13 +831,13 @@ export function AiReportWizard() {
               {/* Landmark */}
               <div>
                 <label className="block text-xs font-bold text-slate-800 mb-1">
-                  Nearby Landmark / Cross / Pillar No.
+                  Nearby Landmark / Place
                 </label>
                 <input
                   type="text"
                   value={landmark}
                   onChange={(e) => setLandmark(e.target.value)}
-                  placeholder="e.g. Opposite Substation / Pillar #14"
+                  placeholder="e.g. Near Master Canteen Chowk / Opposite Bank"
                   className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#134431] text-slate-900 font-medium"
                 />
               </div>
@@ -820,7 +853,7 @@ export function AiReportWizard() {
                     type="text"
                     value={pincode}
                     onChange={(e) => setPincode(e.target.value)}
-                    placeholder="e.g. 835103"
+                    placeholder="e.g. 751030"
                     className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#134431] text-slate-900"
                   />
                 </div>
@@ -1065,7 +1098,7 @@ export function AiReportWizard() {
             </div>
 
             {/* Citizen Options */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-bold text-slate-900">
@@ -1084,27 +1117,6 @@ export function AiReportWizard() {
                     className="sr-only peer"
                   />
                   <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#134431]"></div>
-                </label>
-              </div>
-
-              <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-                <div>
-                  <p className="text-xs font-bold text-slate-900">
-                    SMS & WhatsApp Alerts
-                  </p>
-                  <p className="text-[10px] text-slate-500">
-                    Receive progress notifications as officers resolve the
-                    ticket
-                  </p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={notifySms}
-                    onChange={(e) => setNotifySms(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
                 </label>
               </div>
             </div>
@@ -1144,22 +1156,59 @@ export function AiReportWizard() {
       {/* STEP 4: Success Modal */}
       {step === 4 && (
         <div className="rounded-3xl bg-white border border-slate-200 p-8 shadow-xl text-center space-y-6 max-w-lg mx-auto animate-slideUp">
-          <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto ring-8 ring-emerald-50 animate-bounce">
-            <CheckCircle2 className="w-10 h-10" />
+          <div className={cn(
+            "w-16 h-16 rounded-full flex items-center justify-center mx-auto ring-8 animate-bounce",
+            mergeInfo?.isMerged
+              ? "bg-purple-100 text-purple-700 ring-purple-50"
+              : "bg-emerald-100 text-emerald-700 ring-emerald-50"
+          )}>
+            {mergeInfo?.isMerged ? (
+              <Sparkles className="w-10 h-10" />
+            ) : (
+              <CheckCircle2 className="w-10 h-10" />
+            )}
           </div>
 
           <div>
-            <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
-              Dispatched to Municipal Queue
+            <span className={cn(
+              "px-3 py-1 rounded-full text-xs font-bold border",
+              mergeInfo?.isMerged
+                ? "bg-purple-50 text-purple-800 border-purple-200"
+                : "bg-emerald-50 text-emerald-800 border-emerald-200"
+            )}>
+              {mergeInfo?.isMerged
+                ? "⚡ Auto-Merged with Existing Active Ticket"
+                : "Dispatched to Municipal Queue"}
             </span>
             <h3 className="font-headline font-extrabold text-2xl text-slate-900 mt-2">
-              Ticket #{createdTicketId} Created!
+              Ticket #{createdTicketId} {mergeInfo?.isMerged ? "Amplified!" : "Created!"}
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              Your grievance at PIN <strong>{pincode}</strong> has been logged
-              and assigned for field resolution.
+              {mergeInfo?.isMerged ? (
+                <>
+                  Your grievance at PIN <strong>{pincode}</strong> matched an existing active report nearby and was <strong>consolidated into Ticket #{createdTicketId}</strong>.
+                </>
+              ) : (
+                <>
+                  Your grievance at PIN <strong>{pincode}</strong> has been logged
+                  and assigned for field resolution.
+                </>
+              )}
             </p>
           </div>
+
+          {/* Merge highlight card */}
+          {mergeInfo?.isMerged && (
+            <div className="p-4 rounded-2xl bg-purple-50/80 border border-purple-200 text-left space-y-2">
+              <div className="flex items-center gap-1.5 text-purple-900 font-bold text-xs">
+                <Sparkles className="w-4 h-4 text-purple-700 shrink-0" />
+                <span>Multi-Citizen Duplicate Consolidation</span>
+              </div>
+              <p className="text-xs text-purple-800 leading-relaxed">
+                Reported <strong>{mergeInfo.timesReported} times</strong> by community citizens. Your upvote and photo evidence have been merged into <strong>Primary Ticket #{mergeInfo.primaryId}</strong> to elevate its municipal priority!
+              </p>
+            </div>
+          )}
 
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-left text-xs space-y-2">
             <div className="flex justify-between">
@@ -1168,6 +1217,14 @@ export function AiReportWizard() {
                 #{createdTicketId}
               </span>
             </div>
+            {mergeInfo?.isMerged && (
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-medium">Community Reports:</span>
+                <span className="font-bold text-purple-700">
+                  {mergeInfo.timesReported} Citizen Reports Consolidated
+                </span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-slate-500 font-medium">
                 Estimated Resolution:
@@ -1190,7 +1247,7 @@ export function AiReportWizard() {
               onClick={() => router.push(`/issues/${createdTicketId}`)}
               className="flex-1 py-2.5 rounded-xl bg-[#134431] hover:bg-[#0c2e21] text-white text-xs font-bold shadow-sm transition-all"
             >
-              Track Live Progress →
+              Track Live Progress #{createdTicketId} →
             </button>
             <button
               type="button"

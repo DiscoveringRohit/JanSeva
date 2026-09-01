@@ -1,54 +1,71 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { TOP_LEADERBOARD } from "@/lib/data/mock-data";
-import { Award, Flame, ChevronRight } from "lucide-react";
+import { Award, Flame, ChevronRight, Sparkles } from "lucide-react";
 import { useApp } from "@/lib/context/app-context";
 
 export function LeaderboardWidget() {
   const { user } = useApp();
+  const [liveLeaderboard, setLiveLeaderboard] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+        const res = await fetch(`${API_URL}/api/leaderboard/`);
+        if (res.ok) {
+          const data = await res.json();
+          setLiveLeaderboard(data);
+        }
+      } catch (err) {
+        console.error("Failed to load live leaderboard", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLeaderboard();
+  }, [user?.civicCitizenXP]);
 
   const leaderboard = useMemo(() => {
-    let board: any[] = TOP_LEADERBOARD.slice(0, 3).map(h => ({ ...h }));
-    
+    let board: any[] = liveLeaderboard.map((item) => ({
+      ...item,
+      isUser: Boolean(user && (user.username === item.username || user.id === item.id)),
+    }));
+
+    // If current logged-in user is not yet in the list or needs position sync
     if (user) {
-      // Find where user belongs
-      const userXP = user.civicCitizenXP ?? 10;
-      let inserted = false;
-      for (let i = 0; i < board.length; i++) {
-        if (userXP > board[i].karma) {
-          board.splice(i, 0, {
-            rank: 0,
-            name: user.name + " (You)",
-            ward: user.ward || "My Ward",
-            karma: userXP,
-            badge: user.levelTitle || "Active Citizen",
-            avatar: user.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100",
-            isUser: true,
-          });
-          inserted = true;
-          break;
-        }
-      }
-      if (!inserted) {
-        board.push({
-          rank: 0,
-          name: user.name + " (You)",
-          ward: user.ward || "My Ward",
-          karma: userXP,
-          badge: user.levelTitle || "Active Citizen",
-          avatar: user.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100",
-          isUser: true,
-        });
+      const existingUserIdx = board.findIndex((item) => item.isUser);
+      const userXP = Number(user.civicCitizenXP ?? 100);
+      const userEntry = {
+        id: user.id,
+        username: user.username,
+        rank: 0,
+        name: `${user.name} (You)`,
+        ward: user.ward || (user.pincode ? `PIN ${user.pincode}` : "My Ward"),
+        karma: userXP,
+        badge: user.levelTitle || (user.role === "officer" ? "Ward Officer" : "Active Citizen"),
+        avatar: user.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username}`,
+        isUser: true,
+      };
+
+      if (existingUserIdx >= 0) {
+        board[existingUserIdx] = { ...userEntry, karma: userXP };
+      } else {
+        board.push(userEntry);
       }
     }
-    
-    // Re-rank
-    return board.map((item, index) => ({ ...item, rank: index + 1 }));
-  }, [user]);
 
-  const userRank = user ? leaderboard.find(l => (l as any).isUser)?.rank || "-" : "-";
+    // Sort by XP descending and re-rank
+    board.sort((a, b) => (b.karma || 0) - (a.karma || 0));
+    return board.slice(0, 5).map((item, index) => ({
+      ...item,
+      rank: index + 1,
+    }));
+  }, [liveLeaderboard, user, user?.civicCitizenXP]);
+
+  const userRank = user ? leaderboard.find((l) => l.isUser)?.rank || "-" : "-";
 
   return (
     <div className="rounded-3xl bg-white border border-surface-container-high/80 p-5 shadow-soft space-y-3.5">

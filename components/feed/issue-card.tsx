@@ -24,22 +24,51 @@ interface IssueCardProps {
 }
 
 export function IssueCard({ issue }: IssueCardProps) {
-  const { deleteIssue, user } = useApp();
+  const { deleteIssue, user, toggleUpvote } = useApp();
   const [copied, setCopied] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const isOwner = user && (user.username === issue.reporter.username || user.name === issue.reporter.name || user.email === issue.reporter.name);
 
-  const [localUpvotes, setLocalUpvotes] = useState(issue.upvotes);
-  const [localIsUpvoted, setLocalIsUpvoted] = useState(issue.isUpvoted);
+  const [localUpvotes, setLocalUpvotes] = useState(issue.upvotes || 0);
+  const [localIsUpvoted, setLocalIsUpvoted] = useState(Boolean(issue.isUpvoted));
 
-  const handleShare = (e: React.MouseEvent) => {
+  React.useEffect(() => {
+    setLocalUpvotes(issue.upvotes || 0);
+    setLocalIsUpvoted(Boolean(issue.isUpvoted));
+  }, [issue.upvotes, issue.isUpvoted]);
+
+  const handleShare = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(`${window.location.origin}/issues/${issue.id}`);
+    if (typeof window === "undefined") return;
+
+    const shareUrl = `${window.location.origin}/issues/${issue.id}`;
+    const shareData = {
+      title: issue.title || "JanSeva Civic Report",
+      text: `Civic report in ${issue.location?.ward || "community"}: ${issue.title}`,
+      url: shareUrl,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (err) {
+        if ((err as any)?.name !== "AbortError") {
+          console.warn("Native share fallback to clipboard:", err);
+        } else {
+          return;
+        }
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    } catch (clipErr) {
+      console.error("Clipboard copy error:", clipErr);
     }
   };
 
@@ -49,13 +78,9 @@ export function IssueCard({ issue }: IssueCardProps) {
 
     const wasUpvoted = localIsUpvoted;
     setLocalIsUpvoted(!wasUpvoted);
-    setLocalUpvotes(prev => wasUpvoted ? prev - 1 : prev + 1);
+    setLocalUpvotes(prev => wasUpvoted ? Math.max(0, prev - 1) : prev + 1);
 
-    if (wasUpvoted) {
-      await downvoteIssue(issue.id);
-    } else {
-      await upvoteIssue(issue.id);
-    }
+    toggleUpvote(issue.id);
   };
 
   // Helper for urgency badge styling
@@ -130,8 +155,13 @@ export function IssueCard({ issue }: IssueCardProps) {
                 </span>
               </div>
 
-              <div className="flex items-center gap-1 text-xs text-slate-500">
-                <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 flex-wrap">
+                <MapPin className="w-3 h-3 text-[#134431] shrink-0" />
+                {((issue as any).pin_code || (issue as any).pincode || issue.location?.pincode || (issue.location?.address?.match(/\b\d{6}\b/) ? issue.location.address.match(/\b\d{6}\b/)![0] : null)) && (
+                  <span className="px-1.5 py-0.5 rounded-md bg-[#edf7f1] text-[#134431] text-[10px] font-bold border border-[#cbe7d7] shrink-0">
+                    PIN {(issue as any).pin_code || (issue as any).pincode || issue.location?.pincode || issue.location.address.match(/\b\d{6}\b/)![0]}
+                  </span>
+                )}
                 <span className="truncate max-w-[180px] sm:max-w-xs">{issue.location.address}</span>
               </div>
             </div>
@@ -141,6 +171,11 @@ export function IssueCard({ issue }: IssueCardProps) {
           <div className="flex items-center sm:flex-col sm:items-end justify-between gap-2 shrink-0 pt-1 sm:pt-0">
             {/* Badges Row */}
             <div className="flex items-center gap-1.5 flex-wrap">
+              {((issue.timesReported && issue.timesReported > 1) || ((issue as any).times_reported && (issue as any).times_reported > 1)) && (
+                <span className="border border-purple-300 text-purple-700 bg-purple-50 text-[11px] font-bold px-2 py-0.5 rounded-md inline-flex items-center gap-1 shadow-2xs">
+                  <span>⚡ Reported {issue.timesReported || (issue as any).times_reported}x</span>
+                </span>
+              )}
               {renderStatusBadge(issue.status)}
               {renderUrgencyBadge(issue.urgency)}
             </div>
