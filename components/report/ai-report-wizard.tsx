@@ -290,15 +290,48 @@ export function AiReportWizard() {
     }
   };
 
+  // Client-side image compression for fast Vercel/Render uploads
+  const compressImage = (file: File, maxWidth = 1200, quality = 0.7): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL("image/jpeg", quality));
+          } else {
+            resolve(e.target?.result as string);
+          }
+        };
+        img.onerror = () => resolve(e.target?.result as string);
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => resolve("");
+      reader.readAsDataURL(file);
+    });
+  };
+
   // Handle Image File Upload (Gallery / File Picker)
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      const result = uploadEvent.target?.result as string;
-      setSelectedImage(result);
+    try {
+      const compressedBase64 = await compressImage(file, 1200, 0.7);
+      setSelectedImage(compressedBase64);
 
       // Auto fill date, time & GPS on image select
       setReportDate(new Date().toISOString().split("T")[0]);
@@ -311,9 +344,19 @@ export function AiReportWizard() {
       handleDetectGPS();
 
       // Trigger Gemini AI Vision Verification
-      verifyImageWithGemini(result);
-    };
-    reader.readAsDataURL(file);
+      verifyImageWithGemini(compressedBase64);
+    } catch {
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        const result = uploadEvent.target?.result as string;
+        setSelectedImage(result);
+        setReportDate(new Date().toISOString().split("T")[0]);
+        setReportTime(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+        handleDetectGPS();
+        verifyImageWithGemini(result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleMapLocationSelect = async (lat: number, lng: number) => {

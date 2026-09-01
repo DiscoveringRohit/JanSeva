@@ -7,6 +7,8 @@ import { useApp } from "@/lib/context/app-context";
 import { CivicIssue } from "@/lib/data/mock-data";
 import { cn } from "@/lib/utils";
 
+import { getIssueById } from "@/lib/api/issues";
+
 // Calculate distance in meters between two lat/lng pairs using Haversine formula
 function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371e3; // metres
@@ -23,14 +25,50 @@ function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: numbe
   return Math.round(R * c);
 }
 
+// Client-side image compression to ensure instant upload on Vercel -> Render connection
+function compressImage(file: File, maxWidth = 1200, quality = 0.7): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        } else {
+          resolve(e.target?.result as string);
+        }
+      };
+      img.onerror = () => resolve(e.target?.result as string);
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function VerifyIssuePage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = Array.isArray(params?.id) ? params.id[0] : (params?.id as string);
   const router = useRouter();
   const { issues, user, setUser, updateIssueStatus } = useApp();
   
   const [issue, setIssue] = useState<CivicIssue | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
   const [geoLoc, setGeoLoc] = useState<string | null>(null);
   const [distanceMeters, setDistanceMeters] = useState<number | null>(null);
   const [isWithinGeoFence, setIsWithinGeoFence] = useState(true);
@@ -40,13 +78,25 @@ export default function VerifyIssuePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (id && issues) {
-      const found = issues.find(i => i.id === id);
+    if (!id) return;
+
+    // 1. Try finding in loaded issues first
+    if (issues && issues.length > 0) {
+      const found = issues.find(i => i.id === id || i.id === `JS-${id}` || i.id.replace("JS-", "") === id);
+      if (found) {
+        setIssue(found);
+        detectLiveDistance(found);
+        return;
+      }
+    }
+
+    // 2. Direct API query for direct URL loads in production
+    getIssueById(id).then((found) => {
       if (found) {
         setIssue(found);
         detectLiveDistance(found);
       }
-    }
+    }).catch((err) => console.warn("Failed to fetch issue directly:", err));
   }, [id, issues]);
 
   const detectLiveDistance = (targetIssue: CivicIssue) => {
@@ -74,14 +124,22 @@ export default function VerifyIssuePage() {
     );
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        setPhoto(uploadEvent.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+      setIsCompressing(true);
+      try {
+        const compressedBase64 = await compressImage(file, 1200, 0.7);
+        setPhoto(compressedBase64);
+      } catch {
+        const reader = new FileReader();
+        reader.onload = (uploadEvent) => {
+          setPhoto(uploadEvent.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+      } finally {
+        setIsCompressing(false);
+      }
     }
   };
 
@@ -93,31 +151,36 @@ export default function VerifyIssuePage() {
     }
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!photo || !issue) return;
     setIsVerifying(true);
     
-    setTimeout(() => {
-      // 1. Award Citizen +25 XP
-      if (setUser) {
-        setUser((prev: any) => prev ? ({
-          ...prev,
-          civicCitizenXP: (prev.civicCitizenXP || 0) + 25,
-          stats: {
-            ...prev.stats,
-            verificationVotes: (prev.stats?.verificationVotes || 0) + 1,
-            issuesResolved: (prev.stats?.issuesResolved || 0) + 1,
-          },
-        }) : prev);
-      }
+    // 1. Award Citizen +25 XP optimistically
+    if (setUser) {
+      setUser((prev: any) => prev ? ({
+        ...prev,
+        civicCitizenXP: (prev.civicCitizenXP || 0) + 25,
+        stats: {
+          ...prev.stats,
+          verificationVotes: (prev.stats?.verificationVotes || 0) + 1,
+          issuesResolved: (prev.stats?.issuesResolved || 0) + 1,
+        },
+      }) : prev);
+    }
 
-      // 2. Closed-Loop Transition to "Verified Resolved"
-      const verifierName = user?.name || "Local Resident";
-      const resolutionNote = `Closed-Loop Verification Complete ✓ Verified by citizen ${verifierName} via on-ground live camera geo-audit (${geoLoc || "Location Tagged"}). ${auditNote}`;
-      
-      updateIssueStatus(issue.id, "Verified Resolved", resolutionNote, photo);
-      router.push(`/issues/${issue.id}`);
-    }, 1200);
+    // 2. Closed-Loop Transition to "Verified Resolved"
+    const verifierName = user?.name || "Local Resident";
+    const resolutionNote = `Closed-Loop Verification Complete ✓ Verified by citizen ${verifierName} via on-ground live camera geo-audit (${geoLoc || "Location Tagged"}). ${auditNote}`;
+    
+    try {
+      await updateIssueStatus(issue.id, "Verified Resolved", resolutionNote, photo);
+    } catch (err) {
+      console.warn("Status update via context had error, proceeding with optimistic redirect:", err);
+    }
+
+    setTimeout(() => {
+      router.push(`/issues/${issue.id}?verified=true`);
+    }, 600);
   };
 
   if (!issue) {
