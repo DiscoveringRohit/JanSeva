@@ -23,42 +23,49 @@ export function setAccessToken(token: string | null) {
   accessToken = token;
 }
 
+let activeRefreshPromise: Promise<string | null> | null = null;
+
 async function refreshAccessWithCookie(): Promise<string | null> {
-  try {
-    const res = await originalFetch(
-      `${API}/api/auth/token/refresh/cookie/`,
-      {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (!res.ok) {
-      console.warn(
-        "cookie refresh returned non-ok",
-        res.status
-      );
-      return null;
-    }
-
-    const data = await res.json().catch(() => null);
-
-    if (data?.access) {
-      setAccessToken(data.access);
-      return data.access;
-    }
-
-    return null;
-  } catch (e: any) {
-    console.error(
-      "refreshAccessWithCookie network error:",
-      e
-    );
-    return null;
+  if (activeRefreshPromise) {
+    return activeRefreshPromise;
   }
+
+  activeRefreshPromise = (async () => {
+    try {
+      const res = await originalFetch(
+        `${API}/api/auth/token/refresh/cookie/`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!res.ok) {
+        return null;
+      }
+
+      const data = await res.json().catch(() => null);
+
+      if (data?.access) {
+        setAccessToken(data.access);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("janseva_token", data.access);
+        }
+        return data.access;
+      }
+
+      return null;
+    } catch (e: any) {
+      return null;
+    } finally {
+      activeRefreshPromise = null;
+    }
+  })();
+
+  return activeRefreshPromise;
 }
 
 export async function fetchWithAuth(

@@ -85,11 +85,13 @@ export default function IssueDetailPage() {
     fetchIssue();
     fetchComments();
 
-    // Poll for real-time cross-tab sync without WebSockets
+    // Poll for real-time cross-tab sync when tab is active
     const pollInterval = setInterval(() => {
-      fetchIssue();
-      fetchComments();
-    }, 4000);
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        fetchIssue();
+        fetchComments();
+      }
+    }, 10000);
 
     return () => clearInterval(pollInterval);
   }, [id, issues, fetchComments]);
