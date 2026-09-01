@@ -14,7 +14,7 @@ import { Award, Camera, MapPin, Search, Filter, TrendingUp, AlertCircle, CheckCi
 import { GUEST_USER } from "@/lib/data/default-location";
 import { cn } from "@/lib/utils";
 
-export default function FeedPage() {
+function FeedPageContent() {
   const searchParams = useSearchParams();
   const initialPinParam = searchParams.get("pin") || "";
   const initialScopeParam = searchParams.get("scope") as "local" | "global" | null;
@@ -482,3 +482,19 @@ export default function FeedPage() {
     </div>
   );
 }
+
+export default function FeedPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="max-w-7xl mx-auto p-8 text-center space-y-3">
+          <div className="w-8 h-8 rounded-full border-4 border-[#134431] border-t-transparent animate-spin mx-auto"></div>
+          <p className="text-xs font-bold text-slate-500">Loading Civic Live Feed...</p>
+        </div>
+      }
+    >
+      <FeedPageContent />
+    </React.Suspense>
+  );
+}
+
