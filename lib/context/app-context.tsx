@@ -23,8 +23,10 @@ import {
   INITIAL_NOTIFICATIONS,
   WardInfo,
   WARD_42_DATA,
+  OfficialAnnouncement,
 } from "@/lib/data/mock-data";
 import { DEFAULT_LOCATION, DEFAULT_USER_FALLBACK } from "@/lib/data/default-location";
+import { getAnnouncements, createAnnouncement, deleteAnnouncement as deleteAnnouncementApi } from "@/lib/api/announcements";
 
 import {
   authService,
@@ -102,6 +104,21 @@ interface AppContextType {
   activeFilter: string;
   setActiveFilter: (filter: string) => void;
 
+  announcements: OfficialAnnouncement[];
+  fetchAnnouncements: (pincode?: string, department?: string) => Promise<void>;
+  publishAnnouncement: (payload: {
+    title: string;
+    message: string;
+    department: string;
+    pincodes: string[];
+    urgency?: "Emergency" | "High" | "Advisory" | "Normal";
+    category?: string;
+    author_name?: string;
+    author_role?: string;
+    action_url?: string;
+  }) => Promise<{ success: boolean; message?: string; reachCount?: number }>;
+  deleteAnnouncement: (id: string | number) => Promise<boolean>;
+
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: TranslationKey) => string;
@@ -138,6 +155,9 @@ export function AppProvider({
 
   const [notifications, setNotifications] =
     useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
+
+  const [announcements, setAnnouncements] =
+    useState<OfficialAnnouncement[]>([]);
 
   const [wardData, setWardData] =
     useState<WardInfo>(WARD_42_DATA);
@@ -336,6 +356,56 @@ export function AppProvider({
         e
       );
     }
+  };
+
+  const fetchAnnouncements = async (pincode?: string, department?: string) => {
+    try {
+      const pin = pincode || user?.pincode;
+      const data = await getAnnouncements(pin, department);
+      setAnnouncements(data);
+    } catch (e) {
+      console.error("Failed to fetch announcements:", e);
+    }
+  };
+
+  const publishAnnouncement = async (payload: {
+    title: string;
+    message: string;
+    department: string;
+    pincodes: string[];
+    urgency?: "Emergency" | "High" | "Advisory" | "Normal";
+    category?: string;
+    author_name?: string;
+    author_role?: string;
+    action_url?: string;
+  }) => {
+    const res = await createAnnouncement(payload);
+    if (res.success && res.announcement) {
+      setAnnouncements((prev) => [res.announcement!, ...prev]);
+      const targetPinStr = payload.pincodes && payload.pincodes.length > 0 ? payload.pincodes.join(", ") : "ALL";
+      const newNotif: NotificationItem = {
+        id: `ann-${res.announcement.id || Date.now()}`,
+        title: `📢 [${payload.department.toUpperCase()} NOTICE - PIN ${targetPinStr}]: ${payload.title}`,
+        message: payload.message,
+        type: "officer",
+        timestamp: new Date().toISOString(),
+        read: false,
+        actionUrl: `/feed?pin=${payload.pincodes[0] || ""}`,
+        pincodes: payload.pincodes,
+        department: payload.department,
+        urgency: payload.urgency || "Advisory",
+      };
+      setNotifications((prev) => [newNotif, ...prev]);
+    }
+    return res;
+  };
+
+  const deleteAnnouncement = async (id: string | number) => {
+    const ok = await deleteAnnouncementApi(id);
+    if (ok) {
+      setAnnouncements((prev) => prev.filter((a) => String(a.id) !== String(id)));
+    }
+    return ok;
   };
 
   const fetchUserProfile = async () => {
@@ -1481,6 +1551,10 @@ export function AppProvider({
         setIsAiDrawerOpen,
         activeFilter,
         setActiveFilter,
+        announcements,
+        fetchAnnouncements,
+        publishAnnouncement,
+        deleteAnnouncement,
         language,
         setLanguage,
         t,

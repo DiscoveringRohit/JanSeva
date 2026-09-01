@@ -10,7 +10,7 @@ import { IssueCard } from "@/components/feed/issue-card";
 import { WeatherWidget } from "@/components/feed/weather-widget";
 import { LeaderboardWidget } from "@/components/feed/leaderboard-widget";
 import { CategoryPill } from "@/components/ui/category-pill";
-import { Award, Camera, MapPin, Search, Filter, TrendingUp, AlertCircle, CheckCircle2, ChevronRight, X, Clock, Settings, LogOut, Sparkles, Layers, ArrowUpDown, Globe2, Navigation, Edit3, RefreshCw } from "lucide-react";
+import { Award, Camera, MapPin, Search, Filter, TrendingUp, AlertCircle, CheckCircle2, ChevronRight, X, Clock, Settings, LogOut, Sparkles, Layers, ArrowUpDown, Globe2, Navigation, Edit3, RefreshCw, Megaphone, ShieldCheck } from "lucide-react";
 import { GUEST_USER } from "@/lib/data/default-location";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +20,7 @@ function FeedPageContent() {
   const initialScopeParam = searchParams.get("scope") as "local" | "global" | null;
   const initialQParam = searchParams.get("q") || "";
 
-  const { user, issues, refreshIssues, isLoadingAuth, t, language } = useApp();
+  const { user, issues, refreshIssues, isLoadingAuth, t, language, announcements, fetchAnnouncements } = useApp();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -179,6 +179,18 @@ function FeedPageContent() {
     return p === localPincode.trim() || (i.location?.address || "").includes(localPincode.trim());
   }).length;
   const globalCount = issues.length;
+
+  // Active Announcements for currently selected PIN
+  const activePinAnnouncements = React.useMemo(() => {
+    if (!announcements || announcements.length === 0) return [];
+    return announcements.filter((ann) => {
+      if (ann.isActive === false) return false;
+      if (feedScope === "global") return true;
+      const targetPins = ann.pincodes && ann.pincodes.length > 0 ? ann.pincodes : ["ALL"];
+      if (targetPins.includes("ALL") || targetPins.includes("all")) return true;
+      return targetPins.some((p) => p.trim() === localPincode.trim());
+    });
+  }, [announcements, feedScope, localPincode]);
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -418,6 +430,69 @@ function FeedPageContent() {
         
         {/* Left 2 Columns: Feed Stream */}
         <div className="lg:col-span-2 space-y-6">
+          {/* HYPERLOCAL OFFICIAL ADVISORY BANNER */}
+          {activePinAnnouncements.length > 0 && (
+            <div className="space-y-3 animate-fadeIn">
+              {activePinAnnouncements.map((ann) => {
+                const isEmergency = ann.urgency === "Emergency";
+                return (
+                  <div
+                    key={ann.id}
+                    className={cn(
+                      "p-4 sm:p-5 rounded-3xl border shadow-sm transition-all relative overflow-hidden",
+                      isEmergency
+                        ? "bg-gradient-to-r from-rose-50 via-rose-50/80 to-amber-50/50 border-rose-200"
+                        : "bg-gradient-to-r from-[#edf7f1] via-[#f4fbf7] to-white border-[#cbe7d7]"
+                    )}
+                  >
+                    <div className="flex items-start gap-3.5">
+                      <div className={cn(
+                        "w-10 h-10 rounded-2xl flex items-center justify-center font-bold shrink-0 shadow-2xs",
+                        isEmergency ? "bg-rose-100 text-rose-700 animate-pulse" : "bg-[#134431] text-emerald-100"
+                      )}>
+                        <Megaphone className="w-5 h-5" />
+                      </div>
+
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={cn(
+                            "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider",
+                            isEmergency ? "bg-rose-600 text-white" : "bg-[#134431] text-emerald-100"
+                          )}>
+                            {isEmergency ? "🔴 Emergency Advisory" : "📢 Official Municipal Advisory"}
+                          </span>
+
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-white text-slate-700 border border-slate-200">
+                            {ann.department || "Municipal Corporation"}
+                          </span>
+
+                          {ann.pincodes && ann.pincodes.length > 0 && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-800 text-emerald-100">
+                              📍 PIN {ann.pincodes.join(", ")}
+                            </span>
+                          )}
+                        </div>
+
+                        <h3 className="font-headline font-black text-sm sm:text-base text-slate-900 leading-snug pt-0.5">
+                          {ann.title}
+                        </h3>
+
+                        <p className="text-xs text-slate-700 leading-relaxed font-medium">
+                          {ann.message}
+                        </p>
+
+                        <div className="flex items-center justify-between pt-1 text-[11px] text-slate-500 font-medium">
+                          <span>Dispatched by {ann.authorName || "Department Authority"}</span>
+                          <span>{new Date(ann.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {isLoadingAuth && issues.length === 0 ? (
             <div className="rounded-3xl bg-white border border-surface-container-high p-12 text-center">
               <div className="w-8 h-8 rounded-full border-4 border-[#134431] border-t-transparent animate-spin mx-auto mb-3"></div>

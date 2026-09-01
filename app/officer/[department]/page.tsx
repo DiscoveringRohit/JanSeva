@@ -182,7 +182,18 @@ function matchesDepartment(issue: CivicIssue, deptSlug: string): boolean {
 }
 
 function DepartmentOfficerContent() {
-  const { user, issues, updateIssueStatus, mergeIssues, notifications, setNotifications } = useApp();
+  const {
+    user,
+    issues,
+    updateIssueStatus,
+    mergeIssues,
+    notifications,
+    setNotifications,
+    announcements,
+    publishAnnouncement,
+    deleteAnnouncement,
+    fetchAnnouncements,
+  } = useApp();
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -199,15 +210,49 @@ function DepartmentOfficerContent() {
     return issues.filter((issue) => matchesDepartment(issue, departmentSlug));
   }, [issues, departmentSlug]);
 
+  // Extract all active PIN codes present across this department's complaints
+  const activeDepartmentPincodes = useMemo(() => {
+    const pins = new Set<string>();
+    deptIssues.forEach((issue) => {
+      const pin = (issue as any).pin_code || (issue as any).pincode || issue.location?.pincode;
+      if (pin) pins.add(String(pin).trim());
+      else {
+        const match = (issue.location?.address || "").match(/\b\d{6}\b/);
+        if (match) pins.add(match[0]);
+      }
+    });
+    if (pins.size === 0) {
+      pins.add("751024");
+      pins.add("751030");
+      pins.add("751001");
+    }
+    return Array.from(pins);
+  }, [deptIssues]);
+
   const [selectedIssueId, setSelectedIssueId] = useState<string>("");
   const [ticketFilter, setTicketFilter] = useState<"all" | "active" | "critical" | "overdue" | "resolved">("all");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [newNote, setNewNote] = useState("");
+
+  // Hyperlocal Announcement Composer State
   const [announcementTitle, setAnnouncementTitle] = useState("");
   const [announcementText, setAnnouncementText] = useState("");
+  const [targetScope, setTargetScope] = useState<"single" | "multiple" | "all">("multiple");
+  const [selectedPincodes, setSelectedPincodes] = useState<string[]>(["751024"]);
+  const [customPincodeInput, setCustomPincodeInput] = useState("");
+  const [announcementUrgency, setAnnouncementUrgency] = useState<"Emergency" | "High" | "Advisory" | "Normal">("Advisory");
+  const [announcementCategory, setAnnouncementCategory] = useState("Service Advisory");
+  const [isPublishingAnnouncement, setIsPublishingAnnouncement] = useState(false);
+  const [broadcastFeedback, setBroadcastFeedback] = useState<{ message: string; reachCount: number } | null>(null);
   const [broadcastSent, setBroadcastSent] = useState(false);
+
   const [selectedSquad, setSelectedSquad] = useState("Unit 1 - Rapid Response Hydro Van");
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+
+  // Initial load of announcements for this department
+  useEffect(() => {
+    fetchAnnouncements(undefined, departmentName);
+  }, [departmentName]);
 
   // Polls & Duplicates state
   const [polls, setPolls] = useState(INITIAL_POLLS);
@@ -368,29 +413,52 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
     );
   };
 
-  // Official Municipal Broadcast to Citizens
-  const handlePublishAnnouncement = (e: React.FormEvent) => {
+  // Official Hyperlocal Municipal Broadcast to Targeted Citizens
+  const handlePublishAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!announcementTitle.trim() || !announcementText.trim()) return;
 
-    const newNotif: NotificationItem = {
-      id: `broadcast-${Date.now()}`,
-      title: `📢 BMC ${departmentName.toUpperCase()} NOTICE: ${announcementTitle.trim()}`,
-      message: announcementText.trim(),
-      type: "officer",
-      timestamp: new Date().toISOString(),
-      read: false,
-      actionUrl: "/feed",
-    };
+    let targetPins = selectedPincodes;
+    if (targetScope === "all") {
+      targetPins = ["ALL"];
+    } else if (targetScope === "single" && customPincodeInput.trim()) {
+      targetPins = [customPincodeInput.trim()];
+    } else if (targetPins.length === 0) {
+      targetPins = [activeDepartmentPincodes[0] || "751024"];
+    }
 
-    setNotifications((prev) => [newNotif, ...prev]);
-    setBroadcastSent(true);
+    setIsPublishingAnnouncement(true);
+    try {
+      const res = await publishAnnouncement({
+        title: announcementTitle.trim(),
+        message: announcementText.trim(),
+        department: departmentName,
+        pincodes: targetPins,
+        urgency: announcementUrgency,
+        category: announcementCategory,
+        author_name: user?.name || `Officer (${departmentName})`,
+        author_role: "officer",
+        action_url: `/feed?pin=${targetPins[0] !== "ALL" ? targetPins[0] : ""}`,
+      });
 
-    setTimeout(() => {
-      setBroadcastSent(false);
-      setAnnouncementTitle("");
-      setAnnouncementText("");
-    }, 4000);
+      if (res.success) {
+        setBroadcastSent(true);
+        setBroadcastFeedback({
+          message: res.message || "Advisory broadcast published successfully!",
+          reachCount: res.reachCount || (targetPins.includes("ALL") ? 12500 : targetPins.length * 2800),
+        });
+        setAnnouncementTitle("");
+        setAnnouncementText("");
+        setTimeout(() => {
+          setBroadcastSent(false);
+          setBroadcastFeedback(null);
+        }, 6000);
+      } else {
+        alert(res.message || "Failed to publish announcement");
+      }
+    } finally {
+      setIsPublishingAnnouncement(false);
+    }
   };
 
   // Merge Duplicate Handler (AI Pair)
@@ -1718,65 +1786,398 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
         </div>
       )}
 
-      {/* 10. DEDICATED TAB: OFFICIAL COMMUNITY ANNOUNCEMENTS */}
+      {/* 10. DEDICATED TAB: OFFICIAL COMMUNITY ANNOUNCEMENTS (HYPERLOCAL PIN TARGETING) */}
       {currentTab === "announcements" && (
-        <div className="p-6 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-6 max-w-3xl mx-auto">
-          <div className="pb-4 border-b border-slate-100">
-            <h2 className="font-headline font-black text-xl text-slate-900 flex items-center gap-2">
-              <Megaphone className="w-5 h-5 text-emerald-700" />
-              <span>Official Community Broadcast Composer</span>
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Publish verified municipal alerts directly into the citizen-facing Ward Feed and real-time notification stream.
-            </p>
+        <div className="space-y-6 max-w-4xl mx-auto">
+          {/* Main Broadcast Composer */}
+          <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-6">
+            <div className="pb-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="p-2 rounded-2xl bg-emerald-100 text-emerald-800 font-bold">
+                    <Megaphone className="w-5 h-5" />
+                  </span>
+                  <h2 className="font-headline font-black text-xl text-slate-900">
+                    Hyperlocal Community Broadcast Composer
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Dispatch official municipal advisories and alerts targeted strictly to specific PIN codes, a cluster of PINs, or your full jurisdiction.
+                </p>
+              </div>
+
+              <span className="px-3.5 py-1.5 rounded-full bg-[#edf7f1] text-[#134431] border border-[#cbe7d7] text-xs font-bold self-start sm:self-auto">
+                BMC {departmentName} Division
+              </span>
+            </div>
+
+            <form onSubmit={handlePublishAnnouncement} className="space-y-5">
+              {/* 1. Target Audience Scope Selector */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                  <span>1. Select Target Geographic Scope</span>
+                  <span className="text-[11px] font-medium text-slate-400">Restricts notification &amp; feed alerts</span>
+                </label>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setTargetScope("multiple")}
+                    className={cn(
+                      "p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1",
+                      targetScope === "multiple"
+                        ? "bg-[#edf7f1] border-emerald-600 text-[#134431] shadow-xs"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold">🏘️ Multi-PIN Cluster</span>
+                      {targetScope === "multiple" && <Check className="w-3.5 h-3.5 text-emerald-700 font-bold" />}
+                    </div>
+                    <p className="text-[10px] text-slate-500 leading-tight">Target selected set of pincodes</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTargetScope("single")}
+                    className={cn(
+                      "p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1",
+                      targetScope === "single"
+                        ? "bg-[#edf7f1] border-emerald-600 text-[#134431] shadow-xs"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold">🎯 Single PIN Code</span>
+                      {targetScope === "single" && <Check className="w-3.5 h-3.5 text-emerald-700 font-bold" />}
+                    </div>
+                    <p className="text-[10px] text-slate-500 leading-tight">Strictly broadcast to 1 specific PIN</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTargetScope("all")}
+                    className={cn(
+                      "p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1",
+                      targetScope === "all"
+                        ? "bg-[#edf7f1] border-emerald-600 text-[#134431] shadow-xs"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold">🌐 All Jurisdiction</span>
+                      {targetScope === "all" && <Check className="w-3.5 h-3.5 text-emerald-700 font-bold" />}
+                    </div>
+                    <p className="text-[10px] text-slate-500 leading-tight">All residents across all wards</p>
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. PIN Selection Chips (for Single or Multiple modes) */}
+              {targetScope !== "all" && (
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>{targetScope === "single" ? "Choose or Enter Target PIN:" : "Active Department PIN Codes (Click to toggle):"}</span>
+                    </p>
+                    <span className="text-[11px] font-semibold text-emerald-700">
+                      {targetScope === "single"
+                        ? `Target: PIN ${customPincodeInput || selectedPincodes[0] || "751024"}`
+                        : `${selectedPincodes.length} PINs Selected`}
+                    </span>
+                  </div>
+
+                  {/* Active Chips from department issues */}
+                  <div className="flex flex-wrap gap-2">
+                    {activeDepartmentPincodes.map((pin) => {
+                      const isSelected = selectedPincodes.includes(pin);
+                      return (
+                        <button
+                          key={pin}
+                          type="button"
+                          onClick={() => {
+                            if (targetScope === "single") {
+                              setSelectedPincodes([pin]);
+                              setCustomPincodeInput(pin);
+                            } else {
+                              setSelectedPincodes((prev) =>
+                                isSelected ? prev.filter((p) => p !== pin) : [...prev, pin]
+                              );
+                            }
+                          }}
+                          className={cn(
+                            "px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border cursor-pointer",
+                            (targetScope === "single" && (customPincodeInput === pin || (!customPincodeInput && selectedPincodes[0] === pin))) ||
+                            (targetScope === "multiple" && isSelected)
+                              ? "bg-[#134431] text-white border-emerald-950 shadow-sm"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                          )}
+                        >
+                          <span>PIN {pin}</span>
+                          {((targetScope === "single" && (customPincodeInput === pin || (!customPincodeInput && selectedPincodes[0] === pin))) ||
+                            (targetScope === "multiple" && isSelected)) && (
+                            <Check className="w-3 h-3 text-emerald-300" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom PIN input field */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      pattern="[0-9]{6}"
+                      placeholder="Add custom 6-digit PIN (e.g. 751030)..."
+                      value={customPincodeInput}
+                      onChange={(e) => setCustomPincodeInput(e.target.value.replace(/\D/g, ""))}
+                      className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-medium text-slate-900 focus:outline-none focus:border-[#134431] w-64"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (customPincodeInput.length === 6) {
+                          if (targetScope === "single") {
+                            setSelectedPincodes([customPincodeInput]);
+                          } else {
+                            if (!selectedPincodes.includes(customPincodeInput)) {
+                              setSelectedPincodes((prev) => [...prev, customPincodeInput]);
+                            }
+                          }
+                        }
+                      }}
+                      className="px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      + Add PIN
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Category & Urgency Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    Advisory Urgency Level
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: "Emergency", label: "🔴 Emergency", color: "bg-rose-50 border-rose-300 text-rose-800" },
+                      { id: "Advisory", label: "🟡 Advisory", color: "bg-amber-50 border-amber-300 text-amber-800" },
+                      { id: "Normal", label: "🟢 Public Notice", color: "bg-emerald-50 border-emerald-300 text-emerald-800" },
+                    ].map((urg) => (
+                      <button
+                        key={urg.id}
+                        type="button"
+                        onClick={() => setAnnouncementUrgency(urg.id as any)}
+                        className={cn(
+                          "py-2 px-2 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer",
+                          announcementUrgency === urg.id
+                            ? `${urg.color} ring-2 ring-emerald-600 font-black shadow-xs`
+                            : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                        )}
+                      >
+                        {urg.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    Advisory Classification
+                  </label>
+                  <select
+                    value={announcementCategory}
+                    onChange={(e) => setAnnouncementCategory(e.target.value)}
+                    className="w-full px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:bg-white focus:border-[#134431]"
+                  >
+                    <option value="Water Supply Notice">💧 Water Supply &amp; Pipeline Repair</option>
+                    <option value="Road Works & Traffic">🚧 Road Resurfacing &amp; Diversion</option>
+                    <option value="Power Outage Schedule">⚡ Electricity Grid Maintenance</option>
+                    <option value="Sanitation Mega Drive">🧹 Ward Sanitation &amp; Waste Drive</option>
+                    <option value="Monsoon Drainage Advisory">🌧️ Drainage &amp; Flood Preparedness</option>
+                    <option value="General Civic Notice">📢 General Citizen Advisory</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 4. Title & Content */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">
+                  Broadcast Title
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Cauvery Phase-IV Valve Repair: Reduced Pressure Notice"
+                  value={announcementTitle}
+                  onChange={(e) => setAnnouncementTitle(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:bg-white focus:border-[#134431]"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">
+                  Broadcast Content &amp; Instructions for Residents
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  placeholder="Detail the affected streets in the targeted PINs, expected timeline of restoration, and helpline numbers for emergency supply..."
+                  value={announcementText}
+                  onChange={(e) => setAnnouncementText(e.target.value)}
+                  className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-[#134431] resize-none leading-relaxed"
+                />
+              </div>
+
+              {/* 5. Audience Reach & Dispatch Button */}
+              <div className="p-4 rounded-2xl bg-[#f4fbf7] border border-[#cbe7d7] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-[#134431] flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Estimated Citizen Reach</span>
+                  </p>
+                  <p className="text-[11px] text-emerald-800">
+                    {targetScope === "all"
+                      ? "Dispatches to ~18,500 verified residents in all city wards."
+                      : `Dispatches strictly to registered residents in PIN: ${selectedPincodes.join(", ") || "Selected"}.`}
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isPublishingAnnouncement}
+                  className="px-6 py-3 rounded-full bg-[#134431] hover:bg-[#0c2e21] text-white font-headline font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
+                >
+                  {broadcastSent ? (
+                    <>
+                      <Check className="w-4 h-4 text-emerald-300" />
+                      <span>Advisory Published &amp; Dispatched!</span>
+                    </>
+                  ) : isPublishingAnnouncement ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Broadcasting to PINs...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Publish Targeted Advisory →</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {broadcastFeedback && (
+                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-xs text-emerald-900 font-medium animate-fadeIn">
+                  ✓ {broadcastFeedback.message}
+                </div>
+              )}
+            </form>
           </div>
 
-          <form onSubmit={handlePublishAnnouncement} className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 block">
-                Announcement Title
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Cauvery Line Phase IV Valve Overhaul — Water Supply Notice"
-                value={announcementTitle}
-                onChange={(e) => setAnnouncementTitle(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:bg-white focus:border-[#134431]"
-              />
+          {/* Active Broadcast Ledger & History */}
+          <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="font-headline font-bold text-base text-slate-900">
+                  Active Department Broadcasts ({announcements.length})
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Currently active advisories displayed to citizens on their feed and notification center.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => fetchAnnouncements(undefined, departmentName)}
+                className="p-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors"
+                title="Refresh Broadcasts"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 block">
-                Broadcast Content &amp; Citizen Instructions
-              </label>
-              <textarea
-                required
-                rows={4}
-                placeholder="Describe affected wards, expected restoration timeline, and emergency tanker helpline..."
-                value={announcementText}
-                onChange={(e) => setAnnouncementText(e.target.value)}
-                className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-[#134431] resize-none"
-              />
-            </div>
+            {announcements.length === 0 ? (
+              <div className="p-8 text-center rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+                <Megaphone className="w-6 h-6 text-slate-300 mx-auto" />
+                <p className="text-xs font-bold text-slate-600">No active broadcasts published yet</p>
+                <p className="text-[11px] text-slate-400">Compose an advisory above to notify residents of scheduled repairs.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {announcements.map((ann) => {
+                  const isEmergency = ann.urgency === "Emergency";
+                  const targetPins = ann.pincodes && ann.pincodes.length > 0 ? ann.pincodes : ["ALL"];
 
-            <button
-              type="submit"
-              className="px-6 py-3 rounded-full bg-[#134431] hover:bg-[#0c2e21] text-white font-headline font-bold text-xs shadow-md transition-all flex items-center gap-2"
-            >
-              {broadcastSent ? (
-                <>
-                  <Check className="w-4 h-4 text-emerald-300" />
-                  <span>Broadcast Dispatched to All Ward Citizens!</span>
-                </>
-              ) : (
-                <>
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Publish Official Advisory →</span>
-                </>
-              )}
-            </button>
-          </form>
+                  return (
+                    <div
+                      key={ann.id}
+                      className={cn(
+                        "p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-start justify-between gap-3",
+                        isEmergency
+                          ? "bg-rose-50/50 border-rose-200"
+                          : "bg-slate-50/80 border-slate-200/80 hover:bg-white"
+                      )}
+                    >
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={cn(
+                            "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider",
+                            isEmergency ? "bg-rose-100 text-rose-800 border border-rose-300" : "bg-amber-100 text-amber-900 border border-amber-300"
+                          )}>
+                            {ann.urgency || "Advisory"}
+                          </span>
+
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white text-slate-700 border border-slate-200">
+                            {ann.category || "General"}
+                          </span>
+
+                          <div className="flex items-center gap-1">
+                            {targetPins.map((p) => (
+                              <span key={p} className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-[#134431] text-emerald-100">
+                                📍 PIN {p}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <h4 className="font-headline font-bold text-sm text-slate-900">
+                          {ann.title}
+                        </h4>
+
+                        <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                          {ann.message}
+                        </p>
+
+                        <div className="flex items-center gap-3 text-[10px] text-slate-400 pt-1">
+                          <span>Author: {ann.authorName || "Department Officer"}</span>
+                          <span>•</span>
+                          <span>Published: {new Date(ann.createdAt).toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (confirm(`Deactivate broadcast "${ann.title}"?`)) {
+                            await deleteAnnouncement(ann.id);
+                          }
+                        }}
+                        className="self-start sm:self-center px-3 py-1.5 rounded-xl bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-700 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Retract</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

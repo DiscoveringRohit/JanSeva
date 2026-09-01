@@ -112,11 +112,32 @@ export interface NotificationItem {
   id: string;
   title: string;
   message: string;
-  type: "status" | "upvote" | "ward" | "badge" | "officer";
+  type: "status" | "upvote" | "ward" | "badge" | "officer" | "announcement";
   timestamp: string;
   read: boolean;
   issueId?: string;
   actionUrl?: string;
+  pincode?: string;
+  pincodes?: string[];
+  department?: string;
+  urgency?: "Emergency" | "High" | "Advisory" | "Normal";
+}
+
+export interface OfficialAnnouncement {
+  id: string | number;
+  title: string;
+  message: string;
+  department: string;
+  pincodes: string[];
+  urgency: "Emergency" | "High" | "Advisory" | "Normal";
+  category: string;
+  authorName?: string;
+  authorRole?: string;
+  createdAt: string;
+  expiresAt?: string | null;
+  actionUrl?: string;
+  isActive?: boolean;
+  reachCount?: number;
 }
 
 export interface UserProfile {
