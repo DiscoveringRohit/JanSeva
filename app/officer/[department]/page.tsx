@@ -6,7 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { OfficerKanban } from "@/components/officer/officer-kanban";
 import { CivicMapView } from "@/components/map/JanSevaMap";
 import { useApp } from "@/lib/context/app-context";
-import { useBudget } from "@/lib/context/budget-context";
+import { useBudget, parseBudgetNumber } from "@/lib/context/budget-context";
 import { usePolls } from "@/lib/context/poll-context";
 import { CivicIssue, NotificationItem } from "@/lib/data/mock-data";
 import {
@@ -158,7 +158,6 @@ function DepartmentOfficerContent() {
     deleteAnnouncement,
     fetchAnnouncements,
   } = useApp();
-  const { proposals, addProposal, updateProposalStatus } = useBudget();
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -229,12 +228,13 @@ function DepartmentOfficerContent() {
     fetchAnnouncements(undefined, departmentName);
   }, [departmentName]);
 
-  // Polls & Duplicates state
-  const { polls, addPoll } = usePolls();
+  // Polls & Budget Initiatives state
+  const { polls, addPoll, deletePoll, updatePollStatus } = usePolls();
+  const { proposals, addProposal, updateProposalStatus, deleteProposal } = useBudget();
   const [isBallotModalOpen, setIsBallotModalOpen] = useState(false);
   const [ballotForm, setBallotForm] = useState({
     title: "",
-    ward: "",
+    ward: user?.pincode || "",
     description: "",
     budgetEstimate: "",
     daysLeft: "7"
@@ -1301,58 +1301,144 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {polls.map((poll) => {
-              const totalVotes = poll.yesVotes + poll.noVotes;
-              const yesPercent = Math.round((poll.yesVotes / Math.max(1, totalVotes)) * 100);
-              const noPercent = 100 - yesPercent;
+          {polls.length === 0 ? (
+            <div className="p-12 text-center rounded-3xl bg-white border border-slate-200/60 border-dashed flex flex-col items-center justify-center space-y-3">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-[#134431] flex items-center justify-center">
+                <Vote className="w-7 h-7" />
+              </div>
+              <h3 className="text-base font-bold text-slate-800">No Active Ballots Published</h3>
+              <p className="text-slate-500 text-xs max-w-md">
+                Publish a democratic consensus referendum to gather citizen votes on major municipal works before initiating procurement tenders.
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsBallotModalOpen(true)}
+                className="px-4 py-2 rounded-xl bg-[#134431] text-white font-bold text-xs hover:bg-[#0c2e21] shadow-md transition-all flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Create Consensus Ballot</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {polls.map((poll) => {
+                const totalVotes = poll.yesVotes + poll.noVotes;
+                const yesPercent = Math.round((poll.yesVotes / Math.max(1, totalVotes)) * 100);
+                const noPercent = 100 - yesPercent;
 
-              return (
-                <div key={poll.id} className="p-6 rounded-3xl bg-white border border-slate-100 shadow-soft flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#edf7f1] text-[#134431] border border-[#cbe7d7]">
-                        {poll.ward}
-                      </span>
-                      <span className={cn(
-                        "px-2.5 py-0.5 rounded-full text-[10px] font-bold",
-                        poll.status === "Approved" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
-                      )}>
-                        {poll.status}
-                      </span>
-                    </div>
-
-                    <h3 className="font-headline font-bold text-base text-slate-900 leading-snug">
-                      {poll.title}
-                    </h3>
-                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                      {poll.description}
-                    </p>
-                  </div>
-
-                  <div className="space-y-3 pt-3 border-t border-slate-100">
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-xs font-bold">
-                        <span className="text-emerald-700 flex items-center gap-1">
-                          <ThumbsUp className="w-3.5 h-3.5" /> In Favor ({yesPercent}%)
+                return (
+                  <div key={poll.id} className="p-6 rounded-3xl bg-white border border-slate-100 shadow-soft flex flex-col justify-between space-y-4 hover:border-emerald-200 transition-colors">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#edf7f1] text-[#134431] border border-[#cbe7d7] truncate max-w-[140px]">
+                          {poll.ward}
                         </span>
-                        <span className="text-slate-500">{poll.yesVotes.toLocaleString()} votes</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={cn(
+                            "px-2.5 py-0.5 rounded-full text-[10px] font-bold",
+                            poll.status === "Approved" ? "bg-emerald-100 text-emerald-800" :
+                            poll.status === "Rejected" ? "bg-rose-100 text-rose-800" :
+                            "bg-amber-100 text-amber-800"
+                          )}>
+                            {poll.status}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm(`Are you sure you want to delete this referendum: "${poll.title}"?`)) {
+                                deletePoll(poll.id);
+                                deleteProposal(poll.id);
+                              }
+                            }}
+                            className="w-5 h-5 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center transition-colors"
+                            title="Delete Ballot"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
-                      <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden flex">
-                        <div className="h-full bg-emerald-500" style={{ width: `${yesPercent}%` }}></div>
-                        <div className="h-full bg-rose-400" style={{ width: `${noPercent}%` }}></div>
-                      </div>
+
+                      <h3 className="font-headline font-bold text-base text-slate-900 leading-snug">
+                        {poll.title}
+                      </h3>
+                      <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                        {poll.description}
+                      </p>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
-                      <span>Est. Budget: <strong className="text-slate-900">{poll.budgetEstimate}</strong></span>
-                      <span>{poll.daysLeft > 0 ? `Ends in ${poll.daysLeft} days` : "Voting Concluded"}</span>
+                    <div className="space-y-3 pt-3 border-t border-slate-100">
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs font-bold">
+                          <span className="text-emerald-700 flex items-center gap-1">
+                            <ThumbsUp className="w-3.5 h-3.5" /> In Favor ({yesPercent}%)
+                          </span>
+                          <span className="text-slate-500">{poll.yesVotes.toLocaleString()} votes ({totalVotes} total)</span>
+                        </div>
+                        <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden flex">
+                          <div className="h-full bg-emerald-500" style={{ width: `${yesPercent}%` }}></div>
+                          <div className="h-full bg-rose-400" style={{ width: `${noPercent}%` }}></div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                        <span>Est: <strong className="text-slate-900">{poll.budgetEstimate}</strong></span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> {poll.daysLeft} days left
+                        </span>
+                      </div>
+
+                      {/* Status Action Controls */}
+                      <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updatePollStatus(poll.id, "Approved");
+                            updateProposalStatus(poll.id, "Threshold Met");
+                          }}
+                          className={cn(
+                            "flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all flex items-center justify-center gap-1",
+                            poll.status === "Approved"
+                              ? "bg-emerald-600 text-white shadow-xs"
+                              : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
+                          )}
+                        >
+                          <Check className="w-3 h-3" />
+                          <span>✓ Approve Tender</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updatePollStatus(poll.id, "Approved");
+                            updateProposalStatus(poll.id, "In Execution");
+                          }}
+                          className="flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1"
+                        >
+                          <TrendingUp className="w-3 h-3" />
+                          <span>⚡ Mark In Execution</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updatePollStatus(poll.id, "Active Ballot");
+                            updateProposalStatus(poll.id, "Open for Voting");
+                          }}
+                          className={cn(
+                            "py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all",
+                            poll.status === "Active Ballot"
+                              ? "bg-slate-800 text-white"
+                              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                          )}
+                          title="Reset to Active Ballot"
+                        >
+                          Reset
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* CREATE BALLOT MODAL */}
           {isBallotModalOpen && (
@@ -1360,7 +1446,7 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
               <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4">
                 <h3 className="font-headline font-black text-xl text-slate-900 mb-4 flex items-center gap-2">
                   <Vote className="w-5 h-5 text-[#0B402C]" />
-                  Create Consensus Ballot
+                  Create Consensus Ballot &amp; Budget Initiative
                 </h3>
                 <form
                   onSubmit={(e) => {
@@ -1368,8 +1454,9 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
                     if (!ballotForm.title || !ballotForm.description || !ballotForm.ward) {
                       return;
                     }
+                    const pollId = `poll-${Date.now()}`;
                     const newBallot = {
-                      id: `poll-${Date.now()}`,
+                      id: pollId,
                       title: ballotForm.title,
                       department: departmentName,
                       ward: ballotForm.ward,
@@ -1377,14 +1464,28 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
                       yesVotes: 0,
                       noVotes: 0,
                       status: "Active Ballot" as const,
-                      daysLeft: parseInt(ballotForm.daysLeft, 10),
-                      budgetEstimate: ballotForm.budgetEstimate
+                      daysLeft: parseInt(ballotForm.daysLeft, 10) || 7,
+                      budgetEstimate: ballotForm.budgetEstimate || "₹ 45.0 Lakhs"
                     };
                     addPoll(newBallot);
+
+                    // Simultaneously mirror to participatory budget proposal
+                    addProposal({
+                      id: pollId,
+                      title: ballotForm.title,
+                      category: departmentName,
+                      description: ballotForm.description,
+                      requiredBudget: parseBudgetNumber(ballotForm.budgetEstimate) || 4500000,
+                      wardPin: ballotForm.ward,
+                      createdBy: `${user?.name || "Official"} (${departmentName})`,
+                      currentVotes: 0,
+                      status: "Open for Voting"
+                    });
+
                     setIsBallotModalOpen(false);
                     setBallotForm({
                       title: "",
-                      ward: "",
+                      ward: user?.pincode || "",
                       description: "",
                       budgetEstimate: "",
                       daysLeft: "7"
@@ -1418,11 +1519,11 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="block font-bold text-slate-700">Target Ward <span className="text-rose-500">*</span></label>
+                    <label className="block font-bold text-slate-700">Target Ward / PIN Code <span className="text-rose-500">*</span></label>
                     <input
                       required
                       type="text"
-                      placeholder="e.g., Ward 63, Khandagiri"
+                      placeholder="e.g., 751024, 751030, or Ward 63"
                       value={ballotForm.ward}
                       onChange={(e) => setBallotForm({ ...ballotForm, ward: e.target.value })}
                       className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0B402C] focus:border-[#0B402C] transition-colors"
@@ -1431,7 +1532,7 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="block font-bold text-slate-700">Budget Estimate (Optional)</label>
+                      <label className="block font-bold text-slate-700">Budget Estimate (e.g. ₹ 48.5 Lakhs)</label>
                       <input
                         type="text"
                         placeholder="e.g., ₹ 48.5 Lakhs"
@@ -1461,7 +1562,7 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
                         setIsBallotModalOpen(false);
                         setBallotForm({
                           title: "",
-                          ward: "",
+                          ward: user?.pincode || "",
                           description: "",
                           budgetEstimate: "",
                           daysLeft: "7"

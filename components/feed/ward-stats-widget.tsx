@@ -65,10 +65,10 @@ export function WardStatsWidget() {
       {/* Quick Action Links */}
       <div className="pt-2 border-t border-surface-dim space-y-1.5 text-xs">
         <Link
-          href="/ward"
+          href="/ward-budget"
           className="flex items-center justify-between text-primary-600 font-bold hover:underline py-1"
         >
-          <span>View Ward 42 Budget & Projects</span>
+          <span>View Ward Budget & Initiatives</span>
           <span>→</span>
         </Link>
       </div>

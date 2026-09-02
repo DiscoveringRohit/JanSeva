@@ -19,6 +19,7 @@ interface PollContextType {
   polls: ConsensusPoll[];
   userVotes: { pollId: string; vote: "yes" | "no" }[];
   addPoll: (poll: ConsensusPoll) => void;
+  deletePoll: (pollId: string) => void;
   votePoll: (pollId: string, voteType: "yes" | "no") => void;
   updatePollStatus: (pollId: string, status: "Active Ballot" | "Approved" | "Rejected") => void;
 }
@@ -30,75 +31,136 @@ export function PollProvider({ children }: { children: React.ReactNode }) {
   const [userVotes, setUserVotes] = useState<{ pollId: string; vote: "yes" | "no" }[]>([]);
 
   useEffect(() => {
-    const savedPolls = localStorage.getItem("janseva_consensus_polls");
-    const savedVotes = localStorage.getItem("janseva_consensus_user_votes");
-    if (savedPolls) {
-      setPolls(JSON.parse(savedPolls));
-    } else {
-      // Default initial mock data
-      const initial = [
-        {
-          id: "poll-1",
-          title: "24x7 Pressurized Drinking Water Metering Installation",
-          department: "Water",
-          ward: "751024",
-          description: "Proposal to replace legacy gravity mains with automated smart digital telemetry water meters.",
-          yesVotes: 1420,
-          noVotes: 190,
-          status: "Active Ballot",
-          daysLeft: 4,
-          budgetEstimate: "? 48.5 Lakhs"
-        } as ConsensusPoll
-      ];
-      setPolls(initial);
-      localStorage.setItem("janseva_consensus_polls", JSON.stringify(initial));
-    }
+    try {
+      const savedPolls = typeof window !== "undefined" ? localStorage.getItem("janseva_consensus_polls") : null;
+      const savedVotes = typeof window !== "undefined" ? localStorage.getItem("janseva_consensus_user_votes") : null;
+      if (savedPolls) {
+        const parsed = JSON.parse(savedPolls);
+        setPolls(Array.isArray(parsed) ? parsed : []);
+      } else {
+        setPolls([]);
+      }
+      if (savedVotes) {
+        const parsedVotes = JSON.parse(savedVotes);
+        setUserVotes(Array.isArray(parsedVotes) ? parsedVotes : []);
+      } else {
+        setUserVotes([]);
+      }
 
-    if (savedVotes) {
-      setUserVotes(JSON.parse(savedVotes));
+      // Sync with server API ballots if available
+      fetch("/api/ballots")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && Array.isArray(data.ballots) && data.ballots.length > 0) {
+            setPolls((prev) => {
+              const combinedMap = new Map<string, ConsensusPoll>();
+              prev.forEach((p) => combinedMap.set(p.id, p));
+              data.ballots.forEach((b: ConsensusPoll) => {
+                if (!combinedMap.has(b.id)) {
+                  combinedMap.set(b.id, b);
+                }
+              });
+              const combined = Array.from(combinedMap.values());
+              if (typeof window !== "undefined") {
+                localStorage.setItem("janseva_consensus_polls", JSON.stringify(combined));
+              }
+              return combined;
+            });
+          }
+        })
+        .catch(() => {});
+    } catch {
+      setPolls([]);
+      setUserVotes([]);
     }
   }, []);
 
-  const savePolls = (newPolls: ConsensusPoll[]) => {
-    setPolls(newPolls);
-    localStorage.setItem("janseva_consensus_polls", JSON.stringify(newPolls));
-  };
-
-  const saveUserVotes = (newVotes: { pollId: string; vote: "yes" | "no" }[]) => {
-    setUserVotes(newVotes);
-    localStorage.setItem("janseva_consensus_user_votes", JSON.stringify(newVotes));
-  };
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "janseva_consensus_polls" && e.newValue) {
+        try {
+          setPolls(JSON.parse(e.newValue));
+        } catch {}
+      }
+      if (e.key === "janseva_consensus_user_votes" && e.newValue) {
+        try {
+          setUserVotes(JSON.parse(e.newValue));
+        } catch {}
+      }
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("storage", handleStorage);
+      return () => window.removeEventListener("storage", handleStorage);
+    }
+  }, []);
 
   const addPoll = (poll: ConsensusPoll) => {
-    savePolls([poll, ...polls]);
+    setPolls((prev) => {
+      const updated = [poll, ...prev.filter((p) => p.id !== poll.id)];
+      if (typeof window !== "undefined") {
+        localStorage.setItem("janseva_consensus_polls", JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    // Mirror to server API
+    fetch("/api/ballots", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(poll),
+    }).catch(() => {});
+  };
+
+  const deletePoll = (pollId: string) => {
+    setPolls((prev) => {
+      const updated = prev.filter((p) => p.id !== pollId);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("janseva_consensus_polls", JSON.stringify(updated));
+      }
+      return updated;
+    });
   };
 
   const votePoll = (pollId: string, voteType: "yes" | "no") => {
-    const existingVote = userVotes.find((v) => v.pollId === pollId);
-    if (existingVote) return; // already voted
-
-    const updatedPolls = polls.map((p) => {
-      if (p.id === pollId) {
-        return {
-          ...p,
-          yesVotes: voteType === "yes" ? p.yesVotes + 1 : p.yesVotes,
-          noVotes: voteType === "no" ? p.noVotes + 1 : p.noVotes,
-        };
+    setUserVotes((prevVotes) => {
+      if (prevVotes.some((v) => v.pollId === pollId)) return prevVotes;
+      const updatedVotes = [...prevVotes, { pollId, vote: voteType }];
+      if (typeof window !== "undefined") {
+        localStorage.setItem("janseva_consensus_user_votes", JSON.stringify(updatedVotes));
       }
-      return p;
+      return updatedVotes;
     });
 
-    savePolls(updatedPolls);
-    saveUserVotes([...userVotes, { pollId, vote: voteType }]);
+    setPolls((prevPolls) => {
+      const updated = prevPolls.map((p) => {
+        if (p.id === pollId) {
+          return {
+            ...p,
+            yesVotes: voteType === "yes" ? p.yesVotes + 1 : p.yesVotes,
+            noVotes: voteType === "no" ? p.noVotes + 1 : p.noVotes,
+          };
+        }
+        return p;
+      });
+      if (typeof window !== "undefined") {
+        localStorage.setItem("janseva_consensus_polls", JSON.stringify(updated));
+      }
+      return updated;
+    });
   };
 
   const updatePollStatus = (pollId: string, status: "Active Ballot" | "Approved" | "Rejected") => {
-    const updated = polls.map((p) => (p.id === pollId ? { ...p, status } : p));
-    savePolls(updated);
+    setPolls((prev) => {
+      const updated = prev.map((p) => (p.id === pollId ? { ...p, status } : p));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("janseva_consensus_polls", JSON.stringify(updated));
+      }
+      return updated;
+    });
   };
 
   return (
-    <PollContext.Provider value={{ polls, userVotes, addPoll, votePoll, updatePollStatus }}>
+    <PollContext.Provider value={{ polls, userVotes, addPoll, deletePoll, votePoll, updatePollStatus }}>
       {children}
     </PollContext.Provider>
   );

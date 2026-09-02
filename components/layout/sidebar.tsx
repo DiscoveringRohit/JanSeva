@@ -78,7 +78,6 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
     { label: t("explore"), href: "/explore", icon: Compass },
     { label: t("report"), href: "/report", icon: PlusCircle, highlight: true },
     { label: t("map"), href: "/map", icon: Map },
-    { label: t("ward"), href: "/ward", icon: Building2 },
     { label: "Ward Budget", href: "/ward-budget", icon: Wallet },
     {
       label: t("notifications"),
