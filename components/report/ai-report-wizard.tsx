@@ -300,15 +300,28 @@ export function AiReportWizard() {
       const canvas = canvasRef.current;
 
       const doCapture = () => {
-        const width = video.videoWidth || 640;
-        const height = video.videoHeight || 480;
+        let width = video.videoWidth || 640;
+        let height = video.videoHeight || 480;
+
+        // Downscale to max 800px for sub-second Gemini upload & inference
+        const maxDim = 800;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
         canvas.width = width;
         canvas.height = height;
 
         const ctx = canvas.getContext("2d");
         if (ctx) {
           ctx.drawImage(video, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.80);
           setSelectedImage(dataUrl);
           setIsCameraActive(false);
           if (mediaStream) {
@@ -339,8 +352,8 @@ export function AiReportWizard() {
     }
   };
 
-  // Client-side image compression for fast Vercel/Render uploads
-  const compressImage = (file: File, maxWidth = 1200, quality = 0.7): Promise<string> => {
+  // Client-side image compression for fast Vercel/Render uploads & Gemini Vision
+  const compressImage = (file: File, maxWidth = 800, quality = 0.8): Promise<string> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -350,9 +363,14 @@ export function AiReportWizard() {
           let width = img.width;
           let height = img.height;
 
-          if (width > maxWidth) {
-            height = Math.round((height * maxWidth) / width);
-            width = maxWidth;
+          if (width > maxWidth || height > maxWidth) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxWidth) / height);
+              height = maxWidth;
+            }
           }
 
           canvas.width = width;
