@@ -31,6 +31,7 @@ import { getAnnouncements, createAnnouncement, deleteAnnouncement as deleteAnnou
 import {
   authService,
   fetchWithAuth,
+  setAccessToken,
 } from "@/lib/auth/auth-service-cookie3";
 import {
   translations,
@@ -55,6 +56,7 @@ interface AppContextType {
   user: UserProfile | null;
   isLoadingAuth: boolean;
   setUser: React.Dispatch<React.SetStateAction<UserProfile | null>>;
+  logout: () => Promise<void>;
   switchRole: (
     role: "citizen" | "officer" | "corporator"
   ) => void;
@@ -491,6 +493,7 @@ export function AppProvider({
       }
 
       await fetchIssues();
+      await fetchAnnouncements();
 
       const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
       if (token) {
@@ -512,6 +515,7 @@ export function AppProvider({
     // Set up reasonable polling for background sync without clogging backend Gunicorn workers
     const pollInterval = setInterval(() => {
       const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
+      fetchAnnouncements();
       if (token) {
         fetchIssues();
         fetchNotifications();
@@ -590,6 +594,21 @@ export function AppProvider({
         levelTitle: "Ward 42 Corporator",
       });
     }
+  };
+
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch (e) {
+      console.warn("Logout error:", e);
+    }
+    setAccessToken(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("janseva_token");
+      localStorage.removeItem("janseva_user");
+      localStorage.removeItem("janseva_role");
+    }
+    setUser(null);
   };
 
   const toggleUpvote = async (issueId: string) => {
@@ -1526,6 +1545,7 @@ export function AppProvider({
         user,
         isLoadingAuth,
         setUser,
+        logout,
         switchRole,
         issues,
         refreshIssues: fetchIssues,

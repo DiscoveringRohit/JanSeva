@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/context/app-context";
 import { getFeed } from "@/lib/api/issues";
@@ -12,6 +12,8 @@ import { LeaderboardWidget } from "@/components/feed/leaderboard-widget";
 import { CategoryPill } from "@/components/ui/category-pill";
 import { Award, Camera, MapPin, Search, Filter, TrendingUp, AlertCircle, CheckCircle2, ChevronRight, X, Clock, Settings, LogOut, Sparkles, Layers, ArrowUpDown, Globe2, Navigation, Edit3, RefreshCw, Megaphone, ShieldCheck } from "lucide-react";
 import { GUEST_USER } from "@/lib/data/default-location";
+import { AnnouncementCardModal } from "@/components/announcements/announcement-card-modal";
+import { OfficialAnnouncement } from "@/lib/data/mock-data";
 import { cn } from "@/lib/utils";
 
 function FeedPageContent() {
@@ -19,10 +21,16 @@ function FeedPageContent() {
   const initialPinParam = searchParams.get("pin") || "";
   const initialScopeParam = searchParams.get("scope") as "local" | "global" | null;
   const initialQParam = searchParams.get("q") || "";
+  const initialAnnouncementIdParam = searchParams.get("announcementId") || "";
 
   const { user, issues, refreshIssues, isLoadingAuth, t, language, announcements, fetchAnnouncements } = useApp();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Hyperlocal Announcement Modal Popup State
+  const [selectedAnnouncementForModal, setSelectedAnnouncementForModal] = useState<OfficialAnnouncement | null>(null);
+  const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
+  const [hasAutoOpenedPopup, setHasAutoOpenedPopup] = useState(false);
 
   // Feed Scope: "local" (default start with local pincode) or "global" (all areas)
   const [feedScope, setFeedScope] = useState<"local" | "global">(initialScopeParam || (initialPinParam ? "local" : "local"));
@@ -191,6 +199,48 @@ function FeedPageContent() {
       return targetPins.some((p) => p.trim() === localPincode.trim());
     });
   }, [announcements, feedScope, localPincode]);
+
+  // Auto-trigger announcement modal popup on feed load if there is an active advisory
+  useEffect(() => {
+    if (activePinAnnouncements.length === 0 || hasAutoOpenedPopup) return;
+
+    let targetAnnouncement: OfficialAnnouncement | undefined;
+    if (initialAnnouncementIdParam) {
+      targetAnnouncement = activePinAnnouncements.find(
+        (a) => String(a.id) === initialAnnouncementIdParam
+      );
+    }
+
+    if (!targetAnnouncement) {
+      let dismissed: string[] = [];
+      try {
+        const stored = typeof window !== "undefined" ? localStorage.getItem("janseva_dismissed_announcements") : null;
+        if (stored) dismissed = JSON.parse(stored);
+      } catch (e) {}
+
+      targetAnnouncement = activePinAnnouncements.find(
+        (a) => !dismissed.includes(String(a.id))
+      );
+    }
+
+    if (targetAnnouncement) {
+      setSelectedAnnouncementForModal(targetAnnouncement);
+      setIsAnnouncementModalOpen(true);
+      setHasAutoOpenedPopup(true);
+    }
+  }, [activePinAnnouncements, hasAutoOpenedPopup, initialAnnouncementIdParam]);
+
+  const handleDismissForever = (id: string | number) => {
+    try {
+      let dismissed: string[] = [];
+      const stored = typeof window !== "undefined" ? localStorage.getItem("janseva_dismissed_announcements") : null;
+      if (stored) dismissed = JSON.parse(stored);
+      if (!dismissed.includes(String(id))) {
+        dismissed.push(String(id));
+        localStorage.setItem("janseva_dismissed_announcements", JSON.stringify(dismissed));
+      }
+    } catch (e) {}
+  };
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -438,46 +488,56 @@ function FeedPageContent() {
                 return (
                   <div
                     key={ann.id}
+                    onClick={() => {
+                      setSelectedAnnouncementForModal(ann);
+                      setIsAnnouncementModalOpen(true);
+                    }}
                     className={cn(
-                      "p-4 sm:p-5 rounded-3xl border shadow-sm transition-all relative overflow-hidden",
+                      "p-4 sm:p-5 rounded-3xl border shadow-sm hover:shadow-md transition-all relative overflow-hidden cursor-pointer group",
                       isEmergency
-                        ? "bg-gradient-to-r from-rose-50 via-rose-50/80 to-amber-50/50 border-rose-200"
-                        : "bg-gradient-to-r from-[#edf7f1] via-[#f4fbf7] to-white border-[#cbe7d7]"
+                        ? "bg-gradient-to-r from-rose-50 via-rose-50/80 to-amber-50/50 border-rose-200 hover:border-rose-400"
+                        : "bg-gradient-to-r from-[#edf7f1] via-[#f4fbf7] to-white border-[#cbe7d7] hover:border-emerald-500"
                     )}
                   >
                     <div className="flex items-start gap-3.5">
                       <div className={cn(
-                        "w-10 h-10 rounded-2xl flex items-center justify-center font-bold shrink-0 shadow-2xs",
+                        "w-10 h-10 rounded-2xl flex items-center justify-center font-bold shrink-0 shadow-2xs group-hover:scale-105 transition-transform",
                         isEmergency ? "bg-rose-100 text-rose-700 animate-pulse" : "bg-[#134431] text-emerald-100"
                       )}>
                         <Megaphone className="w-5 h-5" />
                       </div>
 
                       <div className="flex-1 min-w-0 space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={cn(
-                            "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider",
-                            isEmergency ? "bg-rose-600 text-white" : "bg-[#134431] text-emerald-100"
-                          )}>
-                            {isEmergency ? "🔴 Emergency Advisory" : "📢 Official Municipal Advisory"}
-                          </span>
-
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-white text-slate-700 border border-slate-200">
-                            {ann.department || "Municipal Corporation"}
-                          </span>
-
-                          {ann.pincodes && ann.pincodes.length > 0 && (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-800 text-emerald-100">
-                              📍 PIN {ann.pincodes.join(", ")}
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={cn(
+                              "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider",
+                              isEmergency ? "bg-rose-600 text-white" : "bg-[#134431] text-emerald-100"
+                            )}>
+                              {isEmergency ? "🔴 Emergency Advisory" : "📢 Official Municipal Advisory"}
                             </span>
-                          )}
+
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-white text-slate-700 border border-slate-200">
+                              {ann.department || "Municipal Corporation"}
+                            </span>
+
+                            {ann.pincodes && ann.pincodes.length > 0 && (
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-800 text-emerald-100">
+                                📍 PIN {ann.pincodes.join(", ")}
+                              </span>
+                            )}
+                          </div>
+
+                          <span className="text-[11px] font-bold text-emerald-700 group-hover:underline flex items-center gap-0.5">
+                            Inspect Card <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                          </span>
                         </div>
 
-                        <h3 className="font-headline font-black text-sm sm:text-base text-slate-900 leading-snug pt-0.5">
+                        <h3 className="font-headline font-black text-sm sm:text-base text-slate-900 leading-snug pt-0.5 group-hover:text-emerald-950 transition-colors">
                           {ann.title}
                         </h3>
 
-                        <p className="text-xs text-slate-700 leading-relaxed font-medium">
+                        <p className="text-xs text-slate-700 leading-relaxed font-medium line-clamp-2">
                           {ann.message}
                         </p>
 
@@ -553,6 +613,14 @@ function FeedPageContent() {
         </div>
 
       </div>
+
+      {/* Interactive Official Announcement Popup Card */}
+      <AnnouncementCardModal
+        announcement={selectedAnnouncementForModal}
+        isOpen={isAnnouncementModalOpen}
+        onClose={() => setIsAnnouncementModalOpen(false)}
+        onDismissForever={handleDismissForever}
+      />
 
     </div>
   );

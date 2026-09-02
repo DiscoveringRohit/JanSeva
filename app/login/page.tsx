@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
 import { authApi, normalizeUser } from "@/lib/api/auth";
+import { setAccessToken } from "@/lib/auth/auth-service-cookie3";
 import { GoogleLogin } from "@react-oauth/google";
 import {
   Sun,
@@ -13,7 +14,10 @@ import {
   ArrowRight,
   Loader2,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles,
+  ShieldCheck,
+  UserCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +36,39 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const handleDemoCitizenLogin = (preset: "citizen" | "active_citizen") => {
+    setIsLoading(true);
+    setError(null);
+    const demoUser = normalizeUser({
+      id: preset === "citizen" ? "USR-9482" : "USR-1088",
+      name: preset === "citizen" ? "Aarav Sharma" : "Priya Patnaik",
+      username: preset === "citizen" ? "aarav_citizen" : "priya_civic",
+      email: preset === "citizen" ? "aarav.sharma@example.com" : "priya.patnaik@example.com",
+      phone: "+91 98765 43210",
+      role: "citizen",
+      ward: "ITER College Road",
+      wardNumber: 63,
+      pincode: "751024",
+      civicCitizenXP: preset === "citizen" ? 340 : 1250,
+      level: preset === "citizen" ? 2 : 4,
+      levelTitle: preset === "citizen" ? "Engaged Resident" : "Ward Vanguard",
+      verifiedCitizen: true,
+    });
+
+    const demoToken = "demo_jwt_token_" + Date.now();
+    if (typeof window !== "undefined") {
+      localStorage.setItem("janseva_token", demoToken);
+      localStorage.setItem("janseva_user", JSON.stringify(demoUser));
+    }
+    setAccessToken(demoToken);
+    setUser(demoUser);
+    switchRole("citizen");
+    setSuccessMessage(`Signed in as ${demoUser.name}`);
+    setTimeout(() => {
+      router.push("/feed");
+    }, 400);
+  };
 
   const handleGoogleLogin = async (credentialResponse: any) => {
     setIsLoading(true);
@@ -57,7 +94,10 @@ export default function LoginPage() {
 
       if (res.ok && data) {
         if (typeof window !== "undefined") {
-          if (data.access) localStorage.setItem("janseva_token", data.access);
+          if (data.access) {
+            localStorage.setItem("janseva_token", data.access);
+            setAccessToken(data.access);
+          }
           if (data.user) {
             const normalized = normalizeUser(data.user);
             localStorage.setItem("janseva_user", JSON.stringify(normalized));
@@ -107,6 +147,7 @@ export default function LoginPage() {
 
         if (response.token) {
           localStorage.setItem("janseva_token", response.token);
+          setAccessToken(response.token);
         }
         localStorage.setItem("janseva_user", JSON.stringify(response.user));
         setUser(response.user);
@@ -117,11 +158,11 @@ export default function LoginPage() {
           router.push("/feed");
         }, 500);
       } else {
-        setError(response.message || "Invalid credentials. Please try again.");
+        setError(response.message || "Invalid credentials. Please try again or use Quick Demo Sign In.");
         if (response.errors) setFieldErrors(response.errors);
       }
-    } catch (err) {
-      setError("An unexpected connection error occurred. Please try again.");
+    } catch (err: any) {
+      setError(err?.message || "An unexpected connection error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -321,6 +362,37 @@ export default function LoginPage() {
                 shape="pill"
                 width="400"
               />
+            </div>
+          </div>
+        </div>
+
+        {/* 1-Click Quick Demo Sign In for Evaluators & Instant Access */}
+        <div className="pt-2">
+          <div className="p-3 rounded-2xl bg-white/[0.06] border border-white/15 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-white/90 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                <span>1-Click Instant Demo Login</span>
+              </span>
+              <span className="text-[10px] text-white/50">For quick testing</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleDemoCitizenLogin("citizen")}
+                className="py-2 px-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-emerald-200 hover:text-white text-[11px] font-bold transition-all text-center flex items-center justify-center gap-1 cursor-pointer"
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>Aarav (Citizen)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDemoCitizenLogin("active_citizen")}
+                className="py-2 px-2.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-400/40 text-indigo-200 hover:text-white text-[11px] font-bold transition-all text-center flex items-center justify-center gap-1 cursor-pointer"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Priya (Lv.4 XP)</span>
+              </button>
             </div>
           </div>
         </div>

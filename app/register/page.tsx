@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
 import { authApi } from "@/lib/api/auth";
+import { setAccessToken } from "@/lib/auth/auth-service-cookie3";
 import {
   Sun,
   Eye,
@@ -146,6 +147,7 @@ export default function RegisterPage() {
         setSuccessMessage("Account created successfully!");
         
         localStorage.setItem("janseva_token", res.token);
+        setAccessToken(res.token);
         localStorage.setItem("janseva_user", JSON.stringify(res.user));
         setUser(res.user);
 

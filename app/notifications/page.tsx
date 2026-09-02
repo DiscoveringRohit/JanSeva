@@ -18,6 +18,8 @@ import {
   MapPin,
 } from "lucide-react";
 import { formatDate, cn } from "@/lib/utils";
+import { AnnouncementCardModal } from "@/components/announcements/announcement-card-modal";
+import { NotificationItem } from "@/lib/data/mock-data";
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -29,6 +31,8 @@ export default function NotificationsPage() {
   } = useApp();
 
   const [activeFilter, setActiveFilter] = useState<"all" | "officer" | "upvote" | "ward" | "badge">("all");
+  const [selectedAnnouncementForModal, setSelectedAnnouncementForModal] = useState<NotificationItem | null>(null);
+  const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
 
   const filtered = notifications.filter((n) => {
     if (activeFilter === "all") return true;
@@ -129,7 +133,12 @@ export default function NotificationsPage() {
                 key={n.id}
                 onClick={() => {
                   markNotificationRead(n.id);
-                  if (n.actionUrl) router.push(n.actionUrl);
+                  if (isOfficer) {
+                    setSelectedAnnouncementForModal(n);
+                    setIsAnnouncementModalOpen(true);
+                  } else if (n.actionUrl) {
+                    router.push(n.actionUrl);
+                  }
                 }}
                 className={cn(
                   "p-4 sm:p-5 rounded-3xl border transition-all cursor-pointer flex items-start gap-4 group",
@@ -186,18 +195,22 @@ export default function NotificationsPage() {
                     {n.message}
                   </p>
 
-                  {n.actionUrl && (
-                    <div className="pt-1.5 flex items-center gap-1 text-[11px] font-bold text-emerald-700 group-hover:text-emerald-900">
-                      <span>View Feed Updates</span>
-                      <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-1" />
-                    </div>
-                  )}
+                  <div className="pt-1.5 flex items-center gap-1 text-[11px] font-bold text-emerald-700 group-hover:text-emerald-900">
+                    <span>{isOfficer ? "Inspect Full Advisory Card →" : "View Details →"}</span>
+                  </div>
                 </div>
               </div>
             );
           })
         )}
       </div>
+
+      {/* Interactive Official Announcement Modal Card */}
+      <AnnouncementCardModal
+        announcement={selectedAnnouncementForModal}
+        isOpen={isAnnouncementModalOpen}
+        onClose={() => setIsAnnouncementModalOpen(false)}
+      />
 
     </div>
   );

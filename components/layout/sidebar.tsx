@@ -42,7 +42,7 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, setUser, unreadNotifsCount, t } = useApp();
+  const { user, logout, unreadNotifsCount, t } = useApp();
   const isProfilePage = pathname === "/profile";
 
   const isOfficer = Boolean(
@@ -56,16 +56,8 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
   const activeOfficerTab = currentTab || "workbench";
 
   const handleLogout = async () => {
-    try {
-      await authService.logout();
-    } catch (e) {
-      console.warn("Logout error", e);
-    }
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("janseva_token");
-      localStorage.removeItem("janseva_user");
-    }
-    setUser(null as any);
+    await logout();
+    if (onCloseMobile) onCloseMobile();
     router.push("/login");
   };
 
