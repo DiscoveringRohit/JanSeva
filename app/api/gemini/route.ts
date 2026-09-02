@@ -1,31 +1,30 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
 
-// Supported Google Gemini models in order of priority for current API key
+// Supported Google Gemini models in order of latency and throughput
 const GEMINI_MODELS = [
-  "gemini-3.6-flash",
-  "gemini-3.7-flash",
-  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite", // Primary: ~1.0s ultra-fast execution
+  "gemini-3.5-flash",      // Secondary fallback
+  "gemini-3.7-flash",      // Tertiary fallback
 ];
 
 async function generateWithFallback(
-  genAI: GoogleGenerativeAI,
-  promptParts: any[],
-  generationConfig: any = {}
+  ai: GoogleGenAI,
+  contents: any[],
+  config: any = {}
 ) {
   let lastError: any = null;
 
   for (const modelName of GEMINI_MODELS) {
     try {
-      const model = genAI.getGenerativeModel({
+      const response = await ai.models.generateContent({
         model: modelName,
-        generationConfig,
+        contents,
+        config,
       });
-      const result = await model.generateContent(promptParts);
-      const response = await result.response;
-      return response.text();
+      return response.text || "";
     } catch (err: any) {
-      console.warn(`Gemini model ${modelName} failed, trying next fallback:`, err?.message || err);
+      console.warn(`Gemini model ${modelName} failed, trying fallback:`, err?.message || err);
       lastError = err;
     }
   }
@@ -34,7 +33,6 @@ async function generateWithFallback(
 }
 
 function extractJson(text: string): any {
-  // Remove markdown code fences if present
   let cleaned = text.trim();
   if (cleaned.startsWith("```json")) {
     cleaned = cleaned.replace(/^```json\s*/i, "").replace(/\s*```$/, "");
@@ -46,7 +44,6 @@ function extractJson(text: string): any {
   try {
     return JSON.parse(cleaned);
   } catch {
-    // Try regex extraction of first {...}
     const match = cleaned.match(/\{[\s\S]*\}/);
     if (match) {
       return JSON.parse(match[0]);
@@ -69,7 +66,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
+    const ai = new GoogleGenAI({ apiKey });
 
     // 1. CHAT MODE (JanSeva Personal Civic Assistant with User Data)
     if (type === "chat" || (!image && message)) {
@@ -121,7 +118,7 @@ CORE INSTRUCTIONS:
 User Question: ${message}`;
 
       const reply = await generateWithFallback(
-        genAI,
+        ai,
         [prompt],
         {
           temperature: 0.7,
@@ -191,16 +188,19 @@ Return JSON in this exact structure:
 If isCivicProblem is false or isRealScene is false or isValid is false:
 Set "isValid": false and provide a user-friendly "rejectionReason" explaining why.`;
 
-      const imagePart = {
-        inlineData: {
-          data: base64Data,
-          mimeType: mimeType,
+      const contents = [
+        { text: visionPrompt },
+        {
+          inlineData: {
+            data: base64Data,
+            mimeType: mimeType,
+          },
         },
-      };
+      ];
 
       const text = await generateWithFallback(
-        genAI,
-        [visionPrompt, imagePart],
+        ai,
+        contents,
         {
           responseMimeType: "application/json",
           temperature: 0.1,
