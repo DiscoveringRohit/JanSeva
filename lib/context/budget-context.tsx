@@ -1,6 +1,13 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  fetchBudgetProposalsFromBackend,
+  createBudgetProposalInBackend,
+  voteBudgetProposalInBackend,
+  updateBudgetProposalStatusInBackend,
+  deleteBudgetProposalInBackend,
+} from "@/lib/api/budgets";
 
 export type ProposalStatus = "Open for Voting" | "Threshold Met" | "In Execution";
 
@@ -85,6 +92,7 @@ interface BudgetContextProps {
   deleteProposal: (id: string) => void;
   voteProposal: (id: string) => void;
   updateProposalStatus: (id: string, status: ProposalStatus) => void;
+  refreshProposals: () => Promise<void>;
   getWardBudgetSummary: (wardPin?: string) => { totalBudget: number; spent: number; available: number; committed: number };
 }
 
@@ -95,8 +103,23 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   const [userVotes, setUserVotes] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  const refreshProposals = async () => {
+    try {
+      const backendProposals = await fetchBudgetProposalsFromBackend();
+      if (backendProposals && backendProposals.length > 0) {
+        setProposals(backendProposals);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("janseva_budget_proposals", JSON.stringify(backendProposals));
+        }
+      }
+    } catch (e) {
+      console.error("Failed to refresh budget proposals from backend:", e);
+    }
+  };
+
   useEffect(() => {
     try {
+      // 1. Instant hydration from localStorage cache
       const storedProposals = typeof window !== "undefined" ? localStorage.getItem("janseva_budget_proposals") : null;
       const storedVotes = typeof window !== "undefined" ? localStorage.getItem("janseva_budget_votes") : null;
 
@@ -114,6 +137,9 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
           setUserVotes([]);
         }
       }
+
+      // 2. Fetch fresh ground-truth from backend Django database
+      refreshProposals();
     } catch (error) {
       console.error("Failed to load budget data from localStorage", error);
       setProposals([]);
@@ -166,6 +192,8 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       status: newProposalData.status || "Open for Voting",
       createdAt: new Date().toISOString(),
     };
+
+    // Optimistic local update
     setProposals((prev) => {
       const updated = [newProposal, ...prev.filter((p) => p.id !== newProposal.id)];
       if (typeof window !== "undefined") {
@@ -173,9 +201,17 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       }
       return updated;
     });
+
+    // Persistent backend database mutation
+    createBudgetProposalInBackend(newProposal).then((saved) => {
+      if (saved) {
+        setProposals((prev) => [saved, ...prev.filter((p) => p.id !== saved.id)]);
+      }
+    });
   };
 
   const deleteProposal = (id: string) => {
+    // Optimistic local update
     setProposals((prev) => {
       const updated = prev.filter((p) => p.id !== id);
       if (typeof window !== "undefined") {
@@ -183,6 +219,9 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       }
       return updated;
     });
+
+    // Persistent backend database deletion
+    deleteBudgetProposalInBackend(id);
   };
 
   const voteProposal = (id: string) => {
@@ -195,6 +234,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       return updatedVotes;
     });
 
+    // Optimistic local update
     setProposals((prev) => {
       const updated = prev.map((prop) => {
         if (prop.id === id) {
@@ -209,9 +249,17 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       }
       return updated;
     });
+
+    // Persistent backend database vote
+    voteBudgetProposalInBackend(id).then((saved) => {
+      if (saved) {
+        setProposals((prev) => prev.map((p) => (p.id === saved.id ? saved : p)));
+      }
+    });
   };
 
   const updateProposalStatus = (id: string, status: ProposalStatus) => {
+    // Optimistic local update
     setProposals((prev) => {
       const updated = prev.map((prop) => (prop.id === id ? { ...prop, status } : prop));
       if (typeof window !== "undefined") {
@@ -219,6 +267,9 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       }
       return updated;
     });
+
+    // Persistent backend database status update
+    updateBudgetProposalStatusInBackend(id, status);
   };
 
   const getWardBudgetSummary = (wardPin?: string) => {
@@ -260,6 +311,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
         deleteProposal,
         voteProposal,
         updateProposalStatus,
+        refreshProposals,
         getWardBudgetSummary,
       }}
     >
@@ -275,3 +327,4 @@ export function useBudget() {
   }
   return context;
 }
+

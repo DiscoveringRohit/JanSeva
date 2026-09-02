@@ -1,6 +1,13 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import {
+  fetchPollsFromBackend,
+  createPollInBackend,
+  votePollInBackend,
+  updatePollStatusInBackend,
+  deletePollInBackend,
+} from "@/lib/api/polls";
 
 export interface ConsensusPoll {
   id: string;
@@ -22,6 +29,7 @@ interface PollContextType {
   deletePoll: (pollId: string) => void;
   votePoll: (pollId: string, voteType: "yes" | "no") => void;
   updatePollStatus: (pollId: string, status: "Active Ballot" | "Approved" | "Rejected") => void;
+  refreshPolls: () => Promise<void>;
 }
 
 const PollContext = createContext<PollContextType | undefined>(undefined);
@@ -30,45 +38,36 @@ export function PollProvider({ children }: { children: React.ReactNode }) {
   const [polls, setPolls] = useState<ConsensusPoll[]>([]);
   const [userVotes, setUserVotes] = useState<{ pollId: string; vote: "yes" | "no" }[]>([]);
 
+  const refreshPolls = async () => {
+    try {
+      const backendPolls = await fetchPollsFromBackend();
+      if (backendPolls && backendPolls.length > 0) {
+        setPolls(backendPolls);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("janseva_consensus_polls", JSON.stringify(backendPolls));
+        }
+      }
+    } catch (e) {
+      console.error("Failed to refresh polls from backend:", e);
+    }
+  };
+
   useEffect(() => {
     try {
+      // 1. Instant hydration from localStorage cache
       const savedPolls = typeof window !== "undefined" ? localStorage.getItem("janseva_consensus_polls") : null;
       const savedVotes = typeof window !== "undefined" ? localStorage.getItem("janseva_consensus_user_votes") : null;
       if (savedPolls) {
         const parsed = JSON.parse(savedPolls);
         setPolls(Array.isArray(parsed) ? parsed : []);
-      } else {
-        setPolls([]);
       }
       if (savedVotes) {
         const parsedVotes = JSON.parse(savedVotes);
         setUserVotes(Array.isArray(parsedVotes) ? parsedVotes : []);
-      } else {
-        setUserVotes([]);
       }
 
-      // Sync with server API ballots if available
-      fetch("/api/ballots")
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data && Array.isArray(data.ballots) && data.ballots.length > 0) {
-            setPolls((prev) => {
-              const combinedMap = new Map<string, ConsensusPoll>();
-              prev.forEach((p) => combinedMap.set(p.id, p));
-              data.ballots.forEach((b: ConsensusPoll) => {
-                if (!combinedMap.has(b.id)) {
-                  combinedMap.set(b.id, b);
-                }
-              });
-              const combined = Array.from(combinedMap.values());
-              if (typeof window !== "undefined") {
-                localStorage.setItem("janseva_consensus_polls", JSON.stringify(combined));
-              }
-              return combined;
-            });
-          }
-        })
-        .catch(() => {});
+      // 2. Fetch fresh ground-truth from backend Django database
+      refreshPolls();
     } catch {
       setPolls([]);
       setUserVotes([]);
@@ -95,6 +94,7 @@ export function PollProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addPoll = (poll: ConsensusPoll) => {
+    // Optimistic local update
     setPolls((prev) => {
       const updated = [poll, ...prev.filter((p) => p.id !== poll.id)];
       if (typeof window !== "undefined") {
@@ -103,15 +103,16 @@ export function PollProvider({ children }: { children: React.ReactNode }) {
       return updated;
     });
 
-    // Mirror to server API
-    fetch("/api/ballots", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(poll),
-    }).catch(() => {});
+    // Persistent backend database mutation
+    createPollInBackend(poll).then((saved) => {
+      if (saved) {
+        setPolls((prev) => [saved, ...prev.filter((p) => p.id !== saved.id)]);
+      }
+    });
   };
 
   const deletePoll = (pollId: string) => {
+    // Optimistic local update
     setPolls((prev) => {
       const updated = prev.filter((p) => p.id !== pollId);
       if (typeof window !== "undefined") {
@@ -119,6 +120,9 @@ export function PollProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    // Persistent backend database deletion
+    deletePollInBackend(pollId);
   };
 
   const votePoll = (pollId: string, voteType: "yes" | "no") => {
@@ -131,6 +135,7 @@ export function PollProvider({ children }: { children: React.ReactNode }) {
       return updatedVotes;
     });
 
+    // Optimistic local update
     setPolls((prevPolls) => {
       const updated = prevPolls.map((p) => {
         if (p.id === pollId) {
@@ -147,9 +152,17 @@ export function PollProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    // Persistent backend database vote
+    votePollInBackend(pollId, voteType).then((updatedPoll) => {
+      if (updatedPoll) {
+        setPolls((prev) => prev.map((p) => (p.id === updatedPoll.id ? updatedPoll : p)));
+      }
+    });
   };
 
   const updatePollStatus = (pollId: string, status: "Active Ballot" | "Approved" | "Rejected") => {
+    // Optimistic local update
     setPolls((prev) => {
       const updated = prev.map((p) => (p.id === pollId ? { ...p, status } : p));
       if (typeof window !== "undefined") {
@@ -157,10 +170,13 @@ export function PollProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    // Persistent backend database status update
+    updatePollStatusInBackend(pollId, status);
   };
 
   return (
-    <PollContext.Provider value={{ polls, userVotes, addPoll, deletePoll, votePoll, updatePollStatus }}>
+    <PollContext.Provider value={{ polls, userVotes, addPoll, deletePoll, votePoll, updatePollStatus, refreshPolls }}>
       {children}
     </PollContext.Provider>
   );
@@ -173,3 +189,4 @@ export function usePolls() {
   }
   return context;
 }
+
