@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { OfficerKanban } from "@/components/officer/officer-kanban";
 import { CivicMapView } from "@/components/map/JanSevaMap";
 import { useApp } from "@/lib/context/app-context";
+import { useBudget } from "@/lib/context/budget-context";
 import { CivicIssue, NotificationItem } from "@/lib/data/mock-data";
 import {
   ShieldCheck,
@@ -194,6 +195,7 @@ function DepartmentOfficerContent() {
     deleteAnnouncement,
     fetchAnnouncements,
   } = useApp();
+  const { proposals, addProposal, updateProposalStatus } = useBudget();
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -2177,6 +2179,90 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
                 })}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 10. DEDICATED TAB: PARTICIPATORY BUDGETING MANAGER (POLLS) */}
+      {currentTab === "polls" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-headline font-black text-xl text-slate-900 flex items-center gap-2">
+                <Vote className="w-5 h-5 text-[#134431]" />
+                Participatory Budgeting Manager
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Create new civic proposals and monitor live community voting allocations across wards.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                const title = prompt("Enter Proposal Title:");
+                if (!title) return;
+                const category = prompt("Enter Category (e.g., Water Works, Roads):") || departmentName;
+                const desc = prompt("Enter Description:");
+                if (!desc) return;
+                const budgetStr = prompt("Enter Required Budget (in INR):");
+                const requiredBudget = parseInt(budgetStr || "0", 10);
+                if (isNaN(requiredBudget) || requiredBudget <= 0) return;
+                const wardPin = prompt("Enter Target Ward PIN Code (e.g., 751024):") || "751024";
+
+                addProposal({
+                  title,
+                  category,
+                  description: desc,
+                  requiredBudget,
+                  wardPin,
+                  createdBy: `Officer ${user?.name || "Admin"}`,
+                });
+                alert("Proposal Published Successfully!");
+              }}
+              className="px-4 py-2 rounded-xl bg-[#134431] hover:bg-[#0c2e21] text-white font-bold text-xs shadow-md flex items-center gap-1.5 transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Create New Proposal</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            {proposals.map(proposal => (
+              <div key={proposal.id} className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-[#134431]/10 text-[#134431]">
+                      {proposal.category}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-600">
+                      PIN {proposal.wardPin}
+                    </span>
+                  </div>
+                  <h3 className="font-headline font-black text-lg text-slate-900">{proposal.title}</h3>
+                  <div className="flex items-center gap-4 text-xs font-bold text-slate-500">
+                    <span>Votes: <span className="text-emerald-700">{proposal.currentVotes.toLocaleString()}</span></span>
+                    <span>Budget: <span className="text-[#134431]">₹{proposal.requiredBudget.toLocaleString('en-IN')}</span></span>
+                  </div>
+                </div>
+                
+                <div className="shrink-0 space-y-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Live Status Update</label>
+                  <select
+                    value={proposal.status}
+                    onChange={(e) => updateProposalStatus(proposal.id, e.target.value as any)}
+                    className={cn(
+                      "w-full px-3 py-2 rounded-xl text-xs font-bold border focus:outline-none appearance-none cursor-pointer text-center",
+                      proposal.status === "Open for Voting" && "bg-blue-50 text-blue-800 border-blue-200",
+                      proposal.status === "Threshold Met" && "bg-emerald-50 text-emerald-800 border-emerald-200",
+                      proposal.status === "In Execution" && "bg-amber-50 text-amber-800 border-amber-200"
+                    )}
+                  >
+                    <option value="Open for Voting">Open for Voting</option>
+                    <option value="Threshold Met">Threshold Met</option>
+                    <option value="In Execution">In Execution</option>
+                  </select>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

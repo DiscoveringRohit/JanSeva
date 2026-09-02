@@ -14,9 +14,10 @@ export interface CivicIssue {
     lng: number;
   };
   reporter: {
-    name: string;
-    username: string;
-    avatar: string;
+    id?: string | number;
+    name?: string;
+    username?: string;
+    avatar?: string;
     isVerified: boolean;
     karma: number;
   };

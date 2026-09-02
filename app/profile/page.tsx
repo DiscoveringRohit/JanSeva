@@ -5,6 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
+import { useBudget } from "@/lib/context/budget-context";
 
 const JanSevaMap = dynamic(() => import("@/components/map/JanSevaMap"), {
   ssr: false,
@@ -52,6 +53,7 @@ import { cn, formatDate } from "@/lib/utils";
 export default function ProfilePage() {
   const router = useRouter();
   const { user, issues, chatMessages, sendChatMessage, logout } = useApp();
+  const { userVotes, proposals } = useBudget();
 
   // Interactive state
   const [mapExpanded, setMapExpanded] = useState(false);
@@ -818,6 +820,45 @@ export default function ProfilePage() {
               </div>
             </div>
 
+          </div>
+
+          {/* SECTION 3C: ACTIVE BUDGET VOTES */}
+          <div className="rounded-3xl bg-white border border-slate-100 p-5 sm:p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-headline font-black text-lg text-slate-900 flex items-center gap-2">
+                <Award className="w-5 h-5 text-[#134431]" />
+                My Active Budget Votes
+              </h3>
+              <Link href="/ward-budget" className="text-xs font-bold text-[#f06424] hover:underline">
+                View Ward Budget →
+              </Link>
+            </div>
+            
+            <div className="space-y-3">
+              {userVotes.length === 0 ? (
+                <div className="p-4 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-center">
+                  <p className="text-xs font-medium text-slate-500">You haven't voted on any budget proposals yet.</p>
+                </div>
+              ) : (
+                userVotes.slice(0, 3).map(voteId => {
+                  const proposal = proposals.find(p => p.id === voteId);
+                  if (!proposal) return null;
+                  return (
+                    <div key={proposal.id} className="p-3 rounded-2xl bg-[#f8faf9] border border-slate-100 flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-xs font-bold text-slate-900 truncate">{proposal.title}</h4>
+                        <p className="text-[10px] font-medium text-slate-500 mt-0.5">{proposal.status}</p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-lg">
+                          Voted ✓
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
 
         </div>
