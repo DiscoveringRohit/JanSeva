@@ -139,7 +139,7 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
             </div>
           ) : (
             <Link
-              href="/ward"
+              href="/ward-budget"
               className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#f8faf9] hover:bg-[#edf7f1] border border-slate-200/80 text-xs font-bold text-slate-700 hover:text-[#134431] transition-colors shadow-2xs"
             >
               <MapPin className="w-3.5 h-3.5 text-[#134431]" />
