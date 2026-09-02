@@ -492,27 +492,36 @@ export function AppProvider({
         );
       }
 
-      await fetchIssues();
-      await fetchAnnouncements();
+      // Non-blocking warm-up probe to wake up Render if idle
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+      fetch(`${API_URL}/api/hello/`, { cache: "no-store" }).catch(() => {});
 
+      // Parallel Data Fetching: Execute all initial requests concurrently to eliminate waterfalls
       const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
+      const initialFetchPromises: Promise<any>[] = [
+        fetchIssues(),
+        fetchAnnouncements(),
+      ];
+
       if (token) {
-        await fetchUserProfile();
-        await fetchNotifications();
+        initialFetchPromises.push(fetchUserProfile());
+        initialFetchPromises.push(fetchNotifications());
       } else {
-        const restoredAfter = await authService.tryRestoreSession();
-        if (restoredAfter) {
-          await fetchUserProfile();
-          await fetchNotifications();
-        }
+        authService.tryRestoreSession().then((restored) => {
+          if (restored) {
+            fetchUserProfile();
+            fetchNotifications();
+          }
+        }).catch(() => {});
       }
 
+      await Promise.allSettled(initialFetchPromises);
       setIsLoadingAuth(false);
     };
 
     initData();
 
-    // Set up reasonable polling for background sync without clogging backend Gunicorn workers
+    // Set up lightweight 45s keepalive & background polling
     const pollInterval = setInterval(() => {
       const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
       fetchAnnouncements();
@@ -520,7 +529,7 @@ export function AppProvider({
         fetchIssues();
         fetchNotifications();
       }
-    }, 60000);
+    }, 45000);
 
     return () => clearInterval(pollInterval);
   }, []);
