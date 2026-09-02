@@ -101,7 +101,7 @@ export default function IssueDetailPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activePhotoTab, setActivePhotoTab] = useState<"reported" | "resolved">("reported");
 
-  const isOwner = user && (user.username === issue?.reporter.username || user.name === issue?.reporter.name);
+  const isOwner = user && (user.id === (issue?.reporter as any)?.id || user.username === issue?.reporter.username || user.name === issue?.reporter.name);
 
   // Local optimistic state for upvoting
   const [localUpvotes, setLocalUpvotes] = useState(0);
@@ -535,17 +535,15 @@ export default function IssueDetailPage() {
             </span>
           </div>
 
-          {/* Reporter Profile Snippet */}
+          {/* Anonymous Reporter Snippet */}
           <div className="flex items-center gap-2.5 p-2 rounded-2xl bg-surface-container-low border border-surface-dim">
-            <img
-              src={issue.reporter.avatar}
-              alt={issue.reporter.name}
-              className="w-8 h-8 rounded-full object-cover"
-            />
+            <div className="w-8 h-8 rounded-full bg-[#f4fbf7] text-[#134431] flex items-center justify-center font-black text-[10px]">
+              #{issue.id.slice(0, 4)}
+            </div>
             <div className="text-left">
-              <p className="text-xs font-bold text-on-surface">@{issue.reporter.username || issue.reporter.name}</p>
+              <p className="text-xs font-bold text-on-surface">Ticket #{issue.id}</p>
               <p className="text-[10px] text-emerald-700 font-semibold">
-                {(user && (issue.reporter.username === user.username || issue.reporter.name === user.name)) ? user.civicCitizenXP : issue.reporter.karma} Civic Citizen XP
+                Verified Citizen Report
               </p>
             </div>
           </div>
@@ -962,7 +960,7 @@ export default function IssueDetailPage() {
                     .filter((i) => i.id !== issue.id && i.status !== "Resolved" && i.status !== "Verified Resolved")
                     .map((i) => (
                       <option key={`dup-cand-${i.id}`} value={i.id}>
-                        #{i.id} - {i.title.slice(0, 40)}... (Reported by: {i.reporter?.name || "Citizen"}, {i.upvotes} Upvotes)
+                        #{i.id} - {i.title.slice(0, 40)}... (Ticket #{i.id}, {i.upvotes} Upvotes)
                       </option>
                     ))}
                 </select>
@@ -978,7 +976,7 @@ export default function IssueDetailPage() {
                         <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider">Candidate Summary</span>
                         <p className="font-headline font-bold text-slate-900">{cand.title}</p>
                         <p className="text-slate-600">Location: {cand.location.address}</p>
-                        <p className="text-slate-600">Citizen: <strong>{cand.reporter.name}</strong> • {cand.upvotes} Upvotes</p>
+                        <p className="text-slate-600">Citizen: <strong>Ticket #{cand.id}</strong> • {cand.upvotes} Upvotes</p>
                       </div>
                     );
                   })()}

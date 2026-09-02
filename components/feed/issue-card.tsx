@@ -31,7 +31,7 @@ export function IssueCard({ issue }: IssueCardProps) {
   const [copied, setCopied] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const isOwner = user && (user.username === issue.reporter.username || user.name === issue.reporter.name || user.email === issue.reporter.name);
+  const isOwner = user && (user.id === (issue.reporter as any).id || user.username === issue.reporter.username || user.name === issue.reporter.name || user.email === issue.reporter.name);
 
   const [localUpvotes, setLocalUpvotes] = useState(issue.upvotes || 0);
   const [localIsUpvoted, setLocalIsUpvoted] = useState(Boolean(issue.isUpvoted));
@@ -136,22 +136,14 @@ export function IssueCard({ issue }: IssueCardProps) {
 
           {/* Author Info */}
           <div className="flex items-start gap-2.5 min-w-0">
-            <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-slate-200 shadow-2xs">
-              <img
-                src={issue.reporter.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80"}
-                alt={issue.reporter.username || issue.reporter.name}
-                className="w-full h-full object-cover"
-              />
+            <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-slate-200 shadow-2xs bg-[#f4fbf7] flex items-center justify-center">
+              <span className="text-[10px] font-black text-[#134431]">#{issue.id.slice(0, 4)}</span>
             </div>
 
             <div className="space-y-0.5 min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-bold text-xs sm:text-sm text-slate-900 leading-tight truncate">
-                  @{issue.reporter.username || issue.reporter.name}
-                </span>
-                {/* Green verified check badge */}
-                <span className="w-3.5 h-3.5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px] font-bold shrink-0">
-                  ✓
+                  Ticket #{issue.id}
                 </span>
                 <span className="text-[11px] sm:text-xs text-slate-400 font-normal shrink-0">
                   - {formatDate(issue.createdAt)}
