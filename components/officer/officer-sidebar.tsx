@@ -27,17 +27,11 @@ interface OfficerSidebarProps {
 
 export function OfficerSidebar({ mobileOpen, onCloseMobile }: OfficerSidebarProps) {
   const pathname = usePathname();
-  const { user, setUser } = useApp();
+  const { user, logout } = useApp();
   
   const handleSignOut = async () => {
-    try {
-      await authService.logout();
-    } catch (e) {
-      console.error(e);
-    }
-    setUser(null);
+    await logout();
     if (typeof window !== "undefined") {
-      localStorage.removeItem("janseva_user");
       window.location.href = "/officer-portal";
     }
   };

@@ -30,6 +30,7 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
   const {
     user,
     setUser,
+    logout,
     notifications,
     markNotificationRead,
     unreadNotifsCount,
@@ -328,8 +329,7 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
           <UserAvatarBadge
             user={user}
             onLogout={async () => {
-              await authService.logout();
-              setUser(null);
+              await logout();
               router.push("/login");
             }}
           />

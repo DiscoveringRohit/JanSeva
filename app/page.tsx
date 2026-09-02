@@ -1,9 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/context/app-context";
 import { IssueCard } from "@/components/feed/issue-card";
+import { AnnouncementCardModal } from "@/components/announcements/announcement-card-modal";
+import { OfficialAnnouncement } from "@/lib/data/mock-data";
+import { cn } from "@/lib/utils";
 import {
   Sparkles,
   ShieldCheck,
@@ -18,14 +21,181 @@ import {
   CheckCircle2,
   PhoneCall,
   Activity,
-  Flame
+  Flame,
+  Megaphone,
+  AlertTriangle,
+  ChevronRight,
+  Info,
+  X,
+  Check
 } from "lucide-react";
 
 export default function LandingPage() {
-  const { issues, wardData } = useApp();
+  const { issues, wardData, announcements, user, fetchAnnouncements } = useApp();
+
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<OfficialAnnouncement | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [hasAutoOpened, setHasAutoOpened] = useState(false);
+  const [dismissedIds, setDismissedIds] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("janseva_acknowledged_announcements");
+        return stored ? JSON.parse(stored) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  // Fetch announcements on landing
+  useEffect(() => {
+    fetchAnnouncements();
+  }, []);
+
+  // Filter active announcements for the user's PIN code or global announcements (excluding acknowledged ones)
+  const activeAnnouncements = useMemo(() => {
+    if (!announcements || announcements.length === 0) return [];
+    const userPin = user?.pincode?.trim() || "751024";
+    return announcements.filter((ann) => {
+      if (ann.isActive === false) return false;
+      if (dismissedIds.includes(String(ann.id))) return false;
+      const pins = ann.pincodes && ann.pincodes.length > 0 ? ann.pincodes : ["ALL"];
+      if (pins.includes("ALL") || pins.includes("all")) return true;
+      return pins.some((p) => p.trim() === userPin);
+    });
+  }, [announcements, user?.pincode, dismissedIds]);
+
+  // Auto-popup unviewed active advisory on landing page load
+  useEffect(() => {
+    if (activeAnnouncements.length === 0 || hasAutoOpened) return;
+
+    let popupDismissed: string[] = [];
+    try {
+      const stored = typeof window !== "undefined" ? localStorage.getItem("janseva_dismissed_announcements") : null;
+      if (stored) popupDismissed = JSON.parse(stored);
+    } catch (e) {}
+
+    const unviewed = activeAnnouncements.find((a) => !popupDismissed.includes(String(a.id)));
+    if (unviewed) {
+      setSelectedAnnouncement(unviewed);
+      setIsModalOpen(true);
+      setHasAutoOpened(true);
+    }
+  }, [activeAnnouncements, hasAutoOpened]);
+
+  // Acknowledge announcement and immediately remove it from the home page
+  const handleAcknowledge = (id: string | number) => {
+    const strId = String(id);
+    setDismissedIds((prev) => {
+      if (prev.includes(strId)) return prev;
+      const next = [...prev, strId];
+      try {
+        localStorage.setItem("janseva_acknowledged_announcements", JSON.stringify(next));
+        const popupDismissed = JSON.parse(localStorage.getItem("janseva_dismissed_announcements") || "[]");
+        if (!popupDismissed.includes(strId)) {
+          popupDismissed.push(strId);
+          localStorage.setItem("janseva_dismissed_announcements", JSON.stringify(popupDismissed));
+        }
+      } catch (e) {}
+      return next;
+    });
+    setIsModalOpen(false);
+  };
+
+  const handleDismissForever = (id: string | number) => {
+    handleAcknowledge(id);
+  };
 
   return (
-    <div className="space-y-16 animate-fadeIn">
+    <div className="space-y-12 sm:space-y-16 animate-fadeIn pb-12">
+      
+      {/* 0. HYPERLOCAL MUNICIPAL ANNOUNCEMENT BANNER */}
+      {activeAnnouncements.length > 0 && (
+        <div className="space-y-3">
+          {activeAnnouncements.slice(0, 2).map((ann) => {
+            const isEmergency = ann.urgency === "Emergency" || ann.urgency === "High";
+            return (
+              <div
+                key={ann.id}
+                onClick={() => {
+                  setSelectedAnnouncement(ann);
+                  setIsModalOpen(true);
+                }}
+                className={cn(
+                  "p-4 sm:p-5 rounded-3xl border shadow-md hover:shadow-lg transition-all relative overflow-hidden cursor-pointer group animate-fadeIn",
+                  isEmergency
+                    ? "bg-gradient-to-r from-rose-50 via-rose-50/90 to-amber-50/60 border-rose-300 ring-2 ring-rose-500/20 hover:border-rose-500"
+                    : "bg-gradient-to-r from-[#edf7f1] via-[#f4fbf7] to-white border-[#cbe7d7] ring-2 ring-emerald-500/10 hover:border-emerald-500"
+                )}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={cn(
+                    "w-11 h-11 rounded-2xl flex items-center justify-center font-bold shrink-0 shadow-sm group-hover:scale-105 transition-transform",
+                    isEmergency ? "bg-rose-600 text-white animate-pulse" : "bg-[#134431] text-emerald-100"
+                  )}>
+                    {isEmergency ? <AlertTriangle className="w-5 h-5" /> : <Megaphone className="w-5 h-5" />}
+                  </div>
+
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={cn(
+                          "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider",
+                          isEmergency ? "bg-rose-600 text-white" : "bg-[#134431] text-emerald-100"
+                        )}>
+                          {isEmergency ? "🚨 Emergency Advisory" : "📢 Official Municipal Advisory"}
+                        </span>
+
+                        <span className="px-2.5 py-0.5 rounded-md text-[10px] font-extrabold bg-white text-slate-800 border border-slate-200">
+                          {ann.department || "Municipal Corporation"}
+                        </span>
+
+                        {ann.pincodes && ann.pincodes.length > 0 && (
+                          <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black bg-emerald-800 text-emerald-100">
+                            📍 PIN {ann.pincodes.join(", ")}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-emerald-700 group-hover:underline flex items-center gap-1">
+                          Inspect Advisory Card <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAcknowledge(ann.id);
+                          }}
+                          className="p-1.5 rounded-full bg-slate-200/60 hover:bg-slate-300 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                          title="Acknowledge and remove from home page"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <h3 className="font-headline font-black text-sm sm:text-base text-slate-900 leading-snug group-hover:text-emerald-950 transition-colors">
+                      {ann.title}
+                    </h3>
+
+                    <p className="text-xs text-slate-700 leading-relaxed font-medium line-clamp-2">
+                      {ann.message}
+                    </p>
+
+                    <div className="flex items-center justify-between pt-1 text-[11px] text-slate-500 font-medium">
+                      <span>Dispatched by {ann.authorName || "Department Authority"}</span>
+                      <span>{new Date(ann.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
       
       {/* HERO SECTION */}
       <section className="relative overflow-hidden rounded-4xl bg-gradient-to-br from-primary-900 via-primary-800 to-indigo-950 text-white p-8 sm:p-12 lg:p-16 shadow-2xl border border-primary-700/50">
@@ -222,6 +392,15 @@ export default function LandingPage() {
           </Link>
         </div>
       </section>
+
+      {/* Interactive Official Announcement Modal Card */}
+      <AnnouncementCardModal
+        announcement={selectedAnnouncement}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onDismissForever={handleDismissForever}
+        onAcknowledge={handleAcknowledge}
+      />
 
     </div>
   );

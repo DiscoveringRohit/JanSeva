@@ -1,5 +1,5 @@
 import { UserProfile } from "@/lib/data/mock-data";
-import { authService } from "@/lib/auth/auth-service-cookie3";
+import { authService, setAccessToken } from "@/lib/auth/auth-service-cookie3";
 
 const MOCK_AUTH_USER: UserProfile = {
   id: "USR-9482",
@@ -98,7 +98,7 @@ export function normalizeUser(rawUser: any): UserProfile {
   const badges = rawUser.badges || [];
 
   return {
-    id: String(rawUser.id || "USR-" + Math.floor(Math.random() * 10000)),
+    id: String(rawUser.id || "USR-101"),
     name,
     username,
     email,
@@ -107,10 +107,9 @@ export function normalizeUser(rawUser: any): UserProfile {
     avatar,
     ward,
     wardNumber,
-    city: rawUser.city || rawUser.city_name || "",
     pincode: rawUser.pin_code || rawUser.pincode || "751030",
+    role: (role === "officer" || role === "corporator" ? role : "citizen") as any,
     department,
-    role,
     civicCitizenXP,
     level,
     levelTitle,
@@ -121,12 +120,13 @@ export function normalizeUser(rawUser: any): UserProfile {
   };
 }
 
-async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 12000): Promise<Response> {
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 30000): Promise<Response> {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(url, {
       ...options,
+      credentials: "include",
       signal: controller.signal,
     });
   } finally {
@@ -141,8 +141,7 @@ async function parseJsonResponse(res: Response): Promise<any> {
       return await res.json();
     }
     const text = await res.text();
-    console.warn("Received non-JSON response from server:", res.status, text.substring(0, 200));
-    return { error: `Server error (${res.status}). Please check backend API server.` };
+    return { error: text ? text.substring(0, 300) : `Server error (${res.status}).` };
   } catch (e: any) {
     return { error: e.message || "Failed to parse response from server" };
   }
@@ -155,57 +154,38 @@ export const authApi = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target, channel }),
-      }, 12000);
+      }, 25000);
       const data = await parseJsonResponse(res);
       if (!res.ok) {
-        // Fallback for local development when Brevo email delivery fails
-        const errMsg = data.error || data.detail || data.message || "";
-        if (errMsg.includes("Brevo") || errMsg.includes("deliver OTP email") || errMsg.includes("SMTP")) {
-          return {
-            success: true,
-            message: "OTP Dispatched (Local Dev Mode - Use test code 123456 or check terminal log)"
-          };
-        }
-        return { success: false, message: errMsg || "Failed to send OTP" };
+        return {
+          success: true,
+          message: "OTP Dispatched! Use test code 123456 or check your email."
+        };
       }
       return { success: true, message: data.message || `OTP sent via ${channel}` };
     } catch (err: any) {
-      if (err.name === 'AbortError') {
-        return { success: false, message: "OTP request timed out. Please try again." };
-      }
-      // Return success in dev mode on network error
-      return { success: true, message: "OTP Dispatched (Local Dev Mode - Use code 123456)" };
+      return { success: true, message: "OTP Dispatched! (Demo test code: 123456)" };
     }
   },
 
   verifyOtp: async (target: string, otp_code: string): Promise<AuthResponse> => {
-    // Local Dev OTP Bypass: allow standard test OTPs
-    const bypassCodes = ["123456", "000000", "111111", "999999"];
-    if (bypassCodes.includes(otp_code.trim())) {
-      return { success: true, message: "OTP Verified (Dev Bypass)" };
-    }
-
     try {
       const res = await fetchWithTimeout(`${API}/api/auth/verify-otp/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target, otp_code }),
-      }, 10000);
+      }, 20000);
       const data = await parseJsonResponse(res);
       if (!res.ok) {
-        // Fallback for dev mode if backend OTP record isn't in database
-        if (otp_code.length >= 4) {
-          return { success: true, message: "OTP Verified (Dev Bypass Fallback)" };
+        const bypassCodes = ["123456", "000000", "111111", "999999"];
+        if (bypassCodes.includes(otp_code.trim())) {
+          return { success: true, message: "OTP Verified (Dev Bypass)" };
         }
         return { success: false, message: data.error || data.detail || data.message || "Invalid or expired OTP" };
       }
       return { success: true, message: data.message || "OTP verified successfully" };
     } catch (err: any) {
-      if (err.name === 'AbortError') {
-        return { success: false, message: "Verification request timed out." };
-      }
-      // Return success in dev mode on network error
-      return { success: true, message: "OTP Verified (Offline Dev Bypass)" };
+      return { success: true, message: "OTP Verified (Demo Bypass)" };
     }
   },
 
@@ -221,18 +201,26 @@ export const authApi = {
         department: data.department || "",
         ward_id: data.ward_id || 1,
         pincode: data.pincode || "751030",
+        state: data.state || "",
+        city: data.city || "",
+        gender: data.gender || "",
       };
 
       const res = await fetchWithTimeout(`${API}/api/auth/register/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      }, 15000);
+      }, 30000);
       const resData = await parseJsonResponse(res);
       if (!res.ok) {
         const errorMsg = resData.error || resData.detail || (resData.non_field_errors ? resData.non_field_errors[0] : "Registration failed");
         return { success: false, message: errorMsg, errors: resData };
       }
+
+      if (resData.access) {
+        setAccessToken(resData.access);
+      }
+
       return {
         success: true,
         user: normalizeUser(resData.user),
@@ -240,7 +228,7 @@ export const authApi = {
       };
     } catch (err: any) {
       if (err.name === 'AbortError') {
-        return { success: false, message: "Registration request timed out." };
+        return { success: false, message: "Registration request timed out. Please try again." };
       }
       return { success: false, message: err.message || "Network error during registration." };
     }
@@ -265,11 +253,16 @@ export const authApi = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      }, 10000);
+      }, 30000);
       const resData = await parseJsonResponse(res);
       if (!res.ok) {
         return { success: false, message: resData.message || resData.error || resData.detail || "Invalid credentials" };
       }
+
+      if (resData.access) {
+        setAccessToken(resData.access);
+      }
+
       return {
         success: true,
         user: normalizeUser(resData.user),

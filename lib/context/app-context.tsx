@@ -23,12 +23,15 @@ import {
   INITIAL_NOTIFICATIONS,
   WardInfo,
   WARD_42_DATA,
+  OfficialAnnouncement,
 } from "@/lib/data/mock-data";
 import { DEFAULT_LOCATION, DEFAULT_USER_FALLBACK } from "@/lib/data/default-location";
+import { getAnnouncements, createAnnouncement, deleteAnnouncement as deleteAnnouncementApi } from "@/lib/api/announcements";
 
 import {
   authService,
   fetchWithAuth,
+  setAccessToken,
 } from "@/lib/auth/auth-service-cookie3";
 import {
   translations,
@@ -53,6 +56,7 @@ interface AppContextType {
   user: UserProfile | null;
   isLoadingAuth: boolean;
   setUser: React.Dispatch<React.SetStateAction<UserProfile | null>>;
+  logout: () => Promise<void>;
   switchRole: (
     role: "citizen" | "officer" | "corporator"
   ) => void;
@@ -102,6 +106,21 @@ interface AppContextType {
   activeFilter: string;
   setActiveFilter: (filter: string) => void;
 
+  announcements: OfficialAnnouncement[];
+  fetchAnnouncements: (pincode?: string, department?: string) => Promise<void>;
+  publishAnnouncement: (payload: {
+    title: string;
+    message: string;
+    department: string;
+    pincodes: string[];
+    urgency?: "Emergency" | "High" | "Advisory" | "Normal";
+    category?: string;
+    author_name?: string;
+    author_role?: string;
+    action_url?: string;
+  }) => Promise<{ success: boolean; message?: string; reachCount?: number }>;
+  deleteAnnouncement: (id: string | number) => Promise<boolean>;
+
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: TranslationKey) => string;
@@ -138,6 +157,9 @@ export function AppProvider({
 
   const [notifications, setNotifications] =
     useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
+
+  const [announcements, setAnnouncements] =
+    useState<OfficialAnnouncement[]>([]);
 
   const [wardData, setWardData] =
     useState<WardInfo>(WARD_42_DATA);
@@ -338,6 +360,56 @@ export function AppProvider({
     }
   };
 
+  const fetchAnnouncements = async (pincode?: string, department?: string) => {
+    try {
+      const pin = pincode || user?.pincode;
+      const data = await getAnnouncements(pin, department);
+      setAnnouncements(data);
+    } catch (e) {
+      console.error("Failed to fetch announcements:", e);
+    }
+  };
+
+  const publishAnnouncement = async (payload: {
+    title: string;
+    message: string;
+    department: string;
+    pincodes: string[];
+    urgency?: "Emergency" | "High" | "Advisory" | "Normal";
+    category?: string;
+    author_name?: string;
+    author_role?: string;
+    action_url?: string;
+  }) => {
+    const res = await createAnnouncement(payload);
+    if (res.success && res.announcement) {
+      setAnnouncements((prev) => [res.announcement!, ...prev]);
+      const targetPinStr = payload.pincodes && payload.pincodes.length > 0 ? payload.pincodes.join(", ") : "ALL";
+      const newNotif: NotificationItem = {
+        id: `ann-${res.announcement.id || Date.now()}`,
+        title: `📢 [${payload.department.toUpperCase()} NOTICE - PIN ${targetPinStr}]: ${payload.title}`,
+        message: payload.message,
+        type: "officer",
+        timestamp: new Date().toISOString(),
+        read: false,
+        actionUrl: `/feed?pin=${payload.pincodes[0] || ""}`,
+        pincodes: payload.pincodes,
+        department: payload.department,
+        urgency: payload.urgency || "Advisory",
+      };
+      setNotifications((prev) => [newNotif, ...prev]);
+    }
+    return res;
+  };
+
+  const deleteAnnouncement = async (id: string | number) => {
+    const ok = await deleteAnnouncementApi(id);
+    if (ok) {
+      setAnnouncements((prev) => prev.filter((a) => String(a.id) !== String(id)));
+    }
+    return ok;
+  };
+
   const fetchUserProfile = async () => {
     const API_URL =
       process.env.NEXT_PUBLIC_API_URL ||
@@ -421,6 +493,7 @@ export function AppProvider({
       }
 
       await fetchIssues();
+      await fetchAnnouncements();
 
       const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
       if (token) {
@@ -442,6 +515,7 @@ export function AppProvider({
     // Set up reasonable polling for background sync without clogging backend Gunicorn workers
     const pollInterval = setInterval(() => {
       const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
+      fetchAnnouncements();
       if (token) {
         fetchIssues();
         fetchNotifications();
@@ -520,6 +594,21 @@ export function AppProvider({
         levelTitle: "Ward 42 Corporator",
       });
     }
+  };
+
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch (e) {
+      console.warn("Logout error:", e);
+    }
+    setAccessToken(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("janseva_token");
+      localStorage.removeItem("janseva_user");
+      localStorage.removeItem("janseva_role");
+    }
+    setUser(null);
   };
 
   const toggleUpvote = async (issueId: string) => {
@@ -1456,6 +1545,7 @@ export function AppProvider({
         user,
         isLoadingAuth,
         setUser,
+        logout,
         switchRole,
         issues,
         refreshIssues: fetchIssues,
@@ -1481,6 +1571,10 @@ export function AppProvider({
         setIsAiDrawerOpen,
         activeFilter,
         setActiveFilter,
+        announcements,
+        fetchAnnouncements,
+        publishAnnouncement,
+        deleteAnnouncement,
         language,
         setLanguage,
         t,

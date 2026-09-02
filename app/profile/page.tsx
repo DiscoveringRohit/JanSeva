@@ -44,13 +44,14 @@ import {
   Building2,
   X,
   Layers,
-  Heart
+  Heart,
+  LogOut
 } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, issues, chatMessages, sendChatMessage } = useApp();
+  const { user, issues, chatMessages, sendChatMessage, logout } = useApp();
 
   // Interactive state
   const [mapExpanded, setMapExpanded] = useState(false);
@@ -284,6 +285,19 @@ export default function ProfilePage() {
             <Settings className="w-3.5 h-3.5 text-slate-500" />
             <span>Settings</span>
           </Link>
+
+          <button
+            type="button"
+            onClick={async () => {
+              await logout();
+              router.push("/login");
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-colors whitespace-nowrap cursor-pointer"
+            title="Log Out"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Log Out</span>
+          </button>
         </div>
 
         {/* Right Search & Avatar Preview */}
@@ -371,13 +385,26 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <Link
-          href="/profile/edit"
-          className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#134431] hover:bg-[#0c2e21] text-white text-xs font-bold shadow-md shadow-emerald-950/15 hover:scale-102 active:scale-98 transition-all shrink-0 cursor-pointer"
-        >
-          <Edit3 className="w-4 h-4 text-emerald-300" />
-          <span>Edit Profile</span>
-        </Link>
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <Link
+            href="/profile/edit"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#134431] hover:bg-[#0c2e21] text-white text-xs font-bold shadow-md shadow-emerald-950/15 hover:scale-102 active:scale-98 transition-all shrink-0 cursor-pointer"
+          >
+            <Edit3 className="w-4 h-4 text-emerald-300" />
+            <span>Edit Profile</span>
+          </Link>
+          <button
+            type="button"
+            onClick={async () => {
+              await logout();
+              router.push("/login");
+            }}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all shrink-0 cursor-pointer"
+          >
+            <LogOut className="w-4 h-4 text-rose-600" />
+            <span>Log Out</span>
+          </button>
+        </div>
       </div>
 
       {/* 2. MAIN 2-COLUMN DASHBOARD GRID */}
