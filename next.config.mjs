@@ -20,6 +20,15 @@ const nextConfig = {
       }
     ],
   },
+  async rewrites() {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://janseva-3c8v.onrender.com';
+    return [
+      {
+        source: '/backend-api/:path*',
+        destination: `${backendUrl}/api/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
