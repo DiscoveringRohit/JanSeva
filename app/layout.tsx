@@ -3,6 +3,7 @@ import { Outfit, Inter } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/lib/context/app-context";
 import { BudgetProvider } from "@/lib/context/budget-context";
+import { PollProvider } from "@/lib/context/poll-context";
 import { LayoutWrapper } from "@/components/layout/layout-wrapper";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { GoogleTranslator } from "@/components/layout/google-translator";
@@ -49,8 +50,10 @@ export default function RootLayout({
         >
           <AppProvider>
             <BudgetProvider>
-              <GoogleTranslator />
-              <LayoutWrapper>{children}</LayoutWrapper>
+              <PollProvider>
+                <GoogleTranslator />
+                <LayoutWrapper>{children}</LayoutWrapper>
+              </PollProvider>
             </BudgetProvider>
           </AppProvider>
         </GoogleOAuthProvider>

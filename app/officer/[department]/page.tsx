@@ -7,6 +7,7 @@ import { OfficerKanban } from "@/components/officer/officer-kanban";
 import { CivicMapView } from "@/components/map/JanSevaMap";
 import { useApp } from "@/lib/context/app-context";
 import { useBudget } from "@/lib/context/budget-context";
+import { usePolls } from "@/lib/context/poll-context";
 import { CivicIssue, NotificationItem } from "@/lib/data/mock-data";
 import {
   ShieldCheck,
@@ -71,45 +72,7 @@ const SQUADS_ROSTER = [
   { id: "sq-6", name: "Unit 6 - Emergency Night Triage Van", leader: "Er. Manoj Pradhan", phone: "+91 94371 00117", status: "Off Shift", activeTickets: 0, vehicle: "Force Emergency OD-02-M-1122", zone: "Central BMC Depot", specialization: "Hazard barrier & night diversion" },
 ];
 
-// Department-Specific Consensus Polls
-const INITIAL_POLLS = [
-  {
-    id: "poll-1",
-    title: "24x7 Pressurized Drinking Water Metering Installation",
-    department: "Water",
-    ward: "Ward 63, Khandagiri",
-    description: "Proposal to replace legacy gravity mains with automated smart digital telemetry water meters across 1,800 households.",
-    yesVotes: 1420,
-    noVotes: 190,
-    status: "Active Ballot",
-    daysLeft: 4,
-    budgetEstimate: "₹ 48.5 Lakhs"
-  },
-  {
-    id: "poll-2",
-    title: "Underground Stormwater Canal Enclosure on Main Road",
-    department: "Roads",
-    ward: "Ward 34, Saheed Nagar",
-    description: "Install pre-cast RCC culverts to box-in open roadside stormwater drains and widen pedestrian sidewalks by 2.4 meters.",
-    yesVotes: 2105,
-    noVotes: 180,
-    status: "Active Ballot",
-    daysLeft: 7,
-    budgetEstimate: "₹ 82.0 Lakhs"
-  },
-  {
-    id: "poll-3",
-    title: "Smart Solar High-Mast Illumination Grid with Motion Sensors",
-    department: "Electricity",
-    ward: "Ward 12, Patia Tech Zone",
-    description: "Replace sodium-vapor streetlights with dual-frequency solar LEDs and IoT ambient daylight auto-dimming sensors.",
-    yesVotes: 980,
-    noVotes: 45,
-    status: "Approved",
-    daysLeft: 0,
-    budgetEstimate: "₹ 24.0 Lakhs"
-  }
-];
+
 
 // Candidate Duplicate Pairs for AI Review (dynamically populated)
 const INITIAL_DUPLICATES: any[] = [];
@@ -248,6 +211,16 @@ function DepartmentOfficerContent() {
   const [broadcastFeedback, setBroadcastFeedback] = useState<{ message: string; reachCount: number } | null>(null);
   const [broadcastSent, setBroadcastSent] = useState(false);
 
+  // Participatory Budgeting Modal State
+  const [isProposalModalOpen, setIsProposalModalOpen] = useState(false);
+  const [proposalForm, setProposalForm] = useState({
+    title: "",
+    category: departmentName,
+    description: "",
+    requiredBudget: "",
+    wardPin: "751024"
+  });
+
   const [selectedSquad, setSelectedSquad] = useState("Unit 1 - Rapid Response Hydro Van");
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
 
@@ -257,7 +230,15 @@ function DepartmentOfficerContent() {
   }, [departmentName]);
 
   // Polls & Duplicates state
-  const [polls, setPolls] = useState(INITIAL_POLLS);
+  const { polls, addPoll } = usePolls();
+  const [isBallotModalOpen, setIsBallotModalOpen] = useState(false);
+  const [ballotForm, setBallotForm] = useState({
+    title: "",
+    ward: "",
+    description: "",
+    budgetEstimate: "",
+    daysLeft: "7"
+  });
   const [duplicates, setDuplicates] = useState<any[]>([]);
 
   // Dynamically detect potential candidate duplicate pairs in active department tickets
@@ -1312,7 +1293,7 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
               </p>
             </div>
             <button
-              onClick={() => alert("Open Create Ballot Modal")}
+              onClick={() => setIsBallotModalOpen(true)}
               className="px-4 py-2 rounded-2xl bg-[#134431] hover:bg-[#0c2e21] text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 self-start"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -1372,6 +1353,135 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
               );
             })}
           </div>
+
+          {/* CREATE BALLOT MODAL */}
+          {isBallotModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-200">
+              <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4">
+                <h3 className="font-headline font-black text-xl text-slate-900 mb-4 flex items-center gap-2">
+                  <Vote className="w-5 h-5 text-[#0B402C]" />
+                  Create Consensus Ballot
+                </h3>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!ballotForm.title || !ballotForm.description || !ballotForm.ward) {
+                      return;
+                    }
+                    const newBallot = {
+                      id: `poll-${Date.now()}`,
+                      title: ballotForm.title,
+                      department: departmentName,
+                      ward: ballotForm.ward,
+                      description: ballotForm.description,
+                      yesVotes: 0,
+                      noVotes: 0,
+                      status: "Active Ballot" as const,
+                      daysLeft: parseInt(ballotForm.daysLeft, 10),
+                      budgetEstimate: ballotForm.budgetEstimate
+                    };
+                    addPoll(newBallot);
+                    setIsBallotModalOpen(false);
+                    setBallotForm({
+                      title: "",
+                      ward: "",
+                      description: "",
+                      budgetEstimate: "",
+                      daysLeft: "7"
+                    });
+                  }}
+                  className="space-y-4 text-sm"
+                >
+                  <div className="space-y-1.5">
+                    <label className="block font-bold text-slate-700">Ballot Question / Title <span className="text-rose-500">*</span></label>
+                    <input
+                      required
+                      autoFocus
+                      type="text"
+                      placeholder="e.g., Should we install automated digital water meters?"
+                      value={ballotForm.title}
+                      onChange={(e) => setBallotForm({ ...ballotForm, title: e.target.value })}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0B402C] focus:border-[#0B402C] transition-colors"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block font-bold text-slate-700">Context / Description <span className="text-rose-500">*</span></label>
+                    <textarea
+                      required
+                      rows={3}
+                      placeholder="Provide background context for citizens to make an informed Yes/No vote..."
+                      value={ballotForm.description}
+                      onChange={(e) => setBallotForm({ ...ballotForm, description: e.target.value })}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0B402C] focus:border-[#0B402C] transition-colors resize-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block font-bold text-slate-700">Target Ward <span className="text-rose-500">*</span></label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="e.g., Ward 63, Khandagiri"
+                      value={ballotForm.ward}
+                      onChange={(e) => setBallotForm({ ...ballotForm, ward: e.target.value })}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0B402C] focus:border-[#0B402C] transition-colors"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block font-bold text-slate-700">Budget Estimate (Optional)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., ₹ 48.5 Lakhs"
+                        value={ballotForm.budgetEstimate}
+                        onChange={(e) => setBallotForm({ ...ballotForm, budgetEstimate: e.target.value })}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0B402C] focus:border-[#0B402C] transition-colors"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block font-bold text-slate-700">Voting Duration (Days)</label>
+                      <input
+                        required
+                        type="number"
+                        min="1"
+                        max="30"
+                        value={ballotForm.daysLeft}
+                        onChange={(e) => setBallotForm({ ...ballotForm, daysLeft: e.target.value })}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0B402C] focus:border-[#0B402C] transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsBallotModalOpen(false);
+                        setBallotForm({
+                          title: "",
+                          ward: "",
+                          description: "",
+                          budgetEstimate: "",
+                          daysLeft: "7"
+                        });
+                      }}
+                      className="px-4 py-2 rounded-md font-bold text-slate-600 border border-slate-300 hover:bg-slate-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="bg-[#0B402C] text-white hover:bg-[#083020] rounded-md px-4 py-2 font-bold transition-colors shadow-md flex items-center gap-2"
+                    >
+                      Launch Referendum
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -2197,27 +2307,7 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
               </p>
             </div>
             <button
-              onClick={() => {
-                const title = prompt("Enter Proposal Title:");
-                if (!title) return;
-                const category = prompt("Enter Category (e.g., Water Works, Roads):") || departmentName;
-                const desc = prompt("Enter Description:");
-                if (!desc) return;
-                const budgetStr = prompt("Enter Required Budget (in INR):");
-                const requiredBudget = parseInt(budgetStr || "0", 10);
-                if (isNaN(requiredBudget) || requiredBudget <= 0) return;
-                const wardPin = prompt("Enter Target Ward PIN Code (e.g., 751024):") || "751024";
-
-                addProposal({
-                  title,
-                  category,
-                  description: desc,
-                  requiredBudget,
-                  wardPin,
-                  createdBy: `Officer ${user?.name || "Admin"}`,
-                });
-                alert("Proposal Published Successfully!");
-              }}
+              onClick={() => setIsProposalModalOpen(true)}
               className="px-4 py-2 rounded-xl bg-[#134431] hover:bg-[#0c2e21] text-white font-bold text-xs shadow-md flex items-center gap-1.5 transition-all"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -2264,6 +2354,136 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
               </div>
             ))}
           </div>
+
+          {/* CREATE PROPOSAL MODAL */}
+          {isProposalModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-200">
+              <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4">
+                <h3 className="font-headline font-black text-xl text-slate-900 mb-4 flex items-center gap-2">
+                  <Vote className="w-5 h-5 text-[#0B402C]" />
+                  Create New Proposal
+                </h3>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!proposalForm.title || !proposalForm.description || !proposalForm.requiredBudget || !proposalForm.wardPin) {
+                      return;
+                    }
+                    addProposal({
+                      title: proposalForm.title,
+                      category: proposalForm.category,
+                      description: proposalForm.description,
+                      requiredBudget: parseInt(proposalForm.requiredBudget, 10),
+                      wardPin: proposalForm.wardPin,
+                      createdBy: `Officer ${user?.name || "Admin"}`,
+                    });
+                    setProposalForm({
+                      title: "",
+                      category: departmentName,
+                      description: "",
+                      requiredBudget: "",
+                      wardPin: "751024",
+                    });
+                    setIsProposalModalOpen(false);
+                  }}
+                  className="space-y-4 text-sm"
+                >
+                  <div className="space-y-1.5">
+                    <label className="block font-bold text-slate-700">Project Title <span className="text-rose-500">*</span></label>
+                    <input
+                      required
+                      autoFocus
+                      type="text"
+                      placeholder="e.g., New Solar Streetlights"
+                      value={proposalForm.title}
+                      onChange={(e) => setProposalForm({ ...proposalForm, title: e.target.value })}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0B402C] focus:border-[#0B402C] transition-colors"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block font-bold text-slate-700">Category <span className="text-rose-500">*</span></label>
+                    <select
+                      required
+                      value={proposalForm.category}
+                      onChange={(e) => setProposalForm({ ...proposalForm, category: e.target.value })}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0B402C] focus:border-[#0B402C] transition-colors bg-white"
+                    >
+                      <option value="Roads">Roads & Infrastructure</option>
+                      <option value="Water">Water Works</option>
+                      <option value="Sanitation">Sanitation</option>
+                      <option value="Electricity">Electricity</option>
+                      <option value="Parks">Parks & Recreation</option>
+                      <option value={departmentName}>{departmentName}</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block font-bold text-slate-700">Description <span className="text-rose-500">*</span></label>
+                    <textarea
+                      required
+                      rows={3}
+                      placeholder="Briefly describe the proposal and its benefits..."
+                      value={proposalForm.description}
+                      onChange={(e) => setProposalForm({ ...proposalForm, description: e.target.value })}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0B402C] focus:border-[#0B402C] transition-colors resize-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block font-bold text-slate-700">Required Budget (₹) <span className="text-rose-500">*</span></label>
+                      <input
+                        required
+                        type="number"
+                        min="1"
+                        placeholder="e.g., 1500000"
+                        value={proposalForm.requiredBudget}
+                        onChange={(e) => setProposalForm({ ...proposalForm, requiredBudget: e.target.value })}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0B402C] focus:border-[#0B402C] transition-colors"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block font-bold text-slate-700">Ward PIN <span className="text-rose-500">*</span></label>
+                      <input
+                        required
+                        type="text"
+                        placeholder="e.g., 751024"
+                        value={proposalForm.wardPin}
+                        onChange={(e) => setProposalForm({ ...proposalForm, wardPin: e.target.value })}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0B402C] focus:border-[#0B402C] transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProposalModalOpen(false);
+                        setProposalForm({
+                          title: "",
+                          category: departmentName,
+                          description: "",
+                          requiredBudget: "",
+                          wardPin: "751024",
+                        });
+                      }}
+                      className="px-4 py-2 rounded-md font-bold text-slate-600 border border-slate-300 hover:bg-slate-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="bg-[#0B402C] text-white hover:bg-[#083020] rounded-md px-4 py-2 font-bold transition-colors shadow-md"
+                    >
+                      Publish Proposal
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
