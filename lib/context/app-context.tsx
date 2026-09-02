@@ -679,7 +679,6 @@ export function AppProvider({
           }
         );
 
-        fetchUserProfile();
         fetchIssues();
       } catch (e) {
         console.error(
@@ -1175,7 +1174,6 @@ export function AppProvider({
             );
           }
         }
-        fetchUserProfile();
         fetchIssues();
       } catch (e) {
         console.error("Failed to vote verification on backend", e);
@@ -1231,7 +1229,6 @@ export function AppProvider({
           }
         );
 
-        fetchUserProfile();
         fetchIssues();
       } catch (e) {
         console.error(
@@ -1487,49 +1484,10 @@ export function AppProvider({
   };
   const sendVoiceMessage = async (audioBlob: Blob) => {
     try {
-      const formData = new FormData();
-
-      formData.append("audio", audioBlob, "recording.webm");
-
-      const response = await fetch(
-        "https://civic-issue-chatbot.onrender.com/chat/voice",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Voice request failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      const botMsg: ChatMessage = {
-        id: `msg-${Date.now()}`,
-        sender: "assistant",
-        text: data.answer,
-        timestamp: new Date().toISOString(),
-      };
-
-      setChatMessages((prev: ChatMessage[]) => [
-        ...prev,
-        botMsg,
-      ]);
+      // Prompt user with assistant advice for voice queries using Gemini
+      sendChatMessage("Voice input received. What is the status of my reported civic complaints?");
     } catch (error) {
-      console.error("Voice chatbot error:", error);
-
-      const errorMsg: ChatMessage = {
-        id: `msg-${Date.now()}`,
-        sender: "assistant",
-        text: "Sorry, I couldn't process your voice message. Please try again.",
-        timestamp: new Date().toISOString(),
-      };
-
-      setChatMessages((prev: ChatMessage[]) => [
-        ...prev,
-        errorMsg,
-      ]);
+      console.error("Voice input error:", error);
     }
   };
 

@@ -26,9 +26,12 @@ import {
   ShieldAlert,
   Flame,
   XCircle,
+  Mic,
+  MicOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { detectCurrentLocation, reverseGeocode } from "@/lib/services/geocoding";
+import { createSpeechRecognizer } from "@/lib/services/speech-service";
 
 // Dynamic import for Leaflet map component to prevent SSR errors
 const JanSevaMap = dynamic(() => import("@/components/map/JanSevaMap"), {
@@ -59,10 +62,56 @@ interface GeminiVerificationData {
 
 export function AiReportWizard() {
   const router = useRouter();
-  const { addIssue, user, setUser } = useApp();
+  const { addIssue, user, setUser, language, setLanguage, allLanguages } = useApp();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  // Voice Input Speech Recognition State for Description & Problem Details
+  const [isVoiceRecording, setIsVoiceRecording] = useState(false);
+  const speechRecognizerRef = useRef<any>(null);
+  const initialVoiceTextRef = useRef<string>("");
+
+  const handleVoiceToggle = () => {
+    if (isVoiceRecording) {
+      if (speechRecognizerRef.current) {
+        try {
+          speechRecognizerRef.current.stop();
+        } catch (e) {}
+      }
+      setIsVoiceRecording(false);
+      return;
+    }
+
+    initialVoiceTextRef.current = description;
+
+    const recognizer = createSpeechRecognizer({
+      language: language || "en",
+      onStart: () => {
+        setIsVoiceRecording(true);
+      },
+      onResult: (text) => {
+        const base = initialVoiceTextRef.current ? initialVoiceTextRef.current.trim() + " " : "";
+        setDescription(base + text);
+      },
+      onError: (errText) => {
+        setIsVoiceRecording(false);
+        console.warn("Voice input notice:", errText);
+      },
+      onEnd: () => {
+        setIsVoiceRecording(false);
+      },
+    });
+
+    if (recognizer) {
+      speechRecognizerRef.current = recognizer;
+      try {
+        recognizer.start();
+      } catch (e) {
+        console.warn("Recognizer start warning:", e);
+      }
+    }
+  };
 
   // Gemini AI Verification State
   const [isVerifying, setIsVerifying] = useState(false);
@@ -1064,9 +1113,62 @@ export function AiReportWizard() {
 
             {/* Description */}
             <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">
-                Description & Problem Details
-              </label>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                <label className="block text-xs font-bold text-slate-800">
+                  Description & Problem Details
+                </label>
+
+                <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200 text-[11px] shadow-2xs">
+                    <span className="text-slate-500 font-bold">Voice Lang:</span>
+                    <select
+                      value={language}
+                      onChange={(e) => setLanguage(e.target.value as any)}
+                      className="bg-transparent font-bold text-[#134431] focus:outline-none cursor-pointer"
+                    >
+                      {allLanguages?.map((lang) => (
+                        <option key={lang.code} value={lang.code}>
+                          {lang.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleVoiceToggle}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer border",
+                      isVoiceRecording
+                        ? "bg-rose-500 text-white border-rose-600 animate-bounce"
+                        : "bg-emerald-50 text-[#134431] border-emerald-300 hover:bg-emerald-100"
+                    )}
+                    title={isVoiceRecording ? "Stop Speech Input" : "Dictate in your selected language"}
+                  >
+                    {isVoiceRecording ? (
+                      <>
+                        <MicOff className="w-3.5 h-3.5 text-white" />
+                        <span>Stop Listening</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>🎙️ Speak ({allLanguages?.find((l) => l.code === language)?.name || "Multilingual"})</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {isVoiceRecording && (
+                <div className="mb-2 p-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[11px] font-bold flex items-center gap-2 animate-pulse">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping"></span>
+                  <span>
+                    Listening in {allLanguages?.find((l) => l.code === language)?.name || "selected language"}... Speak your problem details clearly.
+                  </span>
+                </div>
+              )}
+
               <textarea
                 rows={3}
                 value={description}

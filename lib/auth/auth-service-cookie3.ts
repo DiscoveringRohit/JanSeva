@@ -233,38 +233,24 @@ export const authService = {
       if (data?.access) {
         setAccessToken(data.access);
 
-        // Fetch profile using authenticated request.
-        const profileRes =
-          await fetchWithAuth(
-            `${API}/api/auth/profile/`
-          );
-
-        if (profileRes.ok) {
-          const user =
-            await profileRes.json();
-
-          if (
-            typeof window !== "undefined"
-          ) {
-            localStorage.setItem(
-              "janseva_user",
-              JSON.stringify(user)
-            );
+        let user = data.user;
+        if (!user) {
+          // Fallback to fetch profile if user object is not in response
+          const profileRes = await fetchWithAuth(`${API}/api/auth/profile/`);
+          if (profileRes.ok) {
+            user = await profileRes.json().catch(() => null);
           }
+        }
 
-          return {
-            success: true,
-            user,
-            token: data.access,
-            message: "Login successful",
-          };
+        if (user && typeof window !== "undefined") {
+          localStorage.setItem("janseva_user", JSON.stringify(user));
         }
 
         return {
           success: true,
+          user,
           token: data.access,
-          message:
-            "Login successful (no profile)",
+          message: "Login successful",
         };
       }
 
@@ -505,28 +491,22 @@ export const authService = {
         setAccessToken(data.access);
       }
 
-      const profileRes = await fetchWithAuth(`${API}/api/auth/profile/`);
-
-      if (profileRes.ok) {
-        const user = await profileRes.json().catch(() => null);
-
-        if (
-          typeof window !== "undefined"
-        ) {
-          localStorage.setItem(
-            "janseva_user",
-            JSON.stringify(user)
-          );
+      let user = data?.user;
+      if (!user) {
+        const profileRes = await fetchWithAuth(`${API}/api/auth/profile/`);
+        if (profileRes.ok) {
+          user = await profileRes.json().catch(() => null);
         }
+      }
 
-        return {
-          success: true,
-          user,
-        } as any;
+      if (user && typeof window !== "undefined") {
+        localStorage.setItem("janseva_user", JSON.stringify(user));
       }
 
       return {
         success: true,
+        user,
+        token: data?.access,
       } as any;
     } catch (e: any) {
       console.error(

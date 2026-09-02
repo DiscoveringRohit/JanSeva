@@ -20,13 +20,13 @@ import {
   ArrowRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createSpeechRecognizer } from "@/lib/services/speech-service";
 
 export default function AssistantPage() {
   const router = useRouter();
   const {
     chatMessages,
     sendChatMessage,
-    sendVoiceMessage,
     language,
     setLanguage,
     allLanguages,
@@ -35,7 +35,8 @@ export default function AssistantPage() {
   const [input, setInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const speechRecognizerRef = useRef<any>(null);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
@@ -47,56 +48,55 @@ export default function AssistantPage() {
       setInput("");
     }
   };
-  const handleVoiceSim = async () => {
+
+  const handleVoiceSim = () => {
     if (isRecording) {
-      mediaRecorderRef.current?.stop();
+      if (speechRecognizerRef.current) {
+        try { speechRecognizerRef.current.stop(); } catch (e) {}
+      }
+      setIsRecording(false);
       return;
     }
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-      });
-
-      const mediaRecorder = new MediaRecorder(stream);
-      const audioChunks: Blob[] = [];
-
-      mediaRecorderRef.current = mediaRecorder;
-      setIsRecording(true);
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunks.push(event.data);
+    const recognizer = createSpeechRecognizer({
+      language: language || "en",
+      onStart: () => {
+        setIsRecording(true);
+      },
+      onResult: (text, isFinal) => {
+        setInput(text);
+        if (isFinal && text.trim()) {
+          sendChatMessage(text.trim());
+          setInput("");
+          setIsRecording(false);
         }
-      };
-
-      mediaRecorder.onstop = async () => {
+      },
+      onError: (errText) => {
         setIsRecording(false);
-        mediaRecorderRef.current = null;
+        console.warn("Speech error:", errText);
+      },
+      onEnd: () => {
+        setIsRecording(false);
+      },
+    });
 
-        stream.getTracks().forEach((track) => track.stop());
+    if (recognizer) {
+      speechRecognizerRef.current = recognizer;
+      try {
+        recognizer.start();
+      } catch (e) {
+        console.warn("Recognizer start warning:", e);
+      }
+    }
+  };
 
-        const audioBlob = new Blob(audioChunks, {
-          type: mediaRecorder.mimeType || "audio/webm",
-        });
-
-        await sendVoiceMessage(audioBlob);
-      };
-
-      mediaRecorder.start();
-    } catch (error) {
-      console.error("Microphone error:", error);
-      setIsRecording(false);
-
-
-    };
-    const quickPrompts = [
-      "📸 How do I report a broken road with AI?",
-      "🔍 What is the status of my recent civic complaints?",
-      "💧 Check local municipal drinking water schedule",
-      "🏛️ Who is my Ward Corporator and office address?",
-      "⚡ Municipal streetlight & power outage helpline",
-    ];
+  const quickPrompts = [
+    "📸 How do I report a broken road with AI?",
+    "🔍 What is the status of my recent civic complaints?",
+    "💧 Check local municipal drinking water schedule",
+    "🏛️ Who is my Ward Corporator and office address?",
+    "⚡ Municipal streetlight & power outage helpline",
+  ];
 
     return (
       <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn pb-12">
@@ -267,5 +267,4 @@ export default function AssistantPage() {
         </div>
       </div>
     );
-  }
 }

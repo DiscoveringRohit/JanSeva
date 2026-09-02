@@ -20,6 +20,7 @@ import {
   Globe
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createSpeechRecognizer } from "@/lib/services/speech-service";
 
 export function AiAssistantDrawer() {
   const router = useRouter();
@@ -37,6 +38,7 @@ export function AiAssistantDrawer() {
   const [input, setInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const speechRecognizerRef = useRef<any>(null);
 
   useEffect(() => {
     if (isAiDrawerOpen) {
@@ -55,15 +57,43 @@ export function AiAssistantDrawer() {
   };
 
   const handleVoiceToggle = () => {
-    if (!isRecording) {
-      setIsRecording(true);
-      // Simulate speech-to-text input after 2 seconds
-      setTimeout(() => {
-        setIsRecording(false);
-        sendChatMessage("What is the status of the drainage issue #JS-101 in Shanti Nagar?");
-      }, 2500);
-    } else {
+    if (isRecording) {
+      if (speechRecognizerRef.current) {
+        try { speechRecognizerRef.current.stop(); } catch (e) {}
+      }
       setIsRecording(false);
+      return;
+    }
+
+    const recognizer = createSpeechRecognizer({
+      language: language || "en",
+      onStart: () => {
+        setIsRecording(true);
+      },
+      onResult: (text, isFinal) => {
+        setInput(text);
+        if (isFinal && text.trim()) {
+          sendChatMessage(text.trim());
+          setInput("");
+          setIsRecording(false);
+        }
+      },
+      onError: (errText) => {
+        setIsRecording(false);
+        console.warn("Chatbot voice error:", errText);
+      },
+      onEnd: () => {
+        setIsRecording(false);
+      },
+    });
+
+    if (recognizer) {
+      speechRecognizerRef.current = recognizer;
+      try {
+        recognizer.start();
+      } catch (e) {
+        console.warn("Recognizer start error:", e);
+      }
     }
   };
 
