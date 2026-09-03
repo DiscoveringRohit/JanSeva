@@ -100,13 +100,13 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
           <button
             type="button"
             onClick={onToggleMobileMenu}
-            className="lg:hidden p-2 rounded-xl text-slate-700 hover:bg-[#edf7f1] hover:text-[#134431] transition-colors cursor-pointer min-w-[40px] min-h-[40px] flex items-center justify-center"
+            className="lg:hidden p-2 rounded-xl text-slate-700 hover:bg-[#edf7f1] hover:text-[#134431] transition-colors cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center active:scale-95"
             aria-label="Open Navigation Menu"
           >
             <Menu className="w-5 h-5 text-slate-700" />
           </button>
 
-          <Link href={isOfficer ? `/officer/${officerDept}` : "/"} className="flex items-center gap-2 group">
+          <Link href={isOfficer ? `/officer/${officerDept}` : "/"} className="flex items-center gap-1.5 sm:gap-2 group">
             <div className="relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#134431] text-white shadow-md shadow-emerald-950/20 group-hover:scale-105 transition-transform shrink-0">
               <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-300" />
               <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 sm:h-3 sm:w-3">
@@ -115,12 +115,12 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
               </span>
             </div>
             <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="font-headline font-black text-lg sm:text-xl tracking-tight text-slate-900">
+              <div className="flex items-center gap-1">
+                <span className="font-headline font-black text-base sm:text-xl tracking-tight text-slate-900 leading-none">
                   Jan<span className="text-[#134431]">Seva</span>
                 </span>
                 {isOfficer && (
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-md bg-[#edf7f1] text-[#134431] border border-[#cbe7d7]">
+                  <span className="text-[9px] uppercase font-bold tracking-wider px-1 py-0.5 rounded-md bg-[#edf7f1] text-[#134431] border border-[#cbe7d7]">
                     OPS
                   </span>
                 )}
@@ -168,13 +168,13 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
         </div>
 
         {/* Right: Language Selector, Actions, Notifications, Profile */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3">
           {/* Multi-Language Selector Dropdown (22+ Indian Languages) */}
           <div className="relative" ref={langDropdownRef}>
             <button
               type="button"
               onClick={() => setShowLangDropdown(!showLangDropdown)}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-[#f8faf9] hover:bg-[#edf7f1] border border-slate-200 text-slate-700 hover:text-[#134431] text-xs font-bold transition-all shadow-2xs min-h-[36px]"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full bg-[#f8faf9] hover:bg-[#edf7f1] border border-slate-200 text-slate-700 hover:text-[#134431] text-xs font-bold transition-all shadow-2xs min-h-[44px] min-w-[44px] justify-center active:scale-95"
               title="Select Language"
             >
               <Globe className="w-3.5 h-3.5 text-[#134431]" />
@@ -264,7 +264,7 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
             <button
               type="button"
               onClick={() => setShowNotifDropdown(!showNotifDropdown)}
-              className="relative p-2 rounded-full text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
+              className="relative p-2 rounded-full text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center active:scale-95"
               aria-label="Notifications"
             >
               <Bell className="w-5 h-5" />

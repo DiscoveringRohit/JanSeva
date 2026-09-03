@@ -535,8 +535,27 @@ export function AiReportWizard() {
           civic defects, detects the department, and auto-fills coordinates.
         </p>
 
-        {/* Stepper Indicator */}
-        <div className="flex items-center justify-center gap-2 sm:gap-4 mt-6">
+        {/* Mobile Compact Progress Bar (under 640px) */}
+        <div className="sm:hidden mt-4 space-y-2 max-w-xs mx-auto">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+            <span>Step {step} of 4</span>
+            <span className="text-[#134431]">
+              {step === 1 && "Evidence & AI Verify"}
+              {step === 2 && "Location & Details"}
+              {step === 3 && "Review & Submit"}
+              {step === 4 && "Dispatched"}
+            </span>
+          </div>
+          <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
+            <div
+              className="h-full bg-[#134431] transition-all duration-300 rounded-full"
+              style={{ width: `${(step / 4) * 100}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Desktop / Tablet Stepper Indicator */}
+        <div className="hidden sm:flex items-center justify-center gap-2 sm:gap-4 mt-6">
           {[
             { num: 1, label: "Evidence & AI Verify" },
             { num: 2, label: "Location & Details" },

@@ -55,7 +55,7 @@ export function MobileNav() {
   const activeItems = isOfficer ? officerNavItems : citizenNavItems;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-around lg:hidden shadow-xl select-none">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-1 sm:px-3 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] flex items-center justify-around lg:hidden shadow-xl select-none min-h-[64px]">
       {activeItems.map((item: any) => {
         const Icon = item.icon;
         const isActive = isOfficer
@@ -67,7 +67,7 @@ export function MobileNav() {
             <Link
               key={item.href}
               href={item.href}
-              className="relative -top-4 flex flex-col items-center group select-none"
+              className="relative -top-3.5 flex flex-col items-center group select-none min-w-[48px] min-h-[48px] justify-center"
             >
               <div className="relative w-12 h-12 rounded-full bg-[#134431] text-white flex items-center justify-center shadow-xl shadow-emerald-950/30 group-active:scale-95 transition-all ring-4 ring-white">
                 <Icon className="w-6 h-6 text-emerald-300 transition-transform group-hover:scale-110" />
@@ -76,7 +76,7 @@ export function MobileNav() {
                 )}
               </div>
               <span className={cn(
-                "text-[10px] font-bold mt-1 transition-colors",
+                "text-[10px] font-bold mt-0.5 transition-colors leading-tight",
                 isActive ? "text-[#134431]" : "text-slate-600"
               )}>
                 {item.label}
@@ -90,7 +90,7 @@ export function MobileNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              "relative flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 rounded-2xl transition-all select-none min-w-[56px]",
+              "relative flex flex-col items-center justify-center gap-0.5 py-1.5 px-2 sm:px-3 rounded-2xl transition-all select-none min-w-[48px] min-h-[48px] active:scale-95",
               isActive
                 ? "bg-[#134431] text-white shadow-md shadow-emerald-950/20"
                 : "text-slate-500 hover:text-[#134431] hover:bg-[#edf7f1]"
@@ -98,7 +98,7 @@ export function MobileNav() {
           >
             <Icon className={cn("w-5 h-5 transition-transform", isActive ? "stroke-[2.5] text-white" : "stroke-2")} />
             <span className={cn(
-              "text-[10px] tracking-tight",
+              "text-[10px] tracking-tight leading-tight truncate max-w-[64px]",
               isActive ? "font-black text-white" : "font-semibold text-slate-500"
             )}>
               {item.label}

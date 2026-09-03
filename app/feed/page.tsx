@@ -246,39 +246,39 @@ function FeedPageContent() {
     <div className="space-y-6 animate-fadeIn">
       
       {/* Top Header & Quick Report Trigger */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="font-headline font-black text-2xl sm:text-3xl text-slate-900 tracking-tight">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="font-headline font-black text-xl sm:text-3xl text-slate-900 tracking-tight leading-tight">
               {feedScope === "local" 
-                ? `Local Pincode ${localPincode} Feed`
+                ? `Local PIN ${localPincode} Feed`
                 : "Global Community Feed"}
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#edf7f1] text-[#134431] border border-[#cbe7d7] flex items-center gap-1.5 shadow-2xs">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#edf7f1] text-[#134431] border border-[#cbe7d7] flex items-center gap-1 shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-              Live Pulse
+              Live
             </span>
             <button
               type="button"
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-2xs transition-all cursor-pointer disabled:opacity-50 min-h-[36px] active:scale-95"
               title="Refresh latest issues"
             >
-              <RefreshCw className={cn("w-3 h-3 text-emerald-700", isRefreshing && "animate-spin")} />
-              <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+              <RefreshCw className={cn("w-3.5 h-3.5 text-emerald-700", isRefreshing && "animate-spin")} />
+              <span>{isRefreshing ? "..." : "Refresh"}</span>
             </button>
           </div>
           <p className="text-xs sm:text-sm text-slate-600 mt-1">
             {feedScope === "local"
-              ? `Real-time neighborhood incident reports & municipal repairs verified in PIN ${localPincode}.`
-              : "Browse public reports, verified civic repairs, and citizen upvotes across all areas."}
+              ? `Neighborhood reports & verified municipal repairs in PIN ${localPincode}.`
+              : "Browse public reports and verified civic repairs across all municipal areas."}
           </p>
         </div>
 
         <Link
           href={user ? "/report" : "/login"}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#134431] hover:bg-[#0c2e21] text-white font-headline font-bold text-xs shadow-md shadow-emerald-950/20 hover:scale-102 active:scale-98 transition-all shrink-0"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-[#134431] hover:bg-[#0c2e21] text-white font-headline font-bold text-xs shadow-md shadow-emerald-950/20 active:scale-98 transition-all shrink-0 min-h-[44px]"
         >
           <Camera className="w-4 h-4 text-emerald-300" />
           <span>AI Quick Snap Report</span>
@@ -286,7 +286,7 @@ function FeedPageContent() {
       </div>
 
       {/* Main Dual Feed Switcher (Local vs Global) & Pincode Search Box */}
-      <div className="bg-white p-2 sm:p-3 rounded-3xl border border-slate-200/80 shadow-sm space-y-3">
+      <div className="bg-white p-2.5 sm:p-3 rounded-3xl border border-slate-200/80 shadow-sm space-y-3">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
           
           {/* Feed Scope Segmented Control */}
@@ -295,16 +295,16 @@ function FeedPageContent() {
               type="button"
               onClick={() => setFeedScope("local")}
               className={cn(
-                "flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all select-none cursor-pointer",
+                "flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all select-none cursor-pointer min-h-[40px]",
                 feedScope === "local"
                   ? "bg-[#134431] text-white shadow-md shadow-emerald-950/15"
                   : "text-slate-700 hover:text-slate-900"
               )}
             >
               <Navigation className="w-3.5 h-3.5" />
-              <span>📍 Local Feed (PIN: {localPincode})</span>
+              <span className="truncate">Local (PIN: {localPincode})</span>
               <span className={cn(
-                "text-[10px] px-1.5 py-0.2 rounded-full font-bold",
+                "text-[10px] px-1.5 py-0.2 rounded-full font-bold shrink-0",
                 feedScope === "local" ? "bg-emerald-700 text-emerald-100" : "bg-slate-200 text-slate-600"
               )}>
                 {localCount}
@@ -315,16 +315,16 @@ function FeedPageContent() {
               type="button"
               onClick={() => setFeedScope("global")}
               className={cn(
-                "flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all select-none cursor-pointer",
+                "flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all select-none cursor-pointer min-h-[40px]",
                 feedScope === "global"
                   ? "bg-[#134431] text-white shadow-md shadow-emerald-950/15"
                   : "text-slate-700 hover:text-slate-900"
               )}
             >
               <Globe2 className="w-3.5 h-3.5" />
-              <span>🌐 Global Feed (All Areas)</span>
+              <span className="truncate">Global Feed</span>
               <span className={cn(
-                "text-[10px] px-1.5 py-0.2 rounded-full font-bold",
+                "text-[10px] px-1.5 py-0.2 rounded-full font-bold shrink-0",
                 feedScope === "global" ? "bg-emerald-700 text-emerald-100" : "bg-slate-200 text-slate-600"
               )}>
                 {globalCount}
@@ -333,22 +333,22 @@ function FeedPageContent() {
           </div>
 
           {/* Pincode Search & GPS Detect Box */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <form onSubmit={handlePincodeSearch} className="flex items-center gap-2 flex-1 sm:flex-none">
-              <div className="relative flex-1 sm:w-56">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <form onSubmit={handlePincodeSearch} className="flex items-center gap-2 flex-1">
+              <div className="relative flex-1">
                 <MapPin className="w-3.5 h-3.5 text-[#134431] absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   maxLength={6}
                   value={pincodeSearchInput}
                   onChange={(e) => setPincodeSearchInput(e.target.value.replace(/\D/g, ''))}
-                  placeholder="Filter PIN (e.g. 751024)..."
-                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-[#f8faf9] border border-slate-200/80 focus:outline-none focus:ring-1 focus:ring-[#134431] text-slate-900 placeholder:text-slate-400 font-medium"
+                  placeholder="Filter PIN..."
+                  className="w-full pl-8 pr-3 py-2 text-xs rounded-xl bg-[#f8faf9] border border-slate-200/80 focus:outline-none focus:ring-1 focus:ring-[#134431] text-slate-900 placeholder:text-slate-400 font-medium min-h-[40px]"
                 />
               </div>
               <button
                 type="submit"
-                className="px-3 py-1.5 rounded-xl bg-[#134431] hover:bg-[#0c2e21] text-white text-xs font-bold transition-colors cursor-pointer shrink-0 shadow-xs"
+                className="px-3 py-2 rounded-xl bg-[#134431] hover:bg-[#0c2e21] text-white text-xs font-bold transition-colors cursor-pointer shrink-0 shadow-xs min-h-[40px]"
               >
                 Go
               </button>
@@ -358,11 +358,11 @@ function FeedPageContent() {
               type="button"
               onClick={handleDetectGPS}
               disabled={isLocating}
-              className="px-3 py-1.5 rounded-xl bg-[#edf7f1] hover:bg-[#cbe7d7] text-[#134431] text-xs font-bold transition-all flex items-center gap-1.5 border border-[#cbe7d7] shrink-0"
+              className="px-3 py-2 rounded-xl bg-[#edf7f1] hover:bg-[#cbe7d7] text-[#134431] text-xs font-bold transition-all flex items-center gap-1.5 border border-[#cbe7d7] shrink-0 min-h-[40px] cursor-pointer"
               title="Detect your current location PIN"
             >
               <Navigation className={cn("w-3.5 h-3.5 text-[#134431]", isLocating && "animate-spin")} />
-              <span>{isLocating ? "Locating..." : "My GPS PIN"}</span>
+              <span>{isLocating ? "..." : "My GPS"}</span>
             </button>
           </div>
 

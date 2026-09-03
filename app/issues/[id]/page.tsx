@@ -266,22 +266,22 @@ export default function IssueDetailPage() {
       )}
 
       {/* Back Button & Top Navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <button
           type="button"
           onClick={() => router.back()}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-white border border-surface-dim hover:bg-surface-container text-xs font-bold text-on-surface transition-all shadow-sm"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white border border-surface-dim hover:bg-surface-container text-xs font-bold text-on-surface transition-all shadow-sm min-h-[44px] cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Feed</span>
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap ml-auto">
           {isOfficerOrStaff && (
             <button
               type="button"
               onClick={() => setMergeModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-[#134431] hover:bg-[#0c2e21] text-white text-xs font-bold transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-[#134431] hover:bg-[#0c2e21] text-white text-xs font-bold transition-all shadow-sm min-h-[44px] cursor-pointer"
             >
               <Layers className="w-3.5 h-3.5" />
               <span>Merge Duplicate</span>
@@ -291,10 +291,10 @@ export default function IssueDetailPage() {
           <button
             type="button"
             onClick={handleShare}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-white border border-surface-dim hover:bg-surface-container text-xs font-bold text-on-surface transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white border border-surface-dim hover:bg-surface-container text-xs font-bold text-on-surface transition-all shadow-sm min-h-[44px] cursor-pointer"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
-            <span>{copied ? "Link Copied!" : "Share Issue"}</span>
+            <span>{copied ? "Copied!" : "Share"}</span>
           </button>
 
           {isOwner && (

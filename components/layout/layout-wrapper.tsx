@@ -29,14 +29,14 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface text-on-surface">
+    <div className="min-h-[100dvh] flex flex-col bg-surface text-on-surface w-full max-w-full overflow-x-hidden">
       {/* Top Navbar */}
       <Suspense fallback={null}>
         <Navbar onToggleMobileMenu={() => setMobileSidebarOpen(true)} />
       </Suspense>
 
       {/* Main Body with Sidebar + Content */}
-      <div className="flex-1 flex max-w-7xl w-full mx-auto">
+      <div className="flex-1 flex max-w-7xl w-full mx-auto min-w-0">
         {/* Left Sidebar */}
         <Suspense fallback={null}>
           <Sidebar
@@ -46,7 +46,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
         </Suspense>
 
         {/* Dynamic Page Content */}
-        <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-12">
+        <main className="flex-1 min-w-0 p-3 sm:p-6 lg:p-8 pb-28 lg:pb-12 max-w-full overflow-x-hidden">
           {children}
         </main>
       </div>

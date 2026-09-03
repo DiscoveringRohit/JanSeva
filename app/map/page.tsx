@@ -33,7 +33,7 @@ export default function MapPage() {
         </div>
       </div>
 
-      <div className="w-full h-[60vh] min-h-[420px] sm:h-[540px] lg:h-[650px] rounded-2xl overflow-hidden shadow-lg border border-slate-200">
+      <div className="w-full h-[calc(100dvh-220px)] min-h-[360px] sm:h-[540px] lg:h-[650px] rounded-2xl overflow-hidden shadow-lg border border-slate-200">
         <JanSevaMap height="100%" showUserLocation={true} interactive={true} className="h-full rounded-2xl border-0 shadow-none" />
       </div>
     </div>
