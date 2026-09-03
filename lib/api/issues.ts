@@ -67,9 +67,6 @@ export async function getFeed(
     });
     if (!response.ok) throw new Error("Fallback to mock");
     const data = await response.json();
-<<<<<<< HEAD
-    return Array.isArray(data) ? data : (data?.results && Array.isArray(data.results) ? data.results : []);
-=======
     
     if (Array.isArray(data)) {
       return { count: data.length, results: data };
@@ -78,7 +75,6 @@ export async function getFeed(
       count: data.count || (data.results ? data.results.length : 0),
       results: data.results || []
     };
->>>>>>> 134348424c7f0c8aa9cc5c3749089f1935ad91aa
   } catch (e) {
     // Mock Fallback
     let issues = MockContextBridge.getIssues();

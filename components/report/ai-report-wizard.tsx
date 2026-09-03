@@ -353,48 +353,6 @@ export function AiReportWizard() {
     }
   };
 
-<<<<<<< HEAD
-=======
-  // Client-side image compression for fast Vercel/Render uploads & Gemini Vision
-  const compressImage = (file: File, maxWidth = 600, quality = 0.65): Promise<string> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          let width = img.width;
-          let height = img.height;
-
-          if (width > maxWidth || height > maxWidth) {
-            if (width > height) {
-              height = Math.round((height * maxWidth) / width);
-              width = maxWidth;
-            } else {
-              width = Math.round((width * maxWidth) / height);
-              height = maxWidth;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL("image/jpeg", quality));
-          } else {
-            resolve(e.target?.result as string);
-          }
-        };
-        img.onerror = () => resolve(e.target?.result as string);
-        img.src = e.target?.result as string;
-      };
-      reader.onerror = () => resolve("");
-      reader.readAsDataURL(file);
-    });
-  };
-
->>>>>>> 134348424c7f0c8aa9cc5c3749089f1935ad91aa
   // Handle Image File Upload (Gallery / File Picker)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

@@ -85,17 +85,13 @@ export default function IssueDetailPage() {
     fetchIssue();
     fetchComments();
 
-    // Poll for real-time cross-tab sync when tab is active (lightweight 60s interval)
+    // Poll for real-time cross-tab sync when tab is active (lightweight 30s interval)
     const pollInterval = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState === "visible") {
         fetchIssue();
         fetchComments();
       }
-<<<<<<< HEAD
     }, 30000);
-=======
-    }, 60000);
->>>>>>> 134348424c7f0c8aa9cc5c3749089f1935ad91aa
 
     return () => clearInterval(pollInterval);
   }, [id, issues, fetchComments]);
@@ -105,7 +101,7 @@ export default function IssueDetailPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activePhotoTab, setActivePhotoTab] = useState<"reported" | "resolved">("reported");
 
-  const isOwner = user && (user.id === (issue?.reporter as any)?.id || user.username === issue?.reporter.username || user.name === issue?.reporter.name);
+  const isOwner = user && (user.id === (issue?.reporter as any)?.id || user.username === issue?.reporter?.username || user.name === issue?.reporter?.name);
 
   // Local optimistic state for upvoting
   const [localUpvotes, setLocalUpvotes] = useState(0);
@@ -785,7 +781,7 @@ export default function IssueDetailPage() {
         </div>
 
         <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-          {issue.timeline.map((event, idx) => {
+          {(issue.timeline || []).map((event, idx) => {
             const isVerifiedResolved = event.stage === "Verified Resolved" || event.stage.toLowerCase().includes("verified");
             const isPendingVerification = event.stage === "Pending Citizen Verification" || event.stage.toLowerCase().includes("pending");
 
