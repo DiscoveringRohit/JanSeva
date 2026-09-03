@@ -300,14 +300,15 @@ export function AppProvider({
 
       if (res.ok) {
         const data = await res.json();
-        const items = Array.isArray(data) ? data : (data.results || []);
+        const rawList = Array.isArray(data) ? data : (data?.results && Array.isArray(data.results) ? data.results : []);
 
-        if (Array.isArray(items)) {
+        if (Array.isArray(rawList)) {
           setIssues((prevIssues) => {
-            const backendIds = new Set(items.map((i: any) => i.id));
+            // Keep any local unpersisted issues along with fresh backend data
+            const backendIds = new Set(rawList.map((i: any) => i.id));
             const localOnlyIssues = prevIssues.filter(i => !backendIds.has(i.id));
 
-            return [...items, ...localOnlyIssues];
+            return [...rawList, ...localOnlyIssues];
           });
         }
       }
@@ -521,13 +522,14 @@ export function AppProvider({
 
     initData();
 
-    // Set up lightweight 60s background polling only when page is actively visible
+    // Set up lightweight background polling (only when tab is active and focused)
     const pollInterval = setInterval(() => {
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+        return; // Skip polling in background/hidden tabs to save network bandwidth
+      }
       const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
       fetchAnnouncements();
       if (token) {
-        fetchIssues();
         fetchNotifications();
       }
     }, 60000);
