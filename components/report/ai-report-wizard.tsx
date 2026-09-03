@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
 import { submitIssue } from "@/lib/api/issues";
+import { compressIssuePhoto } from "@/lib/utils/image";
 import confetti from "canvas-confetti";
 import {
   Camera,
@@ -321,7 +322,7 @@ export function AiReportWizard() {
         const ctx = canvas.getContext("2d");
         if (ctx) {
           ctx.drawImage(video, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL("image/jpeg", 0.80);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.65);
           setSelectedImage(dataUrl);
           setIsCameraActive(false);
           if (mediaStream) {
@@ -352,52 +353,13 @@ export function AiReportWizard() {
     }
   };
 
-  // Client-side image compression for fast Vercel/Render uploads & Gemini Vision
-  const compressImage = (file: File, maxWidth = 800, quality = 0.8): Promise<string> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          let width = img.width;
-          let height = img.height;
-
-          if (width > maxWidth || height > maxWidth) {
-            if (width > height) {
-              height = Math.round((height * maxWidth) / width);
-              width = maxWidth;
-            } else {
-              width = Math.round((width * maxWidth) / height);
-              height = maxWidth;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL("image/jpeg", quality));
-          } else {
-            resolve(e.target?.result as string);
-          }
-        };
-        img.onerror = () => resolve(e.target?.result as string);
-        img.src = e.target?.result as string;
-      };
-      reader.onerror = () => resolve("");
-      reader.readAsDataURL(file);
-    });
-  };
-
   // Handle Image File Upload (Gallery / File Picker)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
-      const compressedBase64 = await compressImage(file, 1200, 0.7);
+      const compressedBase64 = await compressIssuePhoto(file);
       setSelectedImage(compressedBase64);
 
       // Auto fill date, time & GPS on image select

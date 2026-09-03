@@ -91,7 +91,7 @@ export default function IssueDetailPage() {
         fetchIssue();
         fetchComments();
       }
-    }, 10000);
+    }, 30000);
 
     return () => clearInterval(pollInterval);
   }, [id, issues, fetchComments]);

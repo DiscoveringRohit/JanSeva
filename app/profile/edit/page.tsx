@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { compressAvatar } from "@/lib/utils/image";
 
 export default function EditProfilePage() {
   const router = useRouter();
@@ -165,16 +166,17 @@ export default function EditProfilePage() {
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (ev) => {
-                      if (ev.target?.result) {
-                        setAvatar(ev.target.result as string);
+                    try {
+                      const compressed = await compressAvatar(file);
+                      if (compressed) {
+                        setAvatar(compressed);
                       }
-                    };
-                    reader.readAsDataURL(file);
+                    } catch (err) {
+                      console.error("Avatar compression failed:", err);
+                    }
                   }
                 }}
               />

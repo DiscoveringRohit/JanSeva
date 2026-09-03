@@ -8,6 +8,7 @@ import { CivicIssue } from "@/lib/data/mock-data";
 import { cn } from "@/lib/utils";
 
 import { getIssueById } from "@/lib/api/issues";
+import { compressIssuePhoto } from "@/lib/utils/image";
 
 // Calculate distance in meters between two lat/lng pairs using Haversine formula
 function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -23,40 +24,6 @@ function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: numbe
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return Math.round(R * c);
-}
-
-// Client-side image compression to ensure instant upload on Vercel -> Render connection
-function compressImage(file: File, maxWidth = 1200, quality = 0.7): Promise<string> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        let width = img.width;
-        let height = img.height;
-
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL("image/jpeg", quality));
-        } else {
-          resolve(e.target?.result as string);
-        }
-      };
-      img.onerror = () => resolve(e.target?.result as string);
-      img.src = e.target?.result as string;
-    };
-    reader.onerror = () => resolve("");
-    reader.readAsDataURL(file);
-  });
 }
 
 export default function VerifyIssuePage() {
@@ -129,7 +96,7 @@ export default function VerifyIssuePage() {
     if (file) {
       setIsCompressing(true);
       try {
-        const compressedBase64 = await compressImage(file, 1200, 0.7);
+        const compressedBase64 = await compressIssuePhoto(file);
         setPhoto(compressedBase64);
       } catch {
         const reader = new FileReader();

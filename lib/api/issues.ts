@@ -60,7 +60,7 @@ export async function getFeed(wardId?: number, pincode?: string): Promise<CivicI
     });
     if (!response.ok) throw new Error("Fallback to mock");
     const data = await response.json();
-    return data;
+    return Array.isArray(data) ? data : (data?.results && Array.isArray(data.results) ? data.results : []);
   } catch (e) {
     // Mock Fallback
     const issues = MockContextBridge.getIssues();
