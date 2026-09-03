@@ -304,8 +304,8 @@ export function AiReportWizard() {
         let width = video.videoWidth || 640;
         let height = video.videoHeight || 480;
 
-        // Downscale to max 800px for sub-second Gemini upload & inference
-        const maxDim = 800;
+        // Downscale to max 600px for sub-second Gemini upload & minimal payload size
+        const maxDim = 600;
         if (width > maxDim || height > maxDim) {
           if (width > height) {
             height = Math.round((height * maxDim) / width);
@@ -353,6 +353,48 @@ export function AiReportWizard() {
     }
   };
 
+<<<<<<< HEAD
+=======
+  // Client-side image compression for fast Vercel/Render uploads & Gemini Vision
+  const compressImage = (file: File, maxWidth = 600, quality = 0.65): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth || height > maxWidth) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxWidth) / height);
+              height = maxWidth;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL("image/jpeg", quality));
+          } else {
+            resolve(e.target?.result as string);
+          }
+        };
+        img.onerror = () => resolve(e.target?.result as string);
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => resolve("");
+      reader.readAsDataURL(file);
+    });
+  };
+
+>>>>>>> 134348424c7f0c8aa9cc5c3749089f1935ad91aa
   // Handle Image File Upload (Gallery / File Picker)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -497,8 +539,27 @@ export function AiReportWizard() {
           civic defects, detects the department, and auto-fills coordinates.
         </p>
 
-        {/* Stepper Indicator */}
-        <div className="flex items-center justify-center gap-2 sm:gap-4 mt-6">
+        {/* Mobile Compact Progress Bar (under 640px) */}
+        <div className="sm:hidden mt-4 space-y-2 max-w-xs mx-auto">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+            <span>Step {step} of 4</span>
+            <span className="text-[#134431]">
+              {step === 1 && "Evidence & AI Verify"}
+              {step === 2 && "Location & Details"}
+              {step === 3 && "Review & Submit"}
+              {step === 4 && "Dispatched"}
+            </span>
+          </div>
+          <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
+            <div
+              className="h-full bg-[#134431] transition-all duration-300 rounded-full"
+              style={{ width: `${(step / 4) * 100}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Desktop / Tablet Stepper Indicator */}
+        <div className="hidden sm:flex items-center justify-center gap-2 sm:gap-4 mt-6">
           {[
             { num: 1, label: "Evidence & AI Verify" },
             { num: 2, label: "Location & Details" },

@@ -46,12 +46,19 @@ export async function submitIssue(payload: any) {
   }
 }
 
-export async function getFeed(wardId?: number, pincode?: string): Promise<CivicIssue[]> {
+export async function getFeed(
+  wardId?: number,
+  pincode?: string,
+  page: number = 1,
+  pageSize: number = 10
+): Promise<{ count: number; results: CivicIssue[] }> {
   try {
     let url = `${getApiUrl()}/api/issues/`;
     const params = new URLSearchParams();
     if (wardId) params.append("ward", wardId.toString());
     if (pincode) params.append("pincode", pincode);
+    params.append("page", page.toString());
+    params.append("page_size", pageSize.toString());
     if (params.toString()) url += `?${params.toString()}`;
 
     const response = await fetch(url, {
@@ -60,17 +67,32 @@ export async function getFeed(wardId?: number, pincode?: string): Promise<CivicI
     });
     if (!response.ok) throw new Error("Fallback to mock");
     const data = await response.json();
+<<<<<<< HEAD
     return Array.isArray(data) ? data : (data?.results && Array.isArray(data.results) ? data.results : []);
+=======
+    
+    if (Array.isArray(data)) {
+      return { count: data.length, results: data };
+    }
+    return {
+      count: data.count || (data.results ? data.results.length : 0),
+      results: data.results || []
+    };
+>>>>>>> 134348424c7f0c8aa9cc5c3749089f1935ad91aa
   } catch (e) {
     // Mock Fallback
-    const issues = MockContextBridge.getIssues();
+    let issues = MockContextBridge.getIssues();
     if (pincode) {
-      return issues.filter((i) => (i.location?.pincode || (i as any).pin_code) === pincode);
+      issues = issues.filter((i) => (i.location?.pincode || (i as any).pin_code) === pincode);
     }
     if (wardId) {
-      return issues.filter((i) => i.location?.wardNumber === wardId);
+      issues = issues.filter((i) => i.location?.wardNumber === wardId);
     }
-    return issues;
+    const start = (page - 1) * pageSize;
+    return {
+      count: issues.length,
+      results: issues.slice(start, start + pageSize)
+    };
   }
 }
 

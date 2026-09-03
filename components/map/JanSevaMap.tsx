@@ -684,26 +684,22 @@ export default function JanSevaMap({
 
       {/* Floating Bottom Left Threat Level Legend (Full mode) */}
       {!isMini && showControls && (
-        <div className="absolute bottom-4 left-4 z-[400] hidden sm:flex items-center gap-2 bg-white/95 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-200 shadow-md text-[11px] font-bold">
-          <span className="text-slate-400 uppercase text-[9px] tracking-wider">
-            Threat Levels:
+        <div className="absolute bottom-3 left-3 z-[400] flex items-center gap-1.5 bg-white/95 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-slate-200 shadow-md text-[10px] font-bold max-w-[calc(100vw-120px)] overflow-x-auto no-scrollbar">
+          <span className="text-slate-400 uppercase text-[9px] tracking-wider shrink-0 hidden sm:inline">
+            Threat:
           </span>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className="flex items-center gap-1 text-rose-700">
               <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-              Critical
+              Crit
             </span>
             <span className="flex items-center gap-1 text-orange-700">
               <span className="w-2 h-2 rounded-full bg-orange-500" />
               High
             </span>
-            <span className="flex items-center gap-1 text-blue-700">
-              <span className="w-2 h-2 rounded-full bg-blue-500" />
-              Moderate
-            </span>
             <span className="flex items-center gap-1 text-emerald-700">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              Resolved
+              Fixed
             </span>
           </div>
         </div>
@@ -711,19 +707,19 @@ export default function JanSevaMap({
 
       {/* Floating Action Controls (Full mode) */}
       {!isMini && showControls && (
-        <div className="absolute bottom-4 right-4 z-[400] flex flex-col gap-2">
+        <div className="absolute bottom-3 right-3 z-[400] flex flex-col gap-2">
           <button
             type="button"
             onClick={locateUser}
             disabled={isLocating}
             title="Recenter to My GPS Location"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/95 backdrop-blur-md text-slate-800 hover:bg-[#134431] hover:text-white shadow-lg border border-slate-200 transition-all text-xs font-bold"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/95 backdrop-blur-md text-slate-800 hover:bg-[#134431] hover:text-white shadow-lg border border-slate-200 transition-all text-xs font-bold min-h-[44px] cursor-pointer"
           >
             <Navigation
               className={`w-3.5 h-3.5 ${isLocating ? "animate-spin" : ""}`}
             />
-            <span className="hidden sm:inline">
-              {isLocating ? "Locating..." : "My Location"}
+            <span className="inline">
+              {isLocating ? "Locating..." : "GPS"}
             </span>
           </button>
         </div>

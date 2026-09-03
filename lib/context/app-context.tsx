@@ -294,12 +294,13 @@ export function AppProvider({
 
     try {
       const res = await fetchWithAuth(
-        `${API_URL}/api/issues/`,
+        `${API_URL}/api/issues/?page=1&page_size=20`,
         { cache: "no-store" }
       );
 
       if (res.ok) {
         const data = await res.json();
+<<<<<<< HEAD
         const rawList = Array.isArray(data) ? data : (data?.results && Array.isArray(data.results) ? data.results : []);
 
         if (Array.isArray(rawList)) {
@@ -309,6 +310,16 @@ export function AppProvider({
             const localOnlyIssues = prevIssues.filter(i => !backendIds.has(i.id));
 
             return [...rawList, ...localOnlyIssues];
+=======
+        const items = Array.isArray(data) ? data : (data.results || []);
+
+        if (Array.isArray(items)) {
+          setIssues((prevIssues) => {
+            const backendIds = new Set(items.map((i: any) => i.id));
+            const localOnlyIssues = prevIssues.filter(i => !backendIds.has(i.id));
+
+            return [...items, ...localOnlyIssues];
+>>>>>>> 134348424c7f0c8aa9cc5c3749089f1935ad91aa
           });
         }
       }
@@ -522,17 +533,27 @@ export function AppProvider({
 
     initData();
 
+<<<<<<< HEAD
     // Set up lightweight background polling (only when tab is active and focused)
     const pollInterval = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") {
         return; // Skip polling in background/hidden tabs to save network bandwidth
       }
+=======
+    // Set up lightweight 60s background polling only when page is actively visible
+    const pollInterval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+>>>>>>> 134348424c7f0c8aa9cc5c3749089f1935ad91aa
       const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
       fetchAnnouncements();
       if (token) {
         fetchNotifications();
       }
+<<<<<<< HEAD
     }, 90000);
+=======
+    }, 60000);
+>>>>>>> 134348424c7f0c8aa9cc5c3749089f1935ad91aa
 
     return () => clearInterval(pollInterval);
   }, []);

@@ -128,7 +128,7 @@ export function IssueCard({ issue }: IssueCardProps) {
   };
 
   return (
-    <article className="rounded-3xl bg-white border border-slate-200/80 p-5 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+    <article className="rounded-3xl bg-white border border-slate-200/80 p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
       <div>
 
         {/* Top Header: Avatar + Handle + Timestamp + Location & Badges + 3-dots */}
@@ -152,12 +152,12 @@ export function IssueCard({ issue }: IssueCardProps) {
 
               <div className="flex items-center gap-1.5 text-xs text-slate-500 flex-wrap">
                 <MapPin className="w-3 h-3 text-[#134431] shrink-0" />
-                {((issue as any).pin_code || (issue as any).pincode || issue.location?.pincode || (issue.location?.address?.match(/\b\d{6}\b/) ? issue.location.address.match(/\b\d{6}\b/)![0] : null)) && (
+                {((issue as any).pin_code || (issue as any).pincode || issue.location?.pincode || issue.location?.address?.match(/\b\d{6}\b/)?.[0]) && (
                   <span className="px-1.5 py-0.5 rounded-md bg-[#edf7f1] text-[#134431] text-[10px] font-bold border border-[#cbe7d7] shrink-0">
-                    PIN {(issue as any).pin_code || (issue as any).pincode || issue.location?.pincode || issue.location.address.match(/\b\d{6}\b/)![0]}
+                    PIN {(issue as any).pin_code || (issue as any).pincode || issue.location?.pincode || issue.location?.address?.match(/\b\d{6}\b/)?.[0]}
                   </span>
                 )}
-                <span className="truncate max-w-[180px] sm:max-w-xs">{issue.location.address}</span>
+                <span className="truncate max-w-[140px] sm:max-w-xs">{issue.location.address}</span>
               </div>
             </div>
           </div>
@@ -167,7 +167,7 @@ export function IssueCard({ issue }: IssueCardProps) {
             {/* Badges Row */}
             <div className="flex items-center gap-1.5 flex-wrap">
               {((issue.timesReported && issue.timesReported > 1) || ((issue as any).times_reported && (issue as any).times_reported > 1)) && (
-                <span className="border border-purple-300 text-purple-700 bg-purple-50 text-[11px] font-bold px-2 py-0.5 rounded-md inline-flex items-center gap-1 shadow-2xs">
+                <span className="border border-purple-300 text-purple-700 bg-purple-50 text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-md inline-flex items-center gap-1 shadow-2xs">
                   <span>⚡ Reported {issue.timesReported || (issue as any).times_reported}x</span>
                 </span>
               )}
@@ -184,7 +184,8 @@ export function IssueCard({ issue }: IssueCardProps) {
                   e.stopPropagation();
                   setIsMenuOpen(!isMenuOpen);
                 }}
-                className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors min-w-[32px] min-h-[32px] flex items-center justify-center"
+                className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center active:scale-95"
+                aria-label="Options"
               >
                 <MoreVertical className="w-4 h-4" />
               </button>
@@ -201,14 +202,14 @@ export function IssueCard({ issue }: IssueCardProps) {
                         }
                         setIsMenuOpen(false);
                       }}
-                      className="w-full px-3 py-2 text-left text-xs font-medium text-rose-600 hover:bg-rose-50 flex items-center gap-2"
+                      className="w-full px-3 py-2 text-left text-xs font-medium text-rose-600 hover:bg-rose-50 flex items-center gap-2 min-h-[44px]"
                     >
                       <Trash2 className="w-3.5 h-3.5" /> Delete
                     </button>
                   )}
                   <button
                     onClick={handleShare}
-                    className="w-full px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                    className="w-full px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 min-h-[44px]"
                   >
                     <Share2 className="w-3.5 h-3.5" /> Share
                   </button>
@@ -222,7 +223,7 @@ export function IssueCard({ issue }: IssueCardProps) {
         {/* Title & Description */}
         <div className="mt-2 mb-3">
           <Link href={`/issues/${issue.id}`} className="block group-hover:text-emerald-800 transition-colors">
-            <h3 className="font-headline font-bold text-lg sm:text-xl text-slate-900 leading-snug mb-1 flex items-center justify-between gap-2">
+            <h3 className="font-headline font-bold text-base sm:text-xl text-slate-900 leading-snug mb-1 flex items-center justify-between gap-2">
               <span>{translatedTitle || issue.title}</span>
               {language !== "en" && translatedTitle !== issue.title && (
                 <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
@@ -231,13 +232,13 @@ export function IssueCard({ issue }: IssueCardProps) {
               )}
             </h3>
           </Link>
-          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed line-clamp-3">
             {translatedDesc || issue.description}
           </p>
         </div>
 
         {/* Image Showcase with Category/Ticket Overlay */}
-        <div className="relative rounded-2xl overflow-hidden mb-3 aspect-[16/10] sm:h-64 w-full bg-slate-100 border border-slate-100">
+        <div className="relative rounded-2xl overflow-hidden mb-3 aspect-[16/10] sm:aspect-video w-full bg-slate-100 border border-slate-100">
           <img
             src={issue.images.reported || "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&auto=format&fit=crop&q=80"}
             alt={issue.title}
@@ -245,35 +246,35 @@ export function IssueCard({ issue }: IssueCardProps) {
           />
 
           {/* Dark Overlay Pill (Category - Ticket #ID) */}
-          <div className="absolute bottom-3 left-3 px-3 py-1 rounded-md bg-black/85 backdrop-blur-sm text-white text-xs font-bold shadow-md tracking-wide">
+          <div className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded-md bg-black/85 backdrop-blur-sm text-white text-[11px] font-bold shadow-md tracking-wide max-w-[calc(100%-20px)] truncate">
             {issue.category} - Ticket #{issue.id}
           </div>
         </div>
 
         {/* AI Triage Card (Blue/Teal Tinted Box) */}
-        <div className="rounded-2xl p-3.5 sm:p-4 bg-[#f4f9f8] border border-[#d6ebe2] mb-3 space-y-2">
+        <div className="rounded-2xl p-3 sm:p-4 bg-[#f4f9f8] border border-[#d6ebe2] mb-3 space-y-2">
 
           {/* Top Row: AI Triage Label + Confidence */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm text-[#0f5b49]">
-              <Bot className="w-4 h-4 text-[#0f5b49]" />
-              <span>
+              <Bot className="w-4 h-4 text-[#0f5b49] shrink-0" />
+              <span className="truncate">
                 AI Triage: {issue.aiAnalysis?.detectedObject ? issue.aiAnalysis.detectedObject : "Pending Classification"}
               </span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded border border-slate-200 text-slate-500 bg-white shadow-2xs">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded border border-slate-200 text-slate-500 bg-white shadow-2xs shrink-0">
               {issue.aiAnalysis?.confidence ? `${issue.aiAnalysis.confidence}%` : "N/A"}
             </span>
           </div>
 
           {/* Middle Row: AI Summary / Dispatch Status */}
-          <p className="text-xs text-slate-600 leading-relaxed">
+          <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
             {issue.aiAnalysis?.summary || "Pending review by dispatch."}
           </p>
 
           {/* Bottom Row: Routed To + SLA */}
-          <div className="flex items-center justify-between text-xs text-slate-600 border-t border-[#e2efe9] pt-2 mt-1">
-            <span>
+          <div className="flex items-center justify-between text-xs text-slate-600 border-t border-[#e2efe9] pt-2 mt-1 flex-wrap gap-1">
+            <span className="truncate max-w-[200px]">
               Routed to: <strong className="text-[#0f5b49] font-bold">{issue.assignedDepartment || "Municipal Dispatch"}</strong>
             </span>
             <span className="font-semibold text-slate-500">
@@ -286,28 +287,30 @@ export function IssueCard({ issue }: IssueCardProps) {
       </div>
 
       {/* Bottom Action Footer */}
-      <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
+      <div className="flex items-center justify-between pt-2.5 border-t border-slate-100 text-xs gap-2 flex-wrap sm:flex-nowrap">
 
         {/* Left Actions: Upvote, Comment, Share */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
 
           {/* Upvote */}
           <button
             type="button"
             onClick={handleUpvote}
             className={cn(
-              "flex items-center gap-1.5 font-bold text-slate-700 hover:text-emerald-800 transition-colors select-none",
-              localIsUpvoted && "text-emerald-800"
+              "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all select-none min-h-[44px] cursor-pointer",
+              localIsUpvoted
+                ? "bg-[#edf7f1] text-[#134431] border border-[#cbe7d7]"
+                : "bg-slate-50 text-slate-700 hover:bg-slate-100"
             )}
           >
-            <ThumbsUp className={cn("w-4 h-4", localIsUpvoted ? "fill-emerald-800 text-emerald-800" : "text-slate-600")} />
+            <ThumbsUp className={cn("w-4 h-4", localIsUpvoted ? "fill-[#134431] text-[#134431]" : "text-slate-600")} />
             <span>{localUpvotes}</span>
           </button>
 
           {/* Comments Link */}
           <Link
             href={`/issues/${issue.id}#comments`}
-            className="flex items-center gap-1.5 font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 transition-colors min-h-[44px]"
           >
             <MessageSquare className="w-4 h-4 text-slate-600" />
             <span>{issue.commentsCount || 0}</span>
@@ -317,7 +320,7 @@ export function IssueCard({ issue }: IssueCardProps) {
           <button
             type="button"
             onClick={handleShare}
-            className="text-slate-600 hover:text-slate-900 transition-colors"
+            className="p-2 rounded-xl text-slate-600 bg-slate-50 hover:bg-slate-100 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
             title="Share issue"
           >
             {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
@@ -328,10 +331,10 @@ export function IssueCard({ issue }: IssueCardProps) {
         {/* Right Action: Track Live -> */}
         <Link
           href={`/issues/${issue.id}`}
-          className="inline-flex items-center gap-1 text-xs font-bold text-[#0f5b49] hover:text-[#093d31] transition-colors group/link"
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#edf7f1] text-[#134431] text-xs font-bold hover:bg-[#cbe7d7] transition-all min-h-[44px] ml-auto sm:ml-0"
         >
           <span>Track Live</span>
-          <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/link:translate-x-1" />
+          <ArrowRight className="w-3.5 h-3.5" />
         </Link>
 
       </div>
