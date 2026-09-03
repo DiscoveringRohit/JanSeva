@@ -294,20 +294,20 @@ export function AppProvider({
 
     try {
       const res = await fetchWithAuth(
-        `${API_URL}/api/issues/`,
+        `${API_URL}/api/issues/?page=1&page_size=20`,
         { cache: "no-store" }
       );
 
       if (res.ok) {
         const data = await res.json();
+        const items = Array.isArray(data) ? data : (data.results || []);
 
-        if (Array.isArray(data)) {
+        if (Array.isArray(items)) {
           setIssues((prevIssues) => {
-            // Keep any local unpersisted issues along with fresh backend data
-            const backendIds = new Set(data.map((i: any) => i.id));
+            const backendIds = new Set(items.map((i: any) => i.id));
             const localOnlyIssues = prevIssues.filter(i => !backendIds.has(i.id));
 
-            return [...data, ...localOnlyIssues];
+            return [...items, ...localOnlyIssues];
           });
         }
       }
@@ -521,15 +521,16 @@ export function AppProvider({
 
     initData();
 
-    // Set up lightweight 45s keepalive & background polling
+    // Set up lightweight 60s background polling only when page is actively visible
     const pollInterval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
       const token = typeof window !== "undefined" ? localStorage.getItem("janseva_token") : null;
       fetchAnnouncements();
       if (token) {
         fetchIssues();
         fetchNotifications();
       }
-    }, 45000);
+    }, 60000);
 
     return () => clearInterval(pollInterval);
   }, []);

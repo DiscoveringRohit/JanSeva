@@ -70,7 +70,9 @@ function FeedPageContent() {
   };
 
   React.useEffect(() => {
-    refreshIssues();
+    if (!issues || issues.length === 0) {
+      refreshIssues();
+    }
   }, []);
 
   React.useEffect(() => {

@@ -303,8 +303,8 @@ export function AiReportWizard() {
         let width = video.videoWidth || 640;
         let height = video.videoHeight || 480;
 
-        // Downscale to max 800px for sub-second Gemini upload & inference
-        const maxDim = 800;
+        // Downscale to max 600px for sub-second Gemini upload & minimal payload size
+        const maxDim = 600;
         if (width > maxDim || height > maxDim) {
           if (width > height) {
             height = Math.round((height * maxDim) / width);
@@ -321,7 +321,7 @@ export function AiReportWizard() {
         const ctx = canvas.getContext("2d");
         if (ctx) {
           ctx.drawImage(video, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL("image/jpeg", 0.80);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.65);
           setSelectedImage(dataUrl);
           setIsCameraActive(false);
           if (mediaStream) {
@@ -353,7 +353,7 @@ export function AiReportWizard() {
   };
 
   // Client-side image compression for fast Vercel/Render uploads & Gemini Vision
-  const compressImage = (file: File, maxWidth = 800, quality = 0.8): Promise<string> => {
+  const compressImage = (file: File, maxWidth = 600, quality = 0.65): Promise<string> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => {
