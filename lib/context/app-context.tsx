@@ -1016,11 +1016,20 @@ export function AppProvider({
             },
           ];
 
+          const isOfficerRole = Boolean(user && (user.role === "officer" || user.role === "corporator" || (user.role as string) === "admin"));
+          const shouldAssignOfficer = isOfficerRole && (status === "Assigned" || status === "In Progress" || (note && note.toLowerCase().includes("responsibility")));
+
           return {
             ...issue,
             status,
             updatedAt: now,
             timeline: updatedTimeline,
+            assignedOfficer: shouldAssignOfficer && user ? {
+              name: user.name || user.username || "Lead Officer",
+              role: user.levelTitle || (user.role === "corporator" ? "Ward Corporator" : "Lead Officer"),
+              avatar: user.avatar,
+              phone: user.phone || (user as any).phoneNumber || "",
+            } : issue.assignedOfficer,
             images: {
               ...issue.images,
               ...(photo
@@ -1084,6 +1093,8 @@ export function AppProvider({
             status,
             note,
             resolved_image: photo,
+            assigned_officer_id: user?.id,
+            officer_name: user?.name,
           }),
         }
       );

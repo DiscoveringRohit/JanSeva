@@ -284,6 +284,7 @@ function DepartmentOfficerContent() {
   const [manualMergeReason, setManualMergeReason] = useState("");
   const [mergeLoading, setMergeLoading] = useState(false);
   const [mergeSuccessToast, setMergeSuccessToast] = useState<string | null>(null);
+  const [officerActionToast, setOfficerActionToast] = useState<string | null>(null);
 
   // Default selected issue
   useEffect(() => {
@@ -376,24 +377,29 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
   };
 
   // Take Role as Assigned Officer
-  const handleTakeResponsibility = () => {
+  const handleTakeResponsibility = async () => {
     if (!selectedIssue) return;
     const officerName = user?.name || "Official Lead Officer";
-    updateIssueStatus(
+    await updateIssueStatus(
       selectedIssue.id,
       "Assigned",
       `Officer ${officerName} (${departmentName} Division) took primary responsibility as assigned officer.`
     );
+    setOfficerActionToast(`✓ You took primary responsibility for Ticket #${selectedIssue.id}. Assigned as Lead Officer.`);
+    setTimeout(() => setOfficerActionToast(null), 5000);
   };
 
   // Dispatch Squad Handler
-  const handleDispatchSquad = () => {
+  const handleDispatchSquad = async () => {
     if (!selectedIssue) return;
-    updateIssueStatus(
+    const officerName = user?.name || "Official Lead Officer";
+    await updateIssueStatus(
       selectedIssue.id,
-      "Assigned",
-      `Dispatched municipal crew: ${selectedSquad}. Unit mobilized to location.`
+      "In Progress",
+      `Dispatched municipal crew: ${selectedSquad} by Officer ${officerName}. Unit mobilized to location.`
     );
+    setOfficerActionToast(`🚛 Squad "${selectedSquad}" dispatched to Ticket #${selectedIssue.id}. Status set to "In Progress".`);
+    setTimeout(() => setOfficerActionToast(null), 5000);
   };
 
   // Official Hyperlocal Municipal Broadcast to Targeted Citizens
@@ -541,6 +547,23 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
 
   return (
     <div className="space-y-6 animate-fadeIn pb-16 font-body">
+
+      {/* Officer Operational Action Toast */}
+      {officerActionToast && (
+        <div className="p-4 rounded-2xl bg-[#134431] text-white flex items-center justify-between gap-3 shadow-lg border border-emerald-700/60 animate-fadeIn">
+          <div className="flex items-center gap-2.5 text-xs sm:text-sm font-bold">
+            <CheckCircle2 className="w-5 h-5 text-emerald-300 shrink-0" />
+            <span>{officerActionToast}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setOfficerActionToast(null)}
+            className="text-xs font-bold text-emerald-200 hover:text-white px-2.5 py-1 rounded-xl bg-emerald-800/80 hover:bg-emerald-800 transition-colors"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* 1. TOP OPERATIONAL BREADCRUMB & CONSOLE HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-3xl bg-white border border-slate-100 shadow-soft">
@@ -1056,10 +1079,41 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
                       </div>
                     </div>
 
-                    <div className="p-3.5 rounded-2xl bg-white border border-slate-200 space-y-2">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        Officer Assignment & Squad Response
-                      </label>
+                    <div className="p-3.5 rounded-2xl bg-white border border-slate-200 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          Officer Assignment & Squad Response
+                        </label>
+                        {selectedIssue.assignedOfficer ? (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold flex items-center gap-1 border border-emerald-200">
+                            <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                            <span>Assigned</span>
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold border border-amber-200">
+                            Unassigned
+                          </span>
+                        )}
+                      </div>
+
+                      {selectedIssue.assignedOfficer && (
+                        <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200/80 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-bold text-xs">
+                              {selectedIssue.assignedOfficer.name?.[0]?.toUpperCase() || "O"}
+                            </div>
+                            <div>
+                              <p className="font-headline font-bold text-xs text-slate-900 leading-none">
+                                {selectedIssue.assignedOfficer.name}
+                              </p>
+                              <p className="text-[10px] text-emerald-800 font-medium mt-0.5">
+                                {selectedIssue.assignedOfficer.role || "Lead Department Officer"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="space-y-2">
                         <button
                           type="button"
@@ -1483,6 +1537,8 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
                     });
 
                     setIsBallotModalOpen(false);
+                    setOfficerActionToast(`✓ Consensus ballot "${ballotForm.title}" & ward budget proposal published successfully.`);
+                    setTimeout(() => setOfficerActionToast(null), 6000);
                     setBallotForm({
                       title: "",
                       ward: user?.pincode || "",
