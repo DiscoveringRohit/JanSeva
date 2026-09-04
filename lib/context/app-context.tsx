@@ -1004,8 +1004,9 @@ export function AppProvider({
     setIssues((prev: CivicIssue[]) =>
       prev.map((issue: CivicIssue) => {
         if (issue.id === issueId) {
+          const currentTimeline = Array.isArray(issue.timeline) ? issue.timeline : [];
           const updatedTimeline = [
-            ...issue.timeline,
+            ...currentTimeline,
             {
               stage: status,
               timestamp: now,
@@ -1027,11 +1028,11 @@ export function AppProvider({
             assignedOfficer: shouldAssignOfficer && user ? {
               name: user.name || user.username || "Lead Officer",
               role: user.levelTitle || (user.role === "corporator" ? "Ward Corporator" : "Lead Officer"),
-              avatar: user.avatar,
+              avatar: user.avatar || "",
               phone: user.phone || (user as any).phoneNumber || "",
             } : issue.assignedOfficer,
             images: {
-              ...issue.images,
+              ...(issue.images || {}),
               ...(photo
                 ? { resolved: photo }
                 : (status === "Verified Resolved" || status === "Resolved") && !issue.images?.resolved

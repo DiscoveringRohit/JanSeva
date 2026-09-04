@@ -243,33 +243,36 @@ function DepartmentOfficerContent() {
 
   // Dynamically detect potential candidate duplicate pairs in active department tickets
   useEffect(() => {
-    const active = deptIssues.filter(i => i.status !== "Resolved" && i.status !== "Verified Resolved");
+    const active = deptIssues.filter(i => i && i.status !== "Resolved" && i.status !== "Verified Resolved");
     const foundDups: any[] = [];
     
     for (let i = 0; i < active.length; i++) {
       for (let j = i + 1; j < active.length; j++) {
         const a = active[i];
         const b = active[j];
+        if (!a || !b) continue;
         
-        const wordsA = new Set(a.title.toLowerCase().split(/\s+/).filter(w => w.length > 3));
-        const wordsB = new Set(b.title.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+        const wordsA = new Set((a.title || "").toLowerCase().split(/\s+/).filter(w => w.length > 3));
+        const wordsB = new Set((b.title || "").toLowerCase().split(/\s+/).filter(w => w.length > 3));
         const overlap = Array.from(wordsA).filter(w => wordsB.has(w));
         
-        const sameCategory = a.category === b.category;
-        const samePin = a.location?.pincode && b.location?.pincode && a.location.pincode === b.location.pincode;
+        const sameCategory = a.category && b.category && a.category === b.category;
+        const pinA = a.location?.pincode || (a as any).pin_code || (a as any).pincode;
+        const pinB = b.location?.pincode || (b as any).pin_code || (b as any).pincode;
+        const samePin = pinA && pinB && pinA === pinB;
         
-        if ((overlap.length >= 2 || (overlap.length >= 1 && samePin)) && sameCategory) {
+        if ((overlap.length >= 2 || (overlap.length >= 1 && Boolean(samePin))) && sameCategory) {
           foundDups.push({
             id: `dup-${a.id}-${b.id}`,
-            primaryId: (a.upvotes >= b.upvotes) ? a.id : b.id,
-            primaryTitle: (a.upvotes >= b.upvotes) ? a.title : b.title,
-            duplicateId: (a.upvotes >= b.upvotes) ? b.id : a.id,
-            duplicateTitle: (a.upvotes >= b.upvotes) ? b.title : a.title,
+            primaryId: ((a.upvotes || 0) >= (b.upvotes || 0)) ? a.id : b.id,
+            primaryTitle: ((a.upvotes || 0) >= (b.upvotes || 0)) ? a.title : b.title,
+            duplicateId: ((a.upvotes || 0) >= (b.upvotes || 0)) ? b.id : a.id,
+            duplicateTitle: ((a.upvotes || 0) >= (b.upvotes || 0)) ? b.title : a.title,
             confidence: overlap.length >= 3 ? "96.4% Match" : "89.2% Match",
-            location: a.location?.address || b.location?.address || "Nearby Ward Area",
+            location: (typeof a.location === "object" ? a.location?.address : a.location) || (typeof b.location === "object" ? b.location?.address : b.location) || "Nearby Ward Area",
             reportedTime: "Recent reports",
-            primaryPhoto: (a.upvotes >= b.upvotes ? a.images.reported : b.images.reported) || "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=800",
-            duplicatePhoto: (a.upvotes >= b.upvotes ? b.images.reported : a.images.reported) || "https://images.unsplash.com/photo-1584467735815-f778f274e296?w=800",
+            primaryPhoto: ((a.upvotes || 0) >= (b.upvotes || 0) ? a.images?.reported : b.images?.reported) || "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=800",
+            duplicatePhoto: ((a.upvotes || 0) >= (b.upvotes || 0) ? b.images?.reported : a.images?.reported) || "https://images.unsplash.com/photo-1584467735815-f778f274e296?w=800",
           });
         }
       }
@@ -1096,18 +1099,24 @@ Work marked completed! The ticket has transitioned to "Pending Citizen Verificat
                         )}
                       </div>
 
-                      {selectedIssue.assignedOfficer && (
+                      {selectedIssue?.assignedOfficer && (
                         <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200/80 flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-bold text-xs">
-                              {selectedIssue.assignedOfficer.name?.[0]?.toUpperCase() || "O"}
+                              {typeof selectedIssue.assignedOfficer === "object"
+                                ? (selectedIssue.assignedOfficer.name?.[0]?.toUpperCase() || "O")
+                                : String(selectedIssue.assignedOfficer)[0]?.toUpperCase()}
                             </div>
                             <div>
                               <p className="font-headline font-bold text-xs text-slate-900 leading-none">
-                                {selectedIssue.assignedOfficer.name}
+                                {typeof selectedIssue.assignedOfficer === "object"
+                                  ? (selectedIssue.assignedOfficer.name || "Lead Officer")
+                                  : String(selectedIssue.assignedOfficer)}
                               </p>
                               <p className="text-[10px] text-emerald-800 font-medium mt-0.5">
-                                {selectedIssue.assignedOfficer.role || "Lead Department Officer"}
+                                {typeof selectedIssue.assignedOfficer === "object"
+                                  ? (selectedIssue.assignedOfficer.role || "Lead Department Officer")
+                                  : "Lead Department Officer"}
                               </p>
                             </div>
                           </div>
