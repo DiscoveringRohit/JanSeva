@@ -1101,6 +1101,12 @@ export function AppProvider({
       );
 
       if (res.ok) {
+        const updatedIssue = await res.json().catch(() => null);
+        if (updatedIssue && updatedIssue.id) {
+          setIssues((prev: CivicIssue[]) =>
+            prev.map((i: CivicIssue) => (i.id === issueId || i.id === updatedIssue.id ? { ...i, ...updatedIssue } : i))
+          );
+        }
         fetchIssues();
       } else {
         console.warn(`Backend status update returned ${res.status}`);
