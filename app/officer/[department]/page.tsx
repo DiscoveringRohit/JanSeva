@@ -357,26 +357,26 @@ function DepartmentOfficerContent() {
   };
 
   // 5-Stage Civic Lifecycle Transition Handler (Closed-Loop Resolution Protocol)
-  const handleStatusChange = (newStatus: CivicIssue["status"]) => {
+  const handleStatusChange = async (newStatus: CivicIssue["status"]) => {
     if (!selectedIssue) return;
     setStatusDropdownOpen(false);
 
-    // Enforce Closed-Loop Protocol: Officers mark work as completed, which routes to citizen on-ground verification
-    if (newStatus === "Resolved" || newStatus === "Verified Resolved") {
-      const pin = (selectedIssue as any).pin_code || (selectedIssue as any).pincode || (selectedIssue.location as any)?.pincode || "local";
-      const note = `Field squad completed repair work. Under Closed-Loop Protocol, this issue has been queued for citizen live camera on-ground geo-audit in PIN ${pin}.`;
-      updateIssueStatus(selectedIssue.id, "Pending Citizen Verification", note);
-      alert(`🔒 Closed-Loop Protocol Active:
-Work marked completed! The ticket has transitioned to "Pending Citizen Verification". Under JanSeva's transparent protocol, permanent closure requires a resident's on-ground live camera audit.`);
-      return;
-    }
-
+    let targetStatus = newStatus;
     let note = `Officer ${user?.name || "Municipal Authority"} updated status to ${newStatus}.`;
-    if (newStatus === "Pending Citizen Verification") {
-      note = `Field repairs completed by assigned municipal crew. Awaiting citizen on-ground live camera verification.`;
+
+    // Enforce Closed-Loop Protocol: Officers mark work as completed, which routes to citizen on-ground verification
+    if (newStatus === "Resolved" || newStatus === "Verified Resolved" || newStatus === "Pending Citizen Verification") {
+      targetStatus = "Pending Citizen Verification";
+      const pin = (selectedIssue as any).pin_code || (selectedIssue as any).pincode || (selectedIssue.location as any)?.pincode || "local";
+      note = `Field squad completed repair work. Under Closed-Loop Protocol, this issue has been queued for citizen live camera on-ground geo-audit in PIN ${pin}.`;
+      setOfficerActionToast(`🔒 Closed-Loop Active: Ticket #${selectedIssue.id} queued for Citizen Live Camera Verification.`);
+      setTimeout(() => setOfficerActionToast(null), 5000);
+    } else {
+      setOfficerActionToast(`✓ Status updated to "${targetStatus}" for Ticket #${selectedIssue.id}.`);
+      setTimeout(() => setOfficerActionToast(null), 5000);
     }
 
-    updateIssueStatus(selectedIssue.id, newStatus, note);
+    await updateIssueStatus(selectedIssue.id, targetStatus, note);
   };
 
   // Take Role as Assigned Officer
